@@ -1,0 +1,15 @@
+<launch>
+
+<node name="main_mapless_dynamic" pkg="mapless_dynamic" type="main_mapless_dynamic" output="screen">
+    <rosparam param="/map/target_rosbag">"05_2350_to_2670_w_interval_2_node.bag"</rosparam>
+    
+    <!-- <rosparam param="/map/voxelsize">0.2</rosparam>		
+    <rosparam param="/map/target_rosbag">"05_2350_to_2670_w_interval_2_node.bag"</rosparam>
+    <rosparam param="/map/save_path">"/home/junhakim/KITTI_data"</rosparam>
+    <rosparam param="/map/viz_interval">1</rosparam>
+    <rosparam param="/large_scale/is_large_scale">true</rosparam> -->
+</node>
+
+<!-- <node name="rviz" pkg="rviz" type="rviz" args="-d $(find erasor)/rviz/kitti_mapgen.rviz"/> -->
+
+</launch>

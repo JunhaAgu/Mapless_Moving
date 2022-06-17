@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>mapless_dynamic</name>
+  <version>0.0.0</version>
+  <description>The Mapless_dynamic package</description>
+
+  <maintainer email="wnsgk02@snu.ac.kr">junhakim</maintainer>
+
+
+  <!-- One license tag required, multiple allowed, one license per tag -->
+  <!-- Commonly used license strings: -->
+  <!--   BSD, MIT, Boost Software License, GPLv2, GPLv3, LGPLv2.1, LGPLv3 -->
+  <license>TODO</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  
+  <build_depend>roscpp</build_depend>
+  <build_depend>rospy</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>nav_msgs</build_depend>
+  <build_depend>roslaunch</build_depend>
+  <build_depend>libpcl-all-dev</build_depend>
+  <build_depend>message_generation</build_depend>
+  <build_depend>sensro_msgs</build_depend>
+  <build_depend>message_runtime</build_depend>
+  <build_depend>message_filters</build_depend>
+  
+  <export>
+
+  </export>
+</package>
