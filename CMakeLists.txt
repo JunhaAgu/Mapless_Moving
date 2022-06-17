@@ -1,11 +1,10 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.5.1)
 project(mapless_dynamic)
-set(CMAKE_CONFIGURATION_TYPES "Release" CACHE STRING "" FORCE)
-add_compile_options(-std=c++17)
-
+set(CMAKE_BUILD_TYPE Debug) # Release, RelWithDebInfo
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -pthread -pg -O2")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}) 
 find_package(catkin REQUIRED cmake_modules)
-find_package(Eigen3 REQUIRED)
-find_package(OpenCV REQUIRED)
+find_package(Eigen REQUIRED)
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
@@ -27,21 +26,15 @@ catkin_package(
 )
 
 set(SRC ${SRC} 
-  src/main.cpp
-#   src/data.cpp
-#   src/lidar_image.cpp
-#   src/roi.cpp
-#   src/function_transform.cpp
-#   src/relative_pose.cpp
+  src/ros_wrapper.cpp
+  src/mapless_dynamic.cpp
 )
 
-set(includeDirs ${includeDirs} ${CMAKE_CURRENT_BINARY_DIR})
-set(includeDirs ${includeDirs} include)
+set(includeDirs ${includeDirs} ${CMAKE_CURRENT_BINARY_DIR} include)
 
 include_directories( ${includeDirs} )
 include_directories( ${catkin_INCLUDE_DIRS} )
 include_directories( ${Eigen_INCLUDE_DIRS} )
 
-
-add_executable (main_mapless_dynamic src/main.cpp ${SRC})
-target_link_libraries (main_mapless_dynamic ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${Eigen_LIBRARIES})
+add_executable(mapless_dynamic_node src/main.cpp ${SRC})
+target_link_libraries (mapless_dynamic_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${Eigen_LIBRARIES})
