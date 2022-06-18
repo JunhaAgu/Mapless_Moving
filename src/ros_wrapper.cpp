@@ -6,7 +6,8 @@ ROSWrapper::ROSWrapper(ros::NodeHandle& nh)
     // constructor
     ROS_INFO_STREAM("ROSWrapper - constructed.");
 
-    // get ROS parameter (launch )
+    // get ROS parameter (from '*.launch' file).
+    // If parameters are not set, this function throws an exception and terminates the node.
     this->getLaunchParameters();
 
     // initialization
@@ -14,7 +15,7 @@ ROSWrapper::ROSWrapper(ros::NodeHandle& nh)
 
     // subscriber
     sub_lidar_ = nh_.subscribe<sensor_msgs::PointCloud2>(
-            "/lidar0/velodyne_points", 1, &ROSWrapper::callbackLiDAR, this);
+            topicname_lidar_, 1, &ROSWrapper::callbackLiDAR, this);
   
     // spin.   
     this->run();
@@ -37,7 +38,9 @@ void ROSWrapper::run(){
 };
 
 void ROSWrapper::getLaunchParameters(){
-
+        if(!ros::param::has("~topicname_lidar")) 
+            throw std::runtime_error("ROSWrapper - no 'topicname_lidar' is set. You might run the node by 'roslaunch' with parameter settings.\n");
+        ros::param::get("~topicname_lidar", topicname_lidar_);
 };
 
 void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){

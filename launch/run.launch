@@ -1,0 +1,7 @@
+<launch>
+    <arg name="topicname_lidar"     default="/velodyne_points/lidar0"/>
+
+    <node pkg="mapless_dynamic" name="mapless_dynamic_node" type="mapless_dynamic_node" output="screen">
+        <param name="topicname_lidar" type="string" value="$(arg topicname_lidar)"/>
+    </node>
+</launch>

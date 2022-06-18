@@ -31,6 +31,8 @@ private:
 private:
     ros::NodeHandle nh_;
     ros::Subscriber sub_lidar_;
+    
+    std::string     topicname_lidar_;
 
 // Mapless Dynamic algorithm object. 
 private:
