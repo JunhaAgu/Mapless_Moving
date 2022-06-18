@@ -16,7 +16,7 @@ public:
 
 public:
     // DECLARE PUBLIC VARIABLES 
-    // * NOT RECOMMANDED TO MAKE PUBLIC VARIABLES
+    // * NOT RECOMMAND TO MAKE PUBLIC VARIABLES
     
 private:
     // DECLARE PRIVATE VARIABLES
@@ -31,7 +31,7 @@ public:
         /* inputs */ 
         const sensor_msgs::PointCloud2& p0, const sensor_msgs::PointCloud2& p1, const Pose& T01, 
         /* outputs */
-        Mask& mask);
+        Mask& mask1);
 
 // From this, declare your own sub-functions. 
 private:

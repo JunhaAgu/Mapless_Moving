@@ -14,7 +14,6 @@ MaplessDynamic::MaplessDynamic() {
 MaplessDynamic::~MaplessDynamic() {
     // destructor
     ROS_INFO_STREAM("MaplessDynamic - deleted.");
-
     // IMPLEMENT YOUR CODE FROM THIS LINE.
 
     // do something...
@@ -41,7 +40,7 @@ void MaplessDynamic::solve(
     /* inputs */ 
     const sensor_msgs::PointCloud2& p0, const sensor_msgs::PointCloud2& p1, const Pose& T01, 
     /* outputs */ 
-    Mask& mask )
+    Mask& mask1)
 {
     // IMPLEMENT YOUR ALGORITHM FROM THIS LINE.
 

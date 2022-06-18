@@ -21,13 +21,14 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 catkin_package(
-  DEPENDS EIGEN3 #Eigen -> EIGEN3 : resolved
+  DEPENDS EIGEN #Eigen -> EIGEN3 : resolved
   # CATKIN_DEPENDS message_runtime roscpp message_filters
 )
 
 set(SRC ${SRC} 
   src/ros_wrapper.cpp
   src/mapless_dynamic.cpp
+  src/timer.cpp
 )
 
 set(includeDirs ${includeDirs} ${CMAKE_CURRENT_BINARY_DIR} include)
@@ -38,3 +39,9 @@ include_directories( ${Eigen_INCLUDE_DIRS} )
 
 add_executable(mapless_dynamic_node src/main.cpp ${SRC})
 target_link_libraries (mapless_dynamic_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${Eigen_LIBRARIES})
+
+# install
+install(TARGETS mapless_dynamic_node RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+install(DIRECTORY launch/
+    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
+)

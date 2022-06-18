@@ -2,6 +2,7 @@
 #include <exception>
 
 #include <ros/ros.h>
+
 #include "ros_wrapper.h"
 
 int main(int argc, char **argv)
@@ -13,7 +14,7 @@ int main(int argc, char **argv)
 
     try{
         std::unique_ptr<ROSWrapper> wrapper;
-        wrapper = std::make_unique<ROSWrapper>();
+        wrapper = std::make_unique<ROSWrapper>(nh);
     }
     catch(std::exception& e){
         std::cout << " ERROR! the error message is [" << e.what() << std::endl;

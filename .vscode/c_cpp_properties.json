@@ -5,8 +5,10 @@
             "includePath": [
                 // "${workspaceFolder}/**"
                 "/home/junhakim/catkin_ws/devel/include/**",
+                "/home/larrkchlaptop/excavator_ws/devel/include/**",
+                "/opt/ros/noetic/include/**",
                 "/opt/ros/melodic/include/**",
-                "/home/junhakim/catkin_ws/src/Mapless_dynamic/include/**",
+                "${workspaceFolder}/include/**",
                 "/usr/include/**"
             ],
             "defines": [],
