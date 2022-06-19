@@ -38,12 +38,14 @@ private:
 private:
     std::unique_ptr<MaplessDynamic> solver_;
 
+    bool test_flag_;
+
 
 /* =========
     METHODS
    ========= */
 public:
-    ROSWrapper(ros::NodeHandle& nh); // constructor
+    ROSWrapper(ros::NodeHandle& nh, bool test_flag); // constructor
     ~ROSWrapper(); // destructor
 
 private:

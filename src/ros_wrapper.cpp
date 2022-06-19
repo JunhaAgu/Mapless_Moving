@@ -1,7 +1,7 @@
 #include "ros_wrapper.h"
 
-ROSWrapper::ROSWrapper(ros::NodeHandle& nh) 
-: is_initialized(false), nh_(nh)
+ROSWrapper::ROSWrapper(ros::NodeHandle& nh, bool test_flag) 
+: is_initialized(false), nh_(nh), test_flag_(test_flag)
 {
     // constructor
     ROS_INFO_STREAM("ROSWrapper - constructed.");
@@ -11,7 +11,7 @@ ROSWrapper::ROSWrapper(ros::NodeHandle& nh)
     this->getLaunchParameters();
 
     // initialization
-    solver_ = std::make_unique<MaplessDynamic>();
+    solver_ = std::make_unique<MaplessDynamic>(test_flag_);
 
     // subscriber
     sub_lidar_ = nh_.subscribe<sensor_msgs::PointCloud2>(
@@ -27,10 +27,13 @@ ROSWrapper::~ROSWrapper(){
 };
 
 void ROSWrapper::run(){
-    int freq_spin = 200; // [Hz]
+    int freq_spin = 10; // [Hz]
     ros::Rate rate(freq_spin);
     ROS_INFO_STREAM("ROSWrapper - 'run()' - run at [" << freq_spin << "] Hz.");
     while(ros::ok()){
+
+        solver_->TEST();
+        
         ros::spinOnce();
         rate.sleep();
     }
