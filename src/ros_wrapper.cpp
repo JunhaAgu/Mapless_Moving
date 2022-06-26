@@ -33,6 +33,7 @@ void ROSWrapper::run(){
     while(ros::ok()){
 
         solver_->TEST();
+        // solver_->solve();
         
         ros::spinOnce();
         rate.sleep();
@@ -61,7 +62,7 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
         // 2. Solve the Mapless Dynamic algorithm.
         timer::tic();
         Mask mask1;
-        solver_->solve(p0, p1, T01, mask1);
+        // solver_->solve(p0, p1, T01, mask1);
         double dt_solver = timer::toc(); // milliseconds
         ROS_INFO_STREAM("elapsed time for 'solver' :" << dt_solver << " [ms]");
 
