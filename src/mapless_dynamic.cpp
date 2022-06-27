@@ -17,9 +17,9 @@ MaplessDynamic::MaplessDynamic(bool test_flag)
     this->getUserSettingParameters();
 
     // allocation for solver
-    accumulated_dRdt_ = cv::Mat(img_height_, img_width_, CV_32FC1);
-    accumulated_dRdt_score_ = cv::Mat(img_height_, img_width_, CV_32FC1);
-    residual_ = cv::Mat(img_height_, img_width_, CV_32FC1);
+    accumulated_dRdt_ = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    accumulated_dRdt_score_ = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    residual_ = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
 
     str_cur_ = new StrRhoPts;
     str_next_ = new StrRhoPts;
@@ -29,14 +29,14 @@ MaplessDynamic::MaplessDynamic(bool test_flag)
     str_cur_->rho.reserve(200000);
     str_cur_->phi.reserve(200000);
     str_cur_->theta.reserve(200000);
-    str_cur_->img_rho = cv::Mat(img_height_, img_width_, CV_32FC1);
-    str_cur_->img_index = cv::Mat(img_height_, img_width_, CV_32SC1);
+    str_cur_->img_rho = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    str_cur_->img_index = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
 
-    str_cur_->img_x = cv::Mat(img_height_, img_width_, CV_32FC1);
-    str_cur_->img_y = cv::Mat(img_height_, img_width_, CV_32FC1);
-    str_cur_->img_z = cv::Mat(img_height_, img_width_, CV_32FC1);
+    str_cur_->img_x = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    str_cur_->img_y = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    str_cur_->img_z = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
 
-    str_cur_->img_restore_mask = cv::Mat(img_height_, img_width_, CV_32SC1);
+    str_cur_->img_restore_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
     str_cur_->pts_per_pixel_n.resize(img_height_*img_width_);
     str_cur_->pts_per_pixel_index.resize(img_height_*img_width_);
     str_cur_->pts_per_pixel_rho.resize(img_height_ * img_width_);
@@ -51,21 +51,21 @@ MaplessDynamic::MaplessDynamic(bool test_flag)
     str_cur_->valid_original_pts_idx_.reserve(200000);
     str_cur_->pts.reset(new pcl::PointCloud<pcl::PointXYZ>);
     str_cur_->ptsInImage.reset(new pcl::PointCloud<pcl::PointXYZ>);
-    str_cur_->img_restore_warp_mask = cv::Mat(img_height_, img_width_, CV_32SC1);
+    str_cur_->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
 
     
 
     str_next_->rho.reserve(200000);
     str_next_->phi.reserve(200000);
     str_next_->theta.reserve(200000);
-    str_next_->img_rho = cv::Mat(img_height_, img_width_, CV_32FC1);
-    str_next_->img_index = cv::Mat(img_height_, img_width_, CV_32SC1);
+    str_next_->img_rho = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    str_next_->img_index = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
 
-    str_next_->img_x = cv::Mat(img_height_, img_width_, CV_32FC1);
-    str_next_->img_y = cv::Mat(img_height_, img_width_, CV_32FC1);
-    str_next_->img_z = cv::Mat(img_height_, img_width_, CV_32FC1);
+    str_next_->img_x = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    str_next_->img_y = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    str_next_->img_z = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
 
-    str_next_->img_restore_mask = cv::Mat(img_height_, img_width_, CV_32SC1);
+    str_next_->img_restore_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
     str_next_->pts_per_pixel_n.resize(img_height_*img_width_);
     str_next_->pts_per_pixel_index.resize(img_height_*img_width_);
     str_next_->pts_per_pixel_rho.resize(img_height_ * img_width_);
@@ -80,19 +80,21 @@ MaplessDynamic::MaplessDynamic(bool test_flag)
     str_next_->valid_original_pts_idx_.reserve(200000);
     str_next_->pts.reset(new pcl::PointCloud<pcl::PointXYZ>);
     str_next_->ptsInImage.reset(new pcl::PointCloud<pcl::PointXYZ>);
-    str_next_->img_restore_warp_mask = cv::Mat(img_height_, img_width_, CV_32SC1);
+    str_next_->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+    
+    groundPtsIdx_next_ = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
 
     str_cur_warped_->rho.reserve(500000);
     str_cur_warped_->phi.reserve(500000);
     str_cur_warped_->theta.reserve(500000);
-    str_cur_warped_->img_rho = cv::Mat(img_height_, img_width_, CV_32FC1);
-    str_cur_warped_->img_index = cv::Mat(img_height_, img_width_, CV_32SC1);
+    str_cur_warped_->img_rho = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    str_cur_warped_->img_index = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
 
-    str_cur_warped_->img_x = cv::Mat(img_height_, img_width_, CV_32FC1);
-    str_cur_warped_->img_y = cv::Mat(img_height_, img_width_, CV_32FC1);
-    str_cur_warped_->img_z = cv::Mat(img_height_, img_width_, CV_32FC1);
+    str_cur_warped_->img_x = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    str_cur_warped_->img_y = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    str_cur_warped_->img_z = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
 
-    str_cur_warped_->img_restore_mask = cv::Mat(img_height_, img_width_, CV_32SC1);
+    str_cur_warped_->img_restore_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
     str_cur_warped_->pts_per_pixel_n.resize(img_height_*img_width_);
     str_cur_warped_->pts_per_pixel_index.resize(img_height_*img_width_);
     str_cur_warped_->pts_per_pixel_rho.resize(img_height_ * img_width_);
@@ -107,7 +109,7 @@ MaplessDynamic::MaplessDynamic(bool test_flag)
     str_cur_warped_->valid_original_pts_idx_.reserve(500000);
     str_cur_warped_->pts.reset(new pcl::PointCloud<pcl::PointXYZ>);
     str_cur_warped_->ptsInImage.reset(new pcl::PointCloud<pcl::PointXYZ>);
-    str_cur_warped_->img_restore_warp_mask = cv::Mat(img_height_, img_width_, CV_32SC1);
+    str_cur_warped_->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
 
     velo_cur_.reserve(500000);
     velo_xyz_.reserve(500000);
@@ -115,14 +117,14 @@ MaplessDynamic::MaplessDynamic(bool test_flag)
     str_warpPointcloud_->rho.reserve(500000);
     str_warpPointcloud_->phi.reserve(500000);
     str_warpPointcloud_->theta.reserve(500000);
-    str_warpPointcloud_->img_rho = cv::Mat(img_height_, img_width_, CV_32FC1);
-    str_warpPointcloud_->img_index = cv::Mat(img_height_, img_width_, CV_32SC1);
+    str_warpPointcloud_->img_rho = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    str_warpPointcloud_->img_index = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
 
-    str_warpPointcloud_->img_x = cv::Mat(img_height_, img_width_, CV_32FC1);
-    str_warpPointcloud_->img_y = cv::Mat(img_height_, img_width_, CV_32FC1);
-    str_warpPointcloud_->img_z = cv::Mat(img_height_, img_width_, CV_32FC1);
+    str_warpPointcloud_->img_x = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    str_warpPointcloud_->img_y = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    str_warpPointcloud_->img_z = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
 
-    str_warpPointcloud_->img_restore_mask = cv::Mat(img_height_, img_width_, CV_32SC1);
+    str_warpPointcloud_->img_restore_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
     str_warpPointcloud_->pts_per_pixel_n.resize(img_height_*img_width_);
     str_warpPointcloud_->pts_per_pixel_index.resize(img_height_*img_width_);
     str_warpPointcloud_->pts_per_pixel_rho.resize(img_height_ * img_width_);
@@ -137,11 +139,10 @@ MaplessDynamic::MaplessDynamic(bool test_flag)
     str_warpPointcloud_->valid_original_pts_idx_.reserve(500000);
     str_warpPointcloud_->pts.reset(new pcl::PointCloud<pcl::PointXYZ>);
     str_warpPointcloud_->ptsInImage.reset(new pcl::PointCloud<pcl::PointXYZ>);
-    str_warpPointcloud_->img_restore_warp_mask = cv::Mat(img_height_, img_width_, CV_32SC1);
+    str_warpPointcloud_->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
 
     ptr_cur_pts_warped_.reset(new pcl::PointCloud<pcl::PointXYZ>);
     pts_warpewd_.reset(new pcl::PointCloud<pcl::PointXYZ>);
-
 
     if (test_flag_){
         this->loadTestData();
@@ -425,9 +426,11 @@ void MaplessDynamic::solve(
     // p0 is already processed in initial step
     genRangeImages(p1, str_next_);
 
-    //Warp pcl represented in current frame to next frame
+    // Warp pcl represented in current frame to next frame
     T_next2cur_ = T01;
-    //Fast Segment
+    
+    // Segment ground
+    segmentGround(str_next_);
 
     //// Occlusion accumulation ////
     // Compute the occlusion dRdt
@@ -449,6 +452,8 @@ void MaplessDynamic::solve(
     //// update object_mask
     //object_mask = accumulated_dRdt>0;
 
+    // Fast Segment
+    checkSegment(accumulated_dRdt_, str_next_, groundPtsIdx_next_);
 
         
 };
@@ -1271,7 +1276,7 @@ void MaplessDynamic::warpPointcloud(StrRhoPts *str_cur_, const Pose &T01, /*outp
     std::vector<float> I_vec1(n_row*n_col);
     bool isempty_flag = 0;
     float *ptr_img_rho = str_cur_->img_rho.ptr<float>(0);
-    cv::Mat mat_out(img_height_, img_width_, CV_32FC1);
+    cv::Mat mat_out = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
     int *ptr_warp_img_index = str_warpPointcloud_->img_index.ptr<int>(0);
     float *ptr_mat_out = mat_out.ptr<float>(0);
 
@@ -1326,7 +1331,6 @@ void MaplessDynamic::filterOutAccumdR(StrRhoPts* str_next_, StrRhoPts* str_cur_w
     float* ptr_cur_warped_img_rho = str_cur_warped_->img_rho.ptr<float>(0);
     float* ptr_residual_ = residual_.ptr<float>(0);
 
-
     // Accumulate the occlusion
     for (int i = 0; i<n_row; ++i)
     {
@@ -1364,13 +1368,13 @@ void MaplessDynamic::extractObjectCandidate(cv::Mat& accumulated_dRdt, StrRhoPts
 {
     int n_col = accumulated_dRdt.cols;
     int n_row = accumulated_dRdt.rows;
-    cv::Mat object_mask = cv::Mat(img_height_, img_width_, CV_8UC1);
+    cv::Mat object_mask = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
     uchar* ptr_object_mask = object_mask.ptr<uchar>(0);
     float* ptr_accumulated_dRdt = accumulated_dRdt.ptr<float>(0);
     int cnt = 0;
     float* ptr_next_img_z = str_next->img_z.ptr<float>(0);
 
-    cv::Mat object_label = cv::Mat(img_height_, img_width_, CV_32SC1);
+    cv::Mat object_label = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
 
     for (int i=0; i<n_row; ++i)
     {
@@ -1400,7 +1404,7 @@ void MaplessDynamic::extractObjectCandidate(cv::Mat& accumulated_dRdt, StrRhoPts
     object_row.reserve(10000);
     object_col.reserve(10000);
     object_rho_roi.reserve(10000);
-    cv::Mat object_rho_mat = cv::Mat(img_height_,img_width_, CV_32FC1);
+    cv::Mat object_rho_mat = cv::Mat::zeros(img_height_,img_width_, CV_32FC1);
     float *ptr_object_rho_mat = object_rho_mat.ptr<float>(0);
     std::vector<float> max_his_object_rho_roi;
     max_his_object_rho_roi.reserve(10000);
@@ -1577,4 +1581,232 @@ void MaplessDynamic::extractObjectCandidate(cv::Mat& accumulated_dRdt, StrRhoPts
     // cv::imshow("accumulated_dRdt", accumulated_dRdt);
     // cv::waitKey(0);
     // exit(0);
+
+}
+
+void MaplessDynamic::segmentGround(StrRhoPts* str_in)
+{
+    int n_row = str_in->img_rho.rows;
+    int n_col = str_in->img_rho.cols;
+    float* ptr_img_z = str_in->img_z.ptr<float>(0);
+    uchar* ptr_groundPtsIdx_next = groundPtsIdx_next_.ptr<uchar>(0);
+
+    for (int i=0; i<n_row; ++i)
+    {
+        for (int j=0; j<n_col; ++j)
+        {
+            if (*(ptr_img_z + i * n_col + j) < -1.6)
+            {
+                *(ptr_groundPtsIdx_next + i * n_col + j) = 1;
+            }
+        }
+    }
+}
+
+void MaplessDynamic::checkSegment(cv::Mat& accumulated_dRdt, StrRhoPts* str_next, cv::Mat& groundPtsIdx_next)
+{
+    float weight_factor = 0.95;
+    int n_col = str_next->img_rho.cols;
+    int n_row = str_next->img_rho.rows;
+    std::vector<int> idx_row;
+    std::vector<int> idx_col;
+    std::vector<int> check;
+    idx_row.reserve(10000);
+    idx_col.reserve(10000);
+    check.reserve(10000);
+    float* ptr_accumulated_dRdt = accumulated_dRdt.ptr<float>(0);
+    float* ptr_img_rho = str_next->img_rho.ptr<float>(0);
+    uchar* ptr_groundPtsIdx_next = groundPtsIdx_next.ptr<uchar>(0);
+    bool isempty = true;
+
+    float phi = (float)360.0/(float)n_col;
+    int cnt = 0;
+    int row = 0;
+    int col = 0;
+    float R = 0.0;
+
+    float d1 = 0.0;
+    float d2 = 0.0;
+
+    cv::Mat roi_up = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
+    uchar* ptr_roi_up = roi_up.ptr<uchar>(0);
+
+    for (int i=0; i<n_row; ++i)
+    {
+        for (int j=0; j<n_col; ++j)
+        {
+            if (*(ptr_accumulated_dRdt + i * n_col + j) != 0)
+            {
+                // std::cout << accumulated_dRdt.at<float>(i,j) << std::endl;
+                // std::cout<<i<<" " <<j<<std::endl;
+                idx_row.push_back(i);
+                idx_col.push_back(j);
+                check.push_back(0);
+                isempty = false;
+                *(ptr_roi_up+i*n_col+j) = 1;
+            }
+        }
+    }
+
+    if (isempty==true)
+    {
+        return;
+    }
+
+    while(1)
+    {
+        if(check[cnt]==0)
+        {
+            row = idx_row[cnt];
+            col = idx_col[cnt];
+            R = *(ptr_img_rho + row * n_col + col);
+            int i = 0;
+            int j = 0;
+            int ii = 0;
+            int jj = 0;
+            for (int idx_cw = 1; idx_cw < 5; ++idx_cw)
+            {
+                if (idx_cw == 1)
+                {
+                    i = row - 1;
+                    j = col;
+                }
+                else if (idx_cw == 2)
+                {
+                    i = row;
+                    j = col + 1;
+                }
+                else if (idx_cw == 3)
+                {
+                    i = row + 1;
+                    j = col;
+                }
+                else if (idx_cw == 4)
+                {
+                    i = row;
+                    j = col - 1;
+                }
+
+                if ( (i<0) || (i> n_row-1))
+                {
+                    continue;
+                }
+
+                if ( (j<0) || (j> n_col-1))
+                {
+                    continue;
+                }
+
+                if ((*(ptr_roi_up + i * n_col + j) == 0) && (*(ptr_img_rho + i * n_col + j) > 0))
+                {
+                    if (*(ptr_groundPtsIdx_next + i * n_col + j) == 1)
+                    {
+                        continue;
+                    }
+
+                    d1 = std::max(R, *(ptr_img_rho + i * n_col + j));
+                    d2 = std::min(R, *(ptr_img_rho + i * n_col + j));
+                    if (atan2f(d2 * sinf(phi * D2R), (d1 - d2 * cosf(phi * D2R))) > 10.0 * D2R)
+                    {
+                        idx_row.push_back(i);
+                        idx_col.push_back(j);
+                        check.push_back(0);
+                        *(ptr_roi_up + i * n_col + j) = 1;
+                        *(ptr_accumulated_dRdt + i * n_col + j) = weight_factor * *(ptr_accumulated_dRdt + row * n_col + col);
+                    }
+                }
+                else if ((*(ptr_roi_up + i * n_col + j) == 0) && (*(ptr_img_rho + i * n_col + j) == 0))
+                {
+                    if (*(ptr_groundPtsIdx_next + i * n_col + j) == 1)
+                    {
+                        continue;
+                    }
+
+                    if (idx_cw == 1)
+                    {
+                        ii = row - 2;
+                        jj = col;
+                    }
+                    else if (idx_cw == 2)
+                    {
+                        ii = row;
+                        jj = col + 2;
+                    }
+                    else if (idx_cw == 3)
+                    {
+                        ii = row + 2;
+                        jj = col;
+                    }
+                    else if (idx_cw == 4)
+                    {
+                        ii = row;
+                        jj = col - 2;
+                    }
+                    if ((ii < 0) || (ii > n_row-1))
+                    {
+                        continue;
+                    }
+                    if ((jj < 0) || (jj > n_col-1))
+                    {
+                        continue;
+                    }
+
+                    if (*(ptr_groundPtsIdx_next + ii * n_col + jj) == 1)
+                    {
+                        continue;
+                    }
+
+                    if (*(ptr_roi_up + ii * n_col + jj) == 1){}
+                    else
+                    {
+                        d1 = std::max(R, *(ptr_img_rho + ii * n_col + jj));
+                        d2 = std::min(R, *(ptr_img_rho + ii * n_col + jj));
+
+                        if (atan2f(d2 * sinf(2.0 * phi * D2R), (d1 - d2 * cosf(2.0 * phi * D2R))) > 10.0 * D2R)
+                        {
+                            idx_row.push_back(ii);
+                            idx_col.push_back(jj);
+
+                            check.push_back(0);
+                            *(ptr_roi_up + ii * n_col + jj) = 1;
+                            *(ptr_accumulated_dRdt + ii * n_col + jj) = weight_factor * (*(ptr_accumulated_dRdt + row * n_col + col));
+                            if (idx_cw == 1)
+                            {
+                                *(ptr_accumulated_dRdt + (ii + 1) * n_col + jj) = weight_factor * (*(ptr_accumulated_dRdt + row * n_col + col));
+                            }
+                            else if (idx_cw == 2)
+                            {
+                                *(ptr_accumulated_dRdt + ii * n_col + (jj - 1)) = weight_factor * (*(ptr_accumulated_dRdt + row * n_col + col));
+                            }
+                            else if (idx_cw == 3)
+                            {
+                                *(ptr_accumulated_dRdt + (ii - 1) * n_col + jj) = weight_factor * (*(ptr_accumulated_dRdt + row * n_col + col));
+                            }
+                            else if (idx_cw == 4)
+                            {
+                                *(ptr_accumulated_dRdt + ii * n_col + (jj + 1)) = weight_factor * (*(ptr_accumulated_dRdt + row * n_col + col));
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (*(ptr_groundPtsIdx_next + row * n_col + col) == 1)
+            {
+                *(ptr_roi_up + row * n_col + col) = 0;
+            }
+
+            check[cnt] = 1;
+        }
+
+        cnt += 1;
+        if (cnt == check.size())
+        {
+            break;
+        }
+    }
+
+    cv::imshow("accumulated_dRdt", accumulated_dRdt);
+    cv::waitKey(0);
+    exit(0);
 }

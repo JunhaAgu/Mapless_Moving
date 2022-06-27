@@ -85,12 +85,14 @@ private:
     StrRhoPts* str_warpPointcloud_;
 
     Pose T_next2cur_;
+
+    cv::Mat groundPtsIdx_next_;
     
     //dR_warpPointcloud
     pcl::PointCloud<pcl::PointXYZ> velo_cur_;
     pcl::PointCloud<pcl::PointXYZ>::Ptr ptr_cur_pts_warped_;
     cv::Mat residual_;
-    
+
     pcl::PointCloud<pcl::PointXYZ> velo_xyz_;
     pcl::PointCloud<pcl::PointXYZ>::Ptr pts_warpewd_;
 
@@ -137,6 +139,8 @@ private:
     void makeRangeImageAndPtsPerPixel(StrRhoPts* str_in, int n_pts, int n_ring,int n_radial,float az_step);
     void interpRangeImage(StrRhoPts* str_in, int n_ring, int n_radial);
     void interpPts(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts* str_in1, int n_ring, int n_radial);
+
+    void segmentGround(StrRhoPts* str_in);
     
     void dR_warpPointcloud(pcl::PointCloud<pcl::PointXYZ>& p0, Pose& T01);
     void compensateCurRhoZeroWarp(StrRhoPts* str_cur_, int n_ring, int n_radial, std::vector<float>& v_angle_, pcl::PointCloud<pcl::PointXYZ>& velo_cur_);
@@ -146,6 +150,8 @@ private:
     void warpPointcloud(StrRhoPts* str_cur_, const Pose& T01, cv::Mat& mat_in);
     void filterOutAccumdR(StrRhoPts* str_next_,StrRhoPts* str_cur_warped_,cv::Mat& accumulated_dRdt_,cv::Mat& accumulated_dRdt_score_,cv::Mat& residual_);
     void extractObjectCandidate(cv::Mat& accumulated_dRdt, StrRhoPts* str_next, int object_threshold);
+
+    void checkSegment(cv::Mat& accumulated_dRdt, StrRhoPts* str_next, cv::Mat& groundPtsIdx_next);
 
 
 private:
