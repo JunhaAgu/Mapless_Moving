@@ -153,6 +153,11 @@ private:
 
     void checkSegment(cv::Mat& accumulated_dRdt, StrRhoPts* str_next, cv::Mat& groundPtsIdx_next);
 
+    void updateScore(cv::Mat& accumulated_dRdt, cv::Mat& accumulated_dRdt_score);
+    
+    void plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulated_dRdt_score, StrRhoPts* str_next, cv::Mat& groundPtsIdx_next, int object_threshold);
+    void interpAndfill_image(cv::Mat& input_img, cv::Mat& filled_bin);
+
 
 private:
     //test: load data

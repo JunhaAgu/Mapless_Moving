@@ -455,6 +455,13 @@ void MaplessDynamic::solve(
     // Fast Segment
     checkSegment(accumulated_dRdt_, str_next_, groundPtsIdx_next_);
 
+    //// update object_mask
+    //object_mask = accumulated_dRdt>0;
+
+    updateScore(accumulated_dRdt_, accumulated_dRdt_score_);
+
+    plugImageZeroHoles(accumulated_dRdt_, accumulated_dRdt_score_, str_next_, groundPtsIdx_next_, object_threshold_);
+
         
 };
 
@@ -763,8 +770,8 @@ void MaplessDynamic::interpRangeImage(StrRhoPts* str_in, int n_ring, int n_radia
                     {
                         *(ptr_img_restore_mask + i * n_col + j) = 2;
                         *(ptr_img_restore_mask + (i + 1) * n_col + j) = 3;
-                        *(ptr_img_rho_new + i * n_col + j) = *(ptr_img_rho + (i - 1) * n_col + j)*(2.0/3.0) + *(ptr_img_rho + (i + 2) * n_col + j)*(1.0/3.0);
-                        *(ptr_img_rho_new + (i+1) * n_col + j) = *(ptr_img_rho + (i - 1) * n_col + j)*(1.0/3.0) + *(ptr_img_rho + (i + 2) * n_col + j)*(2.0/3.0);
+                        *(ptr_img_rho_new + i * n_col + j) = *(ptr_img_rho + (i - 1) * n_col + j)*(0.6666667) + *(ptr_img_rho + (i + 2) * n_col + j)*(0.3333333);
+                        *(ptr_img_rho_new + (i+1) * n_col + j) = *(ptr_img_rho + (i - 1) * n_col + j)*(0.3333333) + *(ptr_img_rho + (i + 2) * n_col + j)*(0.6666667);
                     }
                     else
                     {
@@ -791,8 +798,8 @@ void MaplessDynamic::interpRangeImage(StrRhoPts* str_in, int n_ring, int n_radia
                 {
                     *(ptr_img_restore_mask + i * n_col + j) = 5;
                     *(ptr_img_restore_mask + i * n_col + (j + 1)) = 6;
-                    *(ptr_img_rho_new + i * n_col + j) = *(ptr_img_rho + i * n_col + (j - 1)) * (2.0 / 3.0) + *(ptr_img_rho + i * n_col + (j + 2)) * (1.0 / 3.0);
-                    *(ptr_img_rho_new + i * n_col + (j + 1)) = *(ptr_img_rho + i * n_col + (j - 1)) * (1.0 / 3.0) + *(ptr_img_rho + i * n_col + (j + 2)) * (2.0 / 3.0);
+                    *(ptr_img_rho_new + i * n_col + j) = *(ptr_img_rho + i * n_col + (j - 1)) * (0.6666667) + *(ptr_img_rho + i * n_col + (j + 2)) * (0.3333333);
+                    *(ptr_img_rho_new + i * n_col + (j + 1)) = *(ptr_img_rho + i * n_col + (j - 1)) * (0.3333333) + *(ptr_img_rho + i * n_col + (j + 2)) * (0.6666667);
                 }
             }
 
@@ -862,9 +869,9 @@ void MaplessDynamic::interpPts(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts
             }
             else if (*(ptr_img_restore_mask + i * n_col + j) == 2)
             {
-                *(ptr_img_x + i * n_col + j) = 2.0 / 3.0 * pcl_in[*(ptr_img_index + (i - 1) * n_col + j)].x + 1.0 / 3.0 * pcl_in[*(ptr_img_index + (i + 2) * n_col + j)].x;
-                *(ptr_img_y + i * n_col + j) = 2.0 / 3.0 * pcl_in[*(ptr_img_index + (i - 1) * n_col + j)].y + 1.0 / 3.0 * pcl_in[*(ptr_img_index + (i + 2) * n_col + j)].y;
-                *(ptr_img_z + i * n_col + j) = 2.0 / 3.0 * pcl_in[*(ptr_img_index + (i - 1) * n_col + j)].z + 1.0 / 3.0 * pcl_in[*(ptr_img_index + (i + 2) * n_col + j)].z;
+                *(ptr_img_x + i * n_col + j) = (0.6666667) * pcl_in[*(ptr_img_index + (i - 1) * n_col + j)].x + (0.3333333) * pcl_in[*(ptr_img_index + (i + 2) * n_col + j)].x;
+                *(ptr_img_y + i * n_col + j) = (0.6666667) * pcl_in[*(ptr_img_index + (i - 1) * n_col + j)].y + (0.3333333) * pcl_in[*(ptr_img_index + (i + 2) * n_col + j)].y;
+                *(ptr_img_z + i * n_col + j) = (0.6666667) * pcl_in[*(ptr_img_index + (i - 1) * n_col + j)].z + (0.3333333) * pcl_in[*(ptr_img_index + (i + 2) * n_col + j)].z;
             }
             else if (*(ptr_img_restore_mask + i * n_col + j) == 20)
             {
@@ -883,9 +890,9 @@ void MaplessDynamic::interpPts(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts
             }
             else if (*(ptr_img_restore_mask + i * n_col + j) == 3)
             {
-                *(ptr_img_x + i * n_col + j) = 1.0 / 3.0 * pcl_in[*(ptr_img_index + (i - 2) * n_col + j)].x + 2.0 / 3.0 * pcl_in[*(ptr_img_index + (i + 1) * n_col + j)].x;
-                *(ptr_img_y + i * n_col + j) = 1.0 / 3.0 * pcl_in[*(ptr_img_index + (i - 2) * n_col + j)].y + 2.0 / 3.0 * pcl_in[*(ptr_img_index + (i + 1) * n_col + j)].y;
-                *(ptr_img_z + i * n_col + j) = 1.0 / 3.0 * pcl_in[*(ptr_img_index + (i - 2) * n_col + j)].z + 2.0 / 3.0 * pcl_in[*(ptr_img_index + (i + 1) * n_col + j)].z;
+                *(ptr_img_x + i * n_col + j) = (0.3333333) * pcl_in[*(ptr_img_index + (i - 2) * n_col + j)].x + (0.6666667) * pcl_in[*(ptr_img_index + (i + 1) * n_col + j)].x;
+                *(ptr_img_y + i * n_col + j) = (0.3333333) * pcl_in[*(ptr_img_index + (i - 2) * n_col + j)].y + (0.6666667) * pcl_in[*(ptr_img_index + (i + 1) * n_col + j)].y;
+                *(ptr_img_z + i * n_col + j) = (0.3333333) * pcl_in[*(ptr_img_index + (i - 2) * n_col + j)].z + (0.6666667) * pcl_in[*(ptr_img_index + (i + 1) * n_col + j)].z;
             }
             else if (*(ptr_img_restore_mask + i * n_col + j) == 30)
             {
@@ -910,15 +917,15 @@ void MaplessDynamic::interpPts(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts
             }
             else if (*(ptr_img_restore_mask + i * n_col + j) == 5)
             {
-                *(ptr_img_x + i * n_col + j) = 2.0/3.0 * pcl_in[*(ptr_img_index + i * n_col + (j-1))].x + 1.0/3.0*pcl_in[*(ptr_img_index + i * n_col + (j+2))].x;
-                *(ptr_img_y + i * n_col + j) = 2.0/3.0 * pcl_in[*(ptr_img_index + i * n_col + (j-1))].y + 1.0/3.0*pcl_in[*(ptr_img_index + i * n_col + (j+2))].y;
-                *(ptr_img_z + i * n_col + j) = 2.0/3.0 * pcl_in[*(ptr_img_index + i * n_col + (j-1))].z + 1.0/3.0*pcl_in[*(ptr_img_index + i * n_col + (j+2))].z;
+                *(ptr_img_x + i * n_col + j) = (0.6666667) * pcl_in[*(ptr_img_index + i * n_col + (j-1))].x + (0.3333333)*pcl_in[*(ptr_img_index + i * n_col + (j+2))].x;
+                *(ptr_img_y + i * n_col + j) = (0.6666667) * pcl_in[*(ptr_img_index + i * n_col + (j-1))].y + (0.3333333)*pcl_in[*(ptr_img_index + i * n_col + (j+2))].y;
+                *(ptr_img_z + i * n_col + j) = (0.6666667) * pcl_in[*(ptr_img_index + i * n_col + (j-1))].z + (0.3333333)*pcl_in[*(ptr_img_index + i * n_col + (j+2))].z;
             }
             else if (*(ptr_img_restore_mask + i * n_col + j) == 6)
             {
-                *(ptr_img_x + i * n_col + j) = 1.0/3.0 * pcl_in[*(ptr_img_index + i * n_col + (j-2))].x + 2.0/3.0*pcl_in[*(ptr_img_index + i * n_col + (j+1))].x;
-                *(ptr_img_y + i * n_col + j) = 1.0/3.0 * pcl_in[*(ptr_img_index + i * n_col + (j-2))].y + 2.0/3.0*pcl_in[*(ptr_img_index + i * n_col + (j+1))].y;
-                *(ptr_img_z + i * n_col + j) = 1.0/3.0 * pcl_in[*(ptr_img_index + i * n_col + (j-2))].z + 2.0/3.0*pcl_in[*(ptr_img_index + i * n_col + (j+1))].z;
+                *(ptr_img_x + i * n_col + j) = (0.3333333) * pcl_in[*(ptr_img_index + i * n_col + (j-2))].x + (0.6666667)*pcl_in[*(ptr_img_index + i * n_col + (j+1))].x;
+                *(ptr_img_y + i * n_col + j) = (0.3333333) * pcl_in[*(ptr_img_index + i * n_col + (j-2))].y + (0.6666667)*pcl_in[*(ptr_img_index + i * n_col + (j+1))].y;
+                *(ptr_img_z + i * n_col + j) = (0.3333333) * pcl_in[*(ptr_img_index + i * n_col + (j-2))].z + (0.6666667)*pcl_in[*(ptr_img_index + i * n_col + (j+1))].z;
             }
 
         }     // end for j
@@ -995,7 +1002,7 @@ void MaplessDynamic::compensateCurRhoZeroWarp(StrRhoPts* str_cur_, int n_ring, i
     int cnt_up = 1;
     int cnt_down = 1;
 
-    int min = 0 ;
+    float min = 0.0 ;
     int min_index = 0;
 
     std::vector<float> four_dir;
@@ -1078,9 +1085,9 @@ void MaplessDynamic::compensateCurRhoZeroWarp(StrRhoPts* str_cur_, int n_ring, i
                         {
                             for (int p = 0; p < 5; ++p)
                             {
-                                velo_cur_.push_back(pcl::PointXYZ(-min * cosf(new_phi + (m - 2) * D2R) * cosf(new_theta + (p - 2) * 0.08 * D2R),
-                                                                  -min * cosf(new_phi + (m - 2) * D2R) * sinf(new_theta + (p - 2) * 0.08 * D2R),
-                                                                   min * sinf(new_phi + (m - 2) * D2R)));
+                                velo_cur_.push_back(pcl::PointXYZ(-min * cosf(new_phi + (float)(m - 2) * D2R) * cosf(new_theta + (float)(p - 2) * 0.08 * D2R),
+                                                                  -min * cosf(new_phi + (float)(m - 2) * D2R) * sinf(new_theta + ((float)p - 2) * 0.08 * D2R),
+                                                                   min * sinf(new_phi + (float)(m - 2) * D2R)));
                             }
                         }
                     } // end if
@@ -1125,8 +1132,8 @@ void MaplessDynamic::interpRangeImageMin(StrRhoPts* str_in, int n_ring, int n_ra
                     {
                         *(ptr_img_restore_warp_mask + i * n_col + j) = 2;
                         *(ptr_img_restore_warp_mask + (i + 1) * n_col + j) = 3;
-                        *(ptr_img_rho_new + i * n_col + j) = *(ptr_img_rho + (i - 1) * n_col + j) * (2.0 / 3.0) + *(ptr_img_rho + (i + 2) * n_col + j) * (1.0 / 3.0);
-                        *(ptr_img_rho_new + (i + 1) * n_col + j) = *(ptr_img_rho + (i - 1) * n_col + j) * (1.0 / 3.0) + *(ptr_img_rho + (i + 2) * n_col + j) * (2.0 / 3.0);
+                        *(ptr_img_rho_new + i * n_col + j) = *(ptr_img_rho + (i - 1) * n_col + j) * (0.6666667) + *(ptr_img_rho + (i + 2) * n_col + j) * (0.3333333);
+                        *(ptr_img_rho_new + (i + 1) * n_col + j) = *(ptr_img_rho + (i - 1) * n_col + j) * (0.3333333) + *(ptr_img_rho + (i + 2) * n_col + j) * (0.6666667);
                     }
                     else
                     {
@@ -1151,8 +1158,8 @@ void MaplessDynamic::interpRangeImageMin(StrRhoPts* str_in, int n_ring, int n_ra
                     {
                         *(ptr_img_restore_warp_mask + i * n_col + j) = 5;
                         *(ptr_img_restore_warp_mask + i * n_col + (j + 1)) = 6;
-                        *(ptr_img_rho_new + i * n_col + j) = *(ptr_img_rho + i * n_col + (j - 1)) * (2.0 / 3.0) + *(ptr_img_rho + i * n_col + (j + 2)) * (1.0 / 3.0);
-                        *(ptr_img_rho_new + i * n_col + (j + 1)) = *(ptr_img_rho + i * n_col + (j - 1)) * (1.0 / 3.0) + *(ptr_img_rho + i * n_col + (j + 2)) * (2.0 / 3.0);
+                        *(ptr_img_rho_new + i * n_col + j) = *(ptr_img_rho + i * n_col + (j - 1)) * (0.6666667) + *(ptr_img_rho + i * n_col + (j + 2)) * (0.3333333);
+                        *(ptr_img_rho_new + i * n_col + (j + 1)) = *(ptr_img_rho + i * n_col + (j - 1)) * (0.3333333) + *(ptr_img_rho + i * n_col + (j + 2)) * (0.6666667);
                     }
                 }
             } // end if
@@ -1203,9 +1210,9 @@ void MaplessDynamic::interpPtsWarp(StrRhoPts* str_in, int n_ring, int n_radial)
             }
             else if (*(ptr_img_restore_warp_mask + i * n_col + j) == 2)
             {
-                *(ptr_img_x + i * n_col + j) = 2.0 / 3.0 * (*(ptr_img_x + (i - 1) * n_col + j)) + 1.0 / 3.0 * (*(ptr_img_x + (i + 2) * n_col + j));
-                *(ptr_img_y + i * n_col + j) = 2.0 / 3.0 * (*(ptr_img_y + (i - 1) * n_col + j)) + 1.0 / 3.0 * (*(ptr_img_y + (i + 2) * n_col + j));
-                *(ptr_img_z + i * n_col + j) = 2.0 / 3.0 * (*(ptr_img_z + (i - 1) * n_col + j)) + 1.0 / 3.0 * (*(ptr_img_z + (i + 2) * n_col + j));
+                *(ptr_img_x + i * n_col + j) = (0.6666667) * (*(ptr_img_x + (i - 1) * n_col + j)) + (0.3333333) * (*(ptr_img_x + (i + 2) * n_col + j));
+                *(ptr_img_y + i * n_col + j) = (0.6666667) * (*(ptr_img_y + (i - 1) * n_col + j)) + (0.3333333) * (*(ptr_img_y + (i + 2) * n_col + j));
+                *(ptr_img_z + i * n_col + j) = (0.6666667) * (*(ptr_img_z + (i - 1) * n_col + j)) + (0.3333333) * (*(ptr_img_z + (i + 2) * n_col + j));
             }
             else if (*(ptr_img_restore_warp_mask + i * n_col + j) == 20)
             {
@@ -1224,9 +1231,9 @@ void MaplessDynamic::interpPtsWarp(StrRhoPts* str_in, int n_ring, int n_radial)
             }
             else if (*(ptr_img_restore_warp_mask + i * n_col + j) == 3)
             {
-                *(ptr_img_x + i * n_col + j) = 1.0 / 3.0 * (*(ptr_img_x + (i - 2) * n_col + j)) + 2.0 / 3.0 * (*(ptr_img_x + (i + 1) * n_col + j));
-                *(ptr_img_y + i * n_col + j) = 1.0 / 3.0 * (*(ptr_img_y + (i - 2) * n_col + j)) + 2.0 / 3.0 * (*(ptr_img_y + (i + 1) * n_col + j));
-                *(ptr_img_z + i * n_col + j) = 1.0 / 3.0 * (*(ptr_img_z + (i - 2) * n_col + j)) + 2.0 / 3.0 * (*(ptr_img_z + (i + 1) * n_col + j));
+                *(ptr_img_x + i * n_col + j) = (0.3333333) * (*(ptr_img_x + (i - 2) * n_col + j)) + (0.6666667) * (*(ptr_img_x + (i + 1) * n_col + j));
+                *(ptr_img_y + i * n_col + j) = (0.3333333) * (*(ptr_img_y + (i - 2) * n_col + j)) + (0.6666667) * (*(ptr_img_y + (i + 1) * n_col + j));
+                *(ptr_img_z + i * n_col + j) = (0.3333333) * (*(ptr_img_z + (i - 2) * n_col + j)) + (0.6666667) * (*(ptr_img_z + (i + 1) * n_col + j));
             }
             else if (*(ptr_img_restore_warp_mask + i * n_col + j) == 30)
             {
@@ -1251,15 +1258,15 @@ void MaplessDynamic::interpPtsWarp(StrRhoPts* str_in, int n_ring, int n_radial)
             }
             else if (*(ptr_img_restore_warp_mask + i * n_col + j) == 5)
             {
-                *(ptr_img_x + i * n_col + j) = 2.0 / 3.0 * (*(ptr_img_x + i * n_col + (j - 1))) + 1.0 / 3.0 * (*(ptr_img_x + i * n_col + (j + 2)));
-                *(ptr_img_y + i * n_col + j) = 2.0 / 3.0 * (*(ptr_img_y + i * n_col + (j - 1))) + 1.0 / 3.0 * (*(ptr_img_y + i * n_col + (j + 2)));
-                *(ptr_img_z + i * n_col + j) = 2.0 / 3.0 * (*(ptr_img_z + i * n_col + (j - 1))) + 1.0 / 3.0 * (*(ptr_img_z + i * n_col + (j + 2)));
+                *(ptr_img_x + i * n_col + j) = (0.6666667) * (*(ptr_img_x + i * n_col + (j - 1))) + (0.3333333) * (*(ptr_img_x + i * n_col + (j + 2)));
+                *(ptr_img_y + i * n_col + j) = (0.6666667) * (*(ptr_img_y + i * n_col + (j - 1))) + (0.3333333) * (*(ptr_img_y + i * n_col + (j + 2)));
+                *(ptr_img_z + i * n_col + j) = (0.6666667) * (*(ptr_img_z + i * n_col + (j - 1))) + (0.3333333) * (*(ptr_img_z + i * n_col + (j + 2)));
             }
             else if (*(ptr_img_restore_warp_mask + i * n_col + j) == 6)
             {
-                *(ptr_img_x + i * n_col + j) = 1.0 / 3.0 * (*(ptr_img_x + i * n_col + (j - 2))) + 2.0 / 3.0 * (*(ptr_img_x + i * n_col + (j + 1)));
-                *(ptr_img_y + i * n_col + j) = 1.0 / 3.0 * (*(ptr_img_y + i * n_col + (j - 2))) + 2.0 / 3.0 * (*(ptr_img_y + i * n_col + (j + 1)));
-                *(ptr_img_z + i * n_col + j) = 1.0 / 3.0 * (*(ptr_img_z + i * n_col + (j - 2))) + 2.0 / 3.0 * (*(ptr_img_z + i * n_col + (j + 1)));
+                *(ptr_img_x + i * n_col + j) = (0.3333333) * (*(ptr_img_x + i * n_col + (j - 2))) + (0.6666667) * (*(ptr_img_x + i * n_col + (j + 1)));
+                *(ptr_img_y + i * n_col + j) = (0.3333333) * (*(ptr_img_y + i * n_col + (j - 2))) + (0.6666667) * (*(ptr_img_y + i * n_col + (j + 1)));
+                *(ptr_img_z + i * n_col + j) = (0.3333333) * (*(ptr_img_z + i * n_col + (j - 2))) + (0.6666667) * (*(ptr_img_z + i * n_col + (j + 1)));
             }
         } // end for j
     } // end for i
@@ -1559,8 +1566,8 @@ void MaplessDynamic::extractObjectCandidate(cv::Mat& accumulated_dRdt, StrRhoPts
             {
                 std_diff_z += powf((diff_z[i]-mean_diff_z),2.0);
             }
-            std_diff_z = sqrtf(1.0/((float)diff_z.size()-1.0)*std_diff_z);
-            if (std_diff_z < 0.07)
+            std_diff_z = (1.0/((float)diff_z.size()-1.0)*std_diff_z);
+            if (std_diff_z < 0.07*0.07)
             {
                 for (int i = 0; i < diff_object_area_bw_disconti_row.size(); ++i)
                 {
@@ -1806,7 +1813,470 @@ void MaplessDynamic::checkSegment(cv::Mat& accumulated_dRdt, StrRhoPts* str_next
         }
     }
 
-    cv::imshow("accumulated_dRdt", accumulated_dRdt);
-    cv::waitKey(0);
-    exit(0);
+    // cv::imshow("accumulated_dRdt", accumulated_dRdt);
+    // cv::waitKey(0);
+    // exit(0);
+}
+
+void MaplessDynamic::updateScore(cv::Mat& accumulated_dRdt, cv::Mat& accumulated_dRdt_score)
+{
+    int n_row = accumulated_dRdt.rows;
+    int n_col = accumulated_dRdt.cols;
+    float* ptr_accumulated_dRdt = accumulated_dRdt.ptr<float>(0);
+    float* ptr_accumulated_dRdt_score = accumulated_dRdt_score.ptr<float>(0);
+    
+    for (int i=1; i<n_row; ++i)
+    {
+        for (int j=1; j<n_col; ++j)
+        {
+            if (*(ptr_accumulated_dRdt+i*n_col+j)!=0)
+            {
+                *(ptr_accumulated_dRdt_score+i*n_col+j) += 1;
+            }
+        }
+    }
+
+    for (int i=1; i<n_row; ++i)
+    {
+        for (int j=1; j<n_col; ++j)
+        {
+            if (*(ptr_accumulated_dRdt_score+i*n_col+j)>2.0)
+            {
+                *(ptr_accumulated_dRdt+i*n_col+j) *= 5.0;
+                if (*(ptr_accumulated_dRdt+i*n_col+j) > 1e3)
+                {
+                    *(ptr_accumulated_dRdt+i*n_col+j) = 1e3;
+                }
+            }
+        }
+    }
+}
+
+void MaplessDynamic::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulated_dRdt_score, StrRhoPts* str_next, cv::Mat& groundPtsIdx_next, int object_threshold)
+{
+    int n_row = accumulated_dRdt.rows;
+    int n_col = accumulated_dRdt.cols;
+    float* ptr_accumulated_dRdt = accumulated_dRdt.ptr<float>(0);
+    float* ptr_accumulated_dRdt_score = accumulated_dRdt_score.ptr<float>(0);
+    cv::Mat dRdt_bin = cv::Mat::zeros(img_height_,img_width_, CV_8UC1);
+    cv::Mat dRdt_score_bin = cv::Mat::zeros(img_height_,img_width_, CV_8UC1);
+    uchar* ptr_dRdt_bin = dRdt_bin.ptr<uchar>(0);
+    uchar* ptr_dRdt_score_bin = dRdt_score_bin.ptr<uchar>(0);
+
+    float* ptr_img_rho = str_next->img_rho.ptr<float>(0);
+
+    for (int i=0; i<n_row; ++i)
+    {
+        for (int j=0; j<n_col; ++j)
+        {
+            if (*(ptr_accumulated_dRdt+i*n_col+j)!=0)
+            {
+                *(ptr_dRdt_bin+i*n_col+j) = 255;
+            }
+        }
+    }
+
+    for (int i=0; i<n_row; ++i)
+    {
+        for (int j=0; j<n_col; ++j)
+        {
+            if (*(ptr_accumulated_dRdt_score+i*n_col+j)!=0)
+            {
+                *(ptr_dRdt_score_bin+i*n_col+j) = 255;
+            }
+        }
+    }    
+    // imfill 
+    //invert dRdt_bin
+    cv::Mat dRdt_bin_inv = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
+    cv::bitwise_not(dRdt_bin, dRdt_bin_inv);
+    cv::floodFill(dRdt_bin_inv, cv::Point(0,0), cv::Scalar(0));
+    cv::Mat dRdt_bin_filled = (dRdt_bin | dRdt_bin_inv);
+    interpAndfill_image(accumulated_dRdt, dRdt_bin_filled);
+
+    cv::Mat dRdt_score_bin_inv = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
+    cv::bitwise_not(dRdt_score_bin, dRdt_score_bin_inv);
+    cv::floodFill(dRdt_score_bin_inv, cv::Point(0,0), cv::Scalar(0));
+    cv::Mat dRdt_score_bin_filled = (dRdt_score_bin | dRdt_score_bin_inv);
+    interpAndfill_image(accumulated_dRdt_score, dRdt_score_bin_filled);
+
+    // cv::imshow("accumulated_dRdt", dRdt_bin_filled);
+    // cv::waitKey(0);
+    // exit(0);
+
+    cv::Mat rho_zero_value = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
+    uchar* ptr_rho_zero_value = rho_zero_value.ptr<uchar>(0);
+
+    for (int i=1; i<n_row; ++i)
+    {
+        for (int j=0; j<n_col; ++j)
+        {
+            if (*(ptr_rho_zero_value + i * n_col + j) == 0)
+            {
+                *(ptr_rho_zero_value + i * n_col + j) = 255;
+            }
+        }
+    }
+
+    cv::Mat input_img_mask = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
+    uchar* ptr_input_img_mask = input_img_mask.ptr<uchar>(0);
+
+    for (int i=1; i<n_row; ++i)
+    {
+        for (int j=0; j<n_col; ++j)
+        {
+            if (*(ptr_input_img_mask + i * n_col + j) == 0)
+            {
+                *(ptr_input_img_mask + i * n_col + j) = 255;
+            }
+        }
+    }
+
+    cv::Mat input_img_tmp = accumulated_dRdt.clone();
+
+    cv::Mat connet_input = (rho_zero_value | input_img_mask);
+    cv::Mat object_label = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+
+    int n_label = cv::connectedComponents(connet_input, object_label, 8);
+    int* ptr_object_label = object_label.ptr<int>(0);
+
+    std::vector<int> object_row;
+    std::vector<int> object_col;
+    std::vector<float> object_rho_roi;
+    object_row.reserve(10000);
+    object_col.reserve(10000);
+    object_rho_roi.reserve(10000);
+   
+    cv::Mat object_area = cv::Mat::zeros(img_height_,img_width_, CV_8UC1);
+    uchar *ptr_object_area = object_area.ptr<uchar>(0);
+
+    cv::Mat object_area_filled = cv::Mat::zeros(img_height_,img_width_, CV_8UC1);
+    uchar *ptr_object_area_filled = object_area_filled.ptr<uchar>(0);
+
+    cv::Mat zero_candidate = cv::Mat::zeros(img_height_,img_width_, CV_8UC1);
+    uchar *ptr_zero_candidate = zero_candidate.ptr<uchar>(0);
+
+    std::vector<int> filled_object_row;
+    std::vector<int> filled_object_col;
+    std::vector<float> filled_object_rho_roi;
+    filled_object_row.reserve(10000);
+    filled_object_col.reserve(10000);
+    filled_object_rho_roi.reserve(10000);
+    cv::Mat filled_object_rho_mat = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    float *ptr_filled_object_rho_mat = filled_object_rho_mat.ptr<float>(0);
+
+    std::vector<float> max_his_filled_object_rho_roi;
+    max_his_filled_object_rho_roi.reserve(10000);
+
+    std::vector<int> rho_zero_filled_value_row;
+    std::vector<int> rho_zero_filled_value_col;
+    std::vector<float> rho_zero_filled_value_rho_roi;
+    rho_zero_filled_value_row.reserve(10000);
+    rho_zero_filled_value_col.reserve(10000);
+    rho_zero_filled_value_rho_roi.reserve(10000);
+
+    std::vector<int> disconti_row;
+    std::vector<int> disconti_col;
+    disconti_row.reserve(10000);
+    disconti_col.reserve(10000);
+
+    cv::MatND histogram;
+    for (int object_idx = 0; object_idx < n_label; ++object_idx)
+    {
+        if (object_idx==0) //background
+        {
+            continue;
+        }
+
+        object_row.clear();
+        object_col.clear();
+        object_rho_roi.clear();
+        filled_object_row.clear();
+        filled_object_col.clear();
+        filled_object_rho_roi.clear();
+        max_his_filled_object_rho_roi.clear();
+        rho_zero_filled_value_row.clear();
+        rho_zero_filled_value_col.clear();
+        rho_zero_filled_value_rho_roi.clear();
+        disconti_row.clear();
+        disconti_col.clear();
+
+        for (int i=0; i<n_row; ++i)
+        {
+            for (int j=0; j<n_col; ++j)
+            {
+                if(*(ptr_object_label+i*n_col+j)==object_idx)
+                {
+                    object_row.push_back(i);
+                    object_col.push_back(j);
+                    object_rho_roi.push_back(*(ptr_accumulated_dRdt + i * n_col + j));
+                    *(ptr_object_area + i * n_col + j) = 255;
+                }
+            }
+        }
+
+        if (object_row.size() < object_threshold)
+        {
+            for (int i = 0; i < object_row.size(); ++i)
+            {
+                *(ptr_rho_zero_value + object_row[i] * n_col + object_col[i]) = 0.0;
+                *(ptr_accumulated_dRdt + object_row[i] * n_col + object_col[i]) = 0.0;
+                continue;
+            }
+        }
+        else
+        {
+            float connect_zero_mean = 0.0;
+            int n_connet_zero = 0;
+
+            cv::Mat object_area_inv = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
+            cv::bitwise_not(object_area, object_area_inv);
+            cv::floodFill(object_area_inv, cv::Point(0, 0), cv::Scalar(0));
+            cv::Mat object_area_filled = (object_area | object_area_inv);
+
+            for (int i=0; i<n_row; ++i)
+            {
+                for (int j=0; j<n_col; ++j)
+                {
+                    if(*(ptr_object_area_filled+i*n_col+j)!=0 && *(ptr_input_img_mask+i*n_col+j)!=0)
+                    {
+                        connect_zero_mean += *(ptr_accumulated_dRdt+i*n_col + j);
+                        n_connet_zero += 1;
+                    }
+                }
+            }
+            if (n_connet_zero > 0)
+            {
+                connect_zero_mean /= n_connet_zero;
+
+                for (int i = 0; i < n_row; ++i)
+                {
+                    for (int j = 0; j < n_col; ++j)
+                    {
+                        if(*(ptr_object_area_filled+i*n_col+j)!=0 && *(ptr_input_img_mask+i*n_col+j)==0)
+                        {
+                            *(ptr_img_rho + i * n_col + j) = connect_zero_mean;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                continue;
+            }
+
+            for (int i = 0; i < n_row; ++i)
+            {
+                for (int j = 0; j < n_col; ++j)
+                {
+                    if (*(ptr_object_area_filled + i * n_col + j) != 0 && *(ptr_input_img_mask + i * n_col + j) == 0 && *(ptr_img_rho + i * n_col + j) != 0)
+                    {
+                        filled_object_row.push_back(i);
+                        filled_object_col.push_back(j);
+                        filled_object_rho_roi.push_back(*(ptr_img_rho + i * n_col + j));
+                        *(ptr_filled_object_rho_mat + i * n_col + j) = 255;
+                    }
+                }
+            }
+
+            float his_range_max = *max_element(filled_object_rho_roi.begin(), filled_object_rho_roi.end());
+            float his_range_min = *min_element(filled_object_rho_roi.begin(), filled_object_rho_roi.end());
+            float his_range[] = {his_range_min, his_range_max};
+            const int* channel_numbers = {0};
+            const float* his_ranges= his_range;
+            int number_bins = 50;
+            cv::calcHist(&filled_object_rho_mat, 1, channel_numbers, cv::Mat(), histogram, 1, &number_bins, &his_ranges);
+
+            int max_n = 0;
+            int max_idx = 100;
+            for (int p = 0; p < number_bins; ++p)
+            {
+                if (max_n < histogram.at<float>(p))
+                {
+                    max_n = histogram.at<float>(p);
+                    max_idx = p;
+                }
+            }
+            float his_interval = (his_range_max-his_range_min)/(float)number_bins;
+            float bin_range_min = his_range_min + (float)(max_idx)*his_interval;
+            float bin_range_max = his_range_min + (float)(max_idx+1)*his_interval;
+            float range_min = 0.0;
+            float range_max = 0.0;
+
+            for (int p = 0; p<filled_object_rho_roi.size(); ++p)
+            {
+                if (filled_object_rho_roi[p]>bin_range_min && filled_object_rho_roi[p]<bin_range_max)
+                {
+                    max_his_filled_object_rho_roi.push_back(filled_object_rho_roi[p]);
+                }
+            }
+            float max_his_average = 0.0;
+            for (int i=0; i<max_his_filled_object_rho_roi.size(); ++i)
+            {
+                max_his_average += max_his_filled_object_rho_roi[i];
+            }
+            max_his_average = max_his_average/(float)max_his_filled_object_rho_roi.size();
+
+            if ((max_his_average - 10.0) < 0.0)
+            {
+                range_min = 0.0;
+            }
+            else{
+                range_min = max_his_average - 10.0;
+            }
+            range_max = max_his_average + 10.0;
+
+            //
+            for (int i = 0; i < n_row; ++i)
+            {
+                for (int j = 0; j < n_col; ++j)
+                {
+                    if (*(ptr_object_area_filled + i * n_col + j) != 0 && *(ptr_img_rho + i * n_col + j) != 0)
+                    {
+                        rho_zero_filled_value_row.push_back(i);
+                        rho_zero_filled_value_col.push_back(j);
+                        rho_zero_filled_value_rho_roi.push_back(*(ptr_img_rho + i * n_col + j));
+                    }
+                }
+            }
+
+            for (int i = 0; i < rho_zero_filled_value_row.size(); ++i)
+            {
+                if ((rho_zero_filled_value_rho_roi[i] < range_min) || (rho_zero_filled_value_rho_roi[i] > range_max))
+                {
+                    if (*(ptr_object_area_filled + rho_zero_filled_value_row[i] * n_col + rho_zero_filled_value_col[i]) != 0)
+                    {
+                        disconti_row.push_back(rho_zero_filled_value_row[i]);
+                        disconti_col.push_back(rho_zero_filled_value_col[i]);
+                    }
+                }
+            }
+
+            for (int i = 0; i < disconti_row.size(); ++i)
+            {
+                *(ptr_accumulated_dRdt + disconti_row[i] * n_col + disconti_col[i]) = 0;
+            }
+
+            // std::cout<<"   ====================    " <<std::endl;
+            // std::cout<<histogram<<std::endl;
+            // std::cout<<max_idx<<std::endl;
+            // std::cout<<bin_range_min<<" " << bin_range_max << std::endl;
+            // std::cout<<max_his_average<< std::endl;
+            // std::cout<<(float)max_his_object_rho_roi.size() << std::endl;
+        }
+    } // end for object_idx
+}
+
+void MaplessDynamic::interpAndfill_image(cv::Mat& input_img, cv::Mat& filled_bin)
+{
+    int n_col = input_img.cols;
+    int n_row = input_img.rows;
+    std::vector<int> row;
+    std::vector<int> col;
+    row.reserve(10000);
+    col.reserve(10000);
+
+    float* ptr_input_img = input_img.ptr<float>(0);
+    uchar* ptr_filled_bin = filled_bin.ptr<uchar>(0);
+
+    cv::Mat input_img_cp = input_img.clone();
+    float* ptr_input_img_cp = input_img_cp.ptr<float>(0);
+
+    float left_dir = 0;
+    float right_dir = 0;
+    float up_dir = 0;
+    float down_dir = 0;
+
+    int cnt_left = 1;
+    int cnt_right = 1;
+    int cnt_up = 1;
+    int cnt_down = 1;
+
+    std::vector<float> four_dir(4);
+
+    float min = 0.0 ;
+
+    for (int i=0; i<n_row; ++i)
+    {
+        for (int j=0; j<n_col; ++j)
+        {
+            if ((*(ptr_input_img + i * n_col + j) == 0) && (*(ptr_filled_bin + i * n_col + j) > 0))
+            {
+                row.push_back(i);
+                col.push_back(j);
+            }
+        }
+    }
+
+    if (row.size()==0)
+    {
+        return;
+    }
+
+    for (int i_v=0; i_v<row.size(); ++i_v)
+    {
+        int i = row[i_v];
+
+        for (int j_v=0; j_v<col.size(); ++j_v)
+        {
+            int j = col[j_v];
+
+            left_dir = 0.0;
+            right_dir = 0.0;
+            up_dir = 0.0;
+            down_dir = 0.0;
+
+            cnt_left = 1;
+            cnt_right = 1;
+            cnt_up = 1;
+            cnt_down = 1;
+            // left
+            while (left_dir == 0.0)
+            {
+                if ((j - cnt_left) < 0)
+                {
+                    break;
+                }
+                left_dir = *(ptr_input_img + i * n_col + (j - cnt_left));
+                cnt_left += 1;
+            } // end while
+            // right
+            while (right_dir == 0.0)
+            {
+                if ((j + cnt_right) > n_col - 1)
+                {
+                    break;
+                }
+                right_dir = *(ptr_input_img + i * n_col + (j + cnt_right));
+                cnt_right += 1;
+            } // end while
+            // up
+            while (up_dir == 0.0)
+            {
+                if ((i - cnt_up) < 0)
+                {
+                    break;
+                }
+                up_dir = *(ptr_input_img + (i - cnt_up) * n_col + j);
+                cnt_up += 1;
+            } // end while
+            // down
+            while (down_dir == 0.0)
+            {
+                if ((i + cnt_down) > n_row - 1)
+                {
+                    break;
+                }
+                down_dir = *(ptr_input_img + (i + cnt_down) * n_col + j);
+                cnt_down += 1;
+            } // end while
+            four_dir[0] = (left_dir);
+            four_dir[1] = (right_dir);
+            four_dir[2] = (up_dir);
+            four_dir[3] = (down_dir);
+            min = *min_element(four_dir.begin(), four_dir.end());
+            *(ptr_input_img_cp + i * n_col + j) = min;
+        }
+    }
+    input_img_cp.copyTo(input_img);
 }
