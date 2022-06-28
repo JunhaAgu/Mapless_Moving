@@ -11,7 +11,7 @@ ROSWrapper::ROSWrapper(ros::NodeHandle& nh, bool test_flag)
     this->getLaunchParameters();
 
     // initialization
-    solver_ = std::make_unique<MaplessDynamic>(test_flag_);
+    solver_ = std::make_unique<MaplessDynamic>(nh_, test_flag_);
 
     // subscriber
     sub_lidar_ = nh_.subscribe<sensor_msgs::PointCloud2>(
