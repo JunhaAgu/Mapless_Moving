@@ -189,7 +189,9 @@ MaplessDynamic::~MaplessDynamic() {
 
 void MaplessDynamic::TEST(){
     static int cnt_data = 0;
+    std::cout<< data_buf_.size() << std::endl;
     std::cout<< "Test iter: "<< cnt_data << std::endl;
+    exit(0);
     // The test function.
     // IMPLEMENT YOUR CODE FROM THIS LINE.
 
@@ -205,6 +207,22 @@ void MaplessDynamic::TEST(){
         // 0. Get the current LiDAR data
         p1_msg_test_ = *(data_buf_[cnt_data]->pcl_msg_);
         pcl::fromROSMsg(p1_msg_test_, p1_pcl_test_);
+
+        // if (cnt_data == 3)
+        // {
+        //     std::cout << p1_pcl_test_.size() << std::endl;
+        //     sensor_msgs::PointCloud2 converted_msg_d;
+        //     pcl::toROSMsg(p1_pcl_test_, converted_msg_d);
+        //     converted_msg_d.header.frame_id = "map";
+        //     pub_dynamic_pts_.publish(converted_msg_d);
+
+        //     std::cout << p0_pcl_test_.size() << std::endl;
+        //     sensor_msgs::PointCloud2 converted_msg_s;
+        //     pcl::toROSMsg(p0_pcl_test_, converted_msg_s);
+        //     converted_msg_s.header.frame_id = "map";
+        //     pub_static_pts_.publish(converted_msg_s);
+        //     exit(0);
+        // }
 
         // 1. Calculate T01 from the SLAM (or Odometry) algorithm
         Pose T01;
@@ -303,7 +321,7 @@ void MaplessDynamic::loadTestData(){
         all_pose_[i].reserve(12);
         data_buf_.push_back(new TestData);
 
-        data_buf_[i]->pcl_.reset(new pcl::PointCloud<pcl::PointXYZI>);
+        data_buf_[i]->pcl_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
         data_buf_[i]->pcl_msg_ = (new sensor_msgs::PointCloud2);
     }
 
@@ -358,16 +376,23 @@ void MaplessDynamic::loadTestData(){
         if (test_data_type_ == "KITTI")
         {
             if (ii == 0)
+            {
                 data_buf_[ii]->T_gt_ = all_T_gt_[i].inverse() * all_T_gt_[i];
+            }
             else
-                data_buf_[ii]->T_gt_ = all_T_gt_[i-1].inverse() * all_T_gt_[i];
+            {
+                data_buf_[ii]->T_gt_ = all_T_gt_[i - 1].inverse() * all_T_gt_[i];
+            }
+
             // std::cout << data_buf_[ii]->T_gt_ << std::endl;
         }
         else if (test_data_type_ == "CARLA")
         {
             if (ii == 0){}
             else
+            {
                 data_buf_[ii-1]->T_gt_ = all_T_gt_[i-1].inverse() * all_T_gt_[i-1];
+            }
         }
     }
 
@@ -448,7 +473,7 @@ void MaplessDynamic::solve(
 
     // END YOUR ALGORITHM
 
-    // if (cnt_data == 2)
+    // if (cnt_data == 3)
     // {
     //     std::cout << p0.size()<<std::endl;
     //     sensor_msgs::PointCloud2 converted_msg_d;
@@ -528,14 +553,15 @@ void MaplessDynamic::solve(
 
     for (int i = 0; i < img_height_; ++i)
     {
+        int i_ncols = i * img_width_;
         for (int j = 0; j < img_width_; ++j)
         {
-            if (*(ptr_accumulated_dRdt_ + i * img_width_ + j)!=0 && *(ptr_next_img_rho + i * img_width_ + j)!=0)
+            if (*(ptr_accumulated_dRdt_ + i_ncols + j)!=0 && *(ptr_next_img_rho + i_ncols + j)!=0)
             {
             }
             else
             {
-                *(ptr_accumulated_dRdt_ + i * img_width_ + j) = 0;
+                *(ptr_accumulated_dRdt_ + i_ncols + j) = 0;
             }
         }
     }
@@ -550,39 +576,47 @@ void MaplessDynamic::solve(
 
     // for (int i = 0; i < img_height_; ++i)
     // {
+    //     int i_ncols = i * img_width_;
     //     for (int j = 0; j < img_width_; ++j)
     //     {
-    //         if (*(ptr_accumulated_dRdt_ + i * img_width_ + j)!=0)
+    //         if (*(ptr_accumulated_dRdt_ + i_ncols + j)!=0)
     //         {
     //             pcl_dynamic.push_back(
-    //                 pcl::PointXYZ(*(ptr_next_img_x + i * img_width_ + j), *(ptr_next_img_y + i * img_width_ + j), *(ptr_next_img_z + i * img_width_ + j)));
+    //                 pcl::PointXYZ(*(ptr_next_img_x + i_ncols + j), *(ptr_next_img_y + i_ncols + j), *(ptr_next_img_z + i_ncols + j)));
     //         }
     //         else
     //         {
     //             pcl_static.push_back(
-    //                 pcl::PointXYZ(*(ptr_next_img_x + i * img_width_ + j), *(ptr_next_img_y + i * img_width_ + j), *(ptr_next_img_z + i * img_width_ + j)));
+    //                 pcl::PointXYZ(*(ptr_next_img_x + i_ncols + j), *(ptr_next_img_y + i_ncols + j), *(ptr_next_img_z + i_ncols + j)));
     //         }
     //     }
     // }
 
     for (int i = 0; i < img_height_; ++i)
     {
+        int i_ncols = i * img_width_;
         for (int j = 0; j < img_width_; ++j)
         {
-            if (*(ptr_accumulated_dRdt_ + i * img_width_ + j)!=0)
+            if (*(ptr_accumulated_dRdt_ + i_ncols + j)!=0)
             {
-                for (int k = 0; k < str_next_->pts_per_pixel_index_valid[i * img_width_ + j].size(); ++k)
+                if (str_next_->pts_per_pixel_index_valid[i_ncols + j].size() != 0)
                 {
-                    pcl_dynamic.push_back(
-                    pcl::PointXYZ(p1[str_next_->pts_per_pixel_index_valid[i * img_width_ + j][k]]));
+                    for (int k = 0; k < str_next_->pts_per_pixel_index_valid[i_ncols + j].size(); ++k)
+                    {
+                        pcl_dynamic.push_back(
+                            pcl::PointXYZ(p1[str_next_->pts_per_pixel_index_valid[i_ncols + j][k]]));
+                    }
                 }
             }
             else
             {
-                for (int k = 0; k < str_next_->pts_per_pixel_index_valid[i * img_width_ + j].size(); ++k)
+                if (str_next_->pts_per_pixel_index_valid[i_ncols + j].size() != 0)
                 {
-                    pcl_static.push_back(
-                    pcl::PointXYZ(p1[str_next_->pts_per_pixel_index_valid[i * img_width_ + j][k]]));
+                    for (int k = 0; k < str_next_->pts_per_pixel_index_valid[i_ncols + j].size(); ++k)
+                    {
+                        pcl_static.push_back(
+                            pcl::PointXYZ(p1[str_next_->pts_per_pixel_index_valid[i_ncols + j][k]]));
+                    }
                 }
             }
         }
@@ -599,17 +633,18 @@ void MaplessDynamic::solve(
     pcl::toROSMsg(pcl_static, converted_msg_s);
     converted_msg_s.header.frame_id = "map";
     pub_static_pts_.publish(converted_msg_s);
-    if (cnt_data == 2)
-    {exit(0);}
+    // if (cnt_data == 3)
+    // {exit(0);}
 
     //// update for next iteration
     for (int i = 0; i < img_height_; ++i)
     {
+        int i_ncols = i * img_width_;
         for (int j = 0; j < img_width_; ++j)
         {
-            if (*(ptr_accumulated_dRdt_ + i * img_width_ + j)==0)
+            if (*(ptr_accumulated_dRdt_ + i_ncols + j)==0)
             {
-                *(ptr_accumulated_dRdt_score_ + i * img_width_ + j) = 0;
+                *(ptr_accumulated_dRdt_score_ + i_ncols + j) = 0;
             }
         }
     }
@@ -622,10 +657,8 @@ void MaplessDynamic::solve(
 void MaplessDynamic::copyStruct(StrRhoPts* str_next, StrRhoPts* str_cur, pcl::PointCloud<pcl::PointXYZ>& p1 ,pcl::PointCloud<pcl::PointXYZ>& p0, int cnt_data)
 {
     // memcpy(str_cur, str_next, sizeof(struct StrRhoPts));
-
     // CHK
-    {       
-        str_cur->pts = str_next->pts;
+    {   str_cur->pts = str_next->pts;
         str_cur->ptsInImage = str_next->ptsInImage;
         
         str_cur->rho.resize(0);
@@ -641,63 +674,191 @@ void MaplessDynamic::copyStruct(StrRhoPts* str_next, StrRhoPts* str_cur, pcl::Po
         str_next->img_y.copyTo(str_cur->img_y);
         str_next->img_z.copyTo(str_cur->img_z);
 
-        str_cur->pts_per_pixel_n.resize(0);
         std::copy(str_next->pts_per_pixel_n.begin(),         str_next->pts_per_pixel_n.end(),         str_cur->pts_per_pixel_n.begin());
-        // for (int i=0; i<img_height_*img_width_; ++i)
-        // {
-        //     str_cur->pts_per_pixel_index[i].resize(0);
-        //     std::copy(str_next->pts_per_pixel_index[i].begin(),     str_next->pts_per_pixel_index[i].end(),     str_cur->pts_per_pixel_index[i].begin());
-        // }
-        str_cur->pts_per_pixel_index.resize(0);
-        std::copy(str_next->pts_per_pixel_index.begin(),     str_next->pts_per_pixel_index.end(),     str_cur->pts_per_pixel_index.begin());
-        // for (int i=0; i<img_height_*img_width_; ++i)
-        // {
-        //     str_cur->pts_per_pixel_rho[i].resize(0);
-        //     std::copy(str_next->pts_per_pixel_rho[i].begin(),     str_next->pts_per_pixel_rho[i].end(),     str_cur->pts_per_pixel_rho[i].begin());
-        // }
-        str_cur->pts_per_pixel_rho.resize(0);
-        std::copy(str_next->pts_per_pixel_rho.begin(),       str_next->pts_per_pixel_rho.end(),       str_cur->pts_per_pixel_rho.begin());
-        str_cur->pts_per_pixel_index_valid.resize(0);
-        std::copy(str_next->pts_per_pixel_index_valid.begin(), str_next->pts_per_pixel_index_valid.end(), str_cur->pts_per_pixel_index_valid.begin());
 
+        for (int i=0; i<img_height_*img_width_; ++i)
+        {
+            if (str_cur->pts_per_pixel_index[i].size() != 0)
+            {
+                str_cur->pts_per_pixel_index[i].resize(0);
+                std::copy(str_next->pts_per_pixel_index[i].begin(), str_next->pts_per_pixel_index[i].end(), str_cur->pts_per_pixel_index[i].begin());
+            }
+        }
+
+        for (int i=0; i<img_height_*img_width_; ++i)
+        {
+            if (str_cur->pts_per_pixel_rho[i].size() != 0)
+            {
+                str_cur->pts_per_pixel_rho[i].resize(0);
+                std::copy(str_next->pts_per_pixel_rho[i].begin(), str_next->pts_per_pixel_rho[i].end(), str_cur->pts_per_pixel_rho[i].begin());
+            }
+        }
+
+        for (int i=0; i<img_height_*img_width_; ++i)
+        {
+            if (str_cur->pts_per_pixel_index_valid[i].size() != 0)
+            {
+                str_cur->pts_per_pixel_index_valid[i].resize(0);
+                std::copy(str_next->pts_per_pixel_index_valid[i].begin(), str_next->pts_per_pixel_index_valid[i].end(), str_cur->pts_per_pixel_index_valid[i].begin());
+            }
+        }
         str_next->img_restore_mask.copyTo(str_cur->img_restore_mask);
         str_next->img_restore_warp_mask.copyTo(str_cur->img_restore_warp_mask);
     }
 
-    str_next->reset();
+
+    // str_next->reset();
     {
-        str_next_->img_rho               = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-        str_next_->img_index             = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
- 
-        str_next_->img_x                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-        str_next_->img_y                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-        str_next_->img_z                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-        str_next_->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+        str_next->rho.resize(0);
+        str_next->phi.resize(0);
+        str_next->theta.resize(0);
+        str_next->img_rho               = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+        str_next->img_index             = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+        str_next->img_x                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+        str_next->img_y                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+        str_next->img_z                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+        str_next->img_restore_mask      = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+        str_next->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+
+        for (int i=0; i<img_height_*img_width_; ++i)
+        {
+            str_next->pts_per_pixel_n[i] = 0;
+        }
+
+        for (int i=0; i<img_height_*img_width_; ++i)
+        {
+            if (str_next->pts_per_pixel_index[i].size() != 0)
+            {
+                str_next->pts_per_pixel_index[i].resize(0);
+            }
+        }
+
+        for (int i=0; i<img_height_*img_width_; ++i)
+        {
+            if (str_next->pts_per_pixel_rho[i].size() != 0)
+            {
+                str_next->pts_per_pixel_rho[i].resize(0);
+            }
+        }
+
+        for (int i=0; i<img_height_*img_width_; ++i)
+        {
+            if (str_next->pts_per_pixel_index_valid[i].size() != 0)
+            {
+                str_next->pts_per_pixel_index_valid[i].resize(0);
+            }
+        }
     }
 
     // memcpy(&p0_pcl_test_, &p1, sizeof(pcl::PointCloud<pcl::PointXYZ>));
-    p0_pcl_test_ = p1;
+    // p0_pcl_test_ = p1;
+    // if (cnt_data == 2)
+    // {
+    //     std::cout << p1.size() << std::endl;
+    //     sensor_msgs::PointCloud2 converted_msg_d;
+    //     pcl::toROSMsg(p1, converted_msg_d);
+    //     converted_msg_d.header.frame_id = "map";
+    //     pub_dynamic_pts_.publish(converted_msg_d);
+    //     exit(0);
+    // }
 
-    str_cur_warped_->reset();
+    p0_pcl_test_.resize(0);
+    pcl::copyPointCloud(p1, p0_pcl_test_);
+
+    // if (cnt_data == 2)
+    // {
+    //     std::cout << p0_pcl_test_.size() << std::endl;
+    //     sensor_msgs::PointCloud2 converted_msg_s;
+    //     pcl::toROSMsg(p0_pcl_test_, converted_msg_s);
+    //     converted_msg_s.header.frame_id = "map";
+    //     pub_static_pts_.publish(converted_msg_s);
+        
+    // }
+
+    // str_cur_warped_->reset();
     {
+        str_cur_warped_->rho.resize(0);
+        str_cur_warped_->phi.resize(0);
+        str_cur_warped_->theta.resize(0);
         str_cur_warped_->img_rho               = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
         str_cur_warped_->img_index             = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
-                   
         str_cur_warped_->img_x                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
         str_cur_warped_->img_y                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
         str_cur_warped_->img_z                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+        str_cur_warped_->img_restore_mask      = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
         str_cur_warped_->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+
+        for (int i=0; i<img_height_*img_width_; ++i)
+        {
+            str_cur_warped_->pts_per_pixel_n[i] = 0;
+        }
+
+        for (int i=0; i<img_height_*img_width_; ++i)
+        {
+            if (str_cur_warped_->pts_per_pixel_index[i].size() != 0)
+            {
+                str_cur_warped_->pts_per_pixel_index[i].resize(0);
+            }
+        }
+
+        for (int i=0; i<img_height_*img_width_; ++i)
+        {
+            if (str_cur_warped_->pts_per_pixel_rho[i].size() != 0)
+            {
+                str_cur_warped_->pts_per_pixel_rho[i].resize(0);
+            }
+        }
+
+        for (int i=0; i<img_height_*img_width_; ++i)
+        {
+            if (str_cur_warped_->pts_per_pixel_index_valid[i].size() != 0)
+            {
+                str_cur_warped_->pts_per_pixel_index_valid[i].resize(0);
+            }
+        }
     }
 
-    str_warpPointcloud_->reset();
+    // str_warpPointcloud_->reset();
     {
+        str_warpPointcloud_->rho.resize(0);
+        str_warpPointcloud_->phi.resize(0);
+        str_warpPointcloud_->theta.resize(0);
         str_warpPointcloud_->img_rho               = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
         str_warpPointcloud_->img_index             = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
-                   
         str_warpPointcloud_->img_x                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
         str_warpPointcloud_->img_y                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
         str_warpPointcloud_->img_z                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+        str_warpPointcloud_->img_restore_mask      = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
         str_warpPointcloud_->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+
+        for (int i=0; i<img_height_*img_width_; ++i)
+        {
+            str_warpPointcloud_->pts_per_pixel_n[i] = 0;
+        }
+
+        for (int i=0; i<img_height_*img_width_; ++i)
+        {
+            if (str_warpPointcloud_->pts_per_pixel_index[i].size() != 0)
+            {
+                str_warpPointcloud_->pts_per_pixel_index[i].resize(0);
+            }
+        }
+
+        for (int i=0; i<img_height_*img_width_; ++i)
+        {
+            if (str_warpPointcloud_->pts_per_pixel_rho[i].size() != 0)
+            {
+                str_warpPointcloud_->pts_per_pixel_rho[i].resize(0);
+            }
+        }
+
+        for (int i=0; i<img_height_*img_width_; ++i)
+        {
+            if (str_warpPointcloud_->pts_per_pixel_index_valid[i].size() != 0)
+            {
+                str_warpPointcloud_->pts_per_pixel_index_valid[i].resize(0);
+            }
+        }
     }
   
     groundPtsIdx_next_ = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
@@ -709,6 +870,10 @@ void MaplessDynamic::copyStruct(StrRhoPts* str_next, StrRhoPts* str_cur, pcl::Po
 
     velo_xyz_.resize(0);
     pts_warpewd_->resize(0);
+
+    // std::cout << ptr_cur_pts_warped_->width << std::endl;
+    // std::cout << pts_warpewd_->width << std::endl;
+    // exit(0);
 }
 
 void MaplessDynamic::getUserSettingParameters(){
@@ -992,21 +1157,22 @@ void MaplessDynamic::interpRangeImage(StrRhoPts* str_in, int n_ring, int n_radia
 
     for (int i = 27; i < 32; i++)
     {
+        int i_ncols = i * n_col;
         for (int j = 0 + 2; j < (n_radial - 2); ++j)
-        {
-            if (*(ptr_img_rho+ i*n_col + j) == 0)
+        {            
+            if (*(ptr_img_rho + i_ncols + j) == 0)
             {
                 if ((*(ptr_img_rho + (i - 1) * n_col + j) != 0) && (*(ptr_img_rho + (i + 1) * n_col + j) != 0))
                 {
                     if (fabsf32(*(ptr_img_rho + (i - 1) * n_col + j) - *(ptr_img_rho + (i + 1) * n_col + j)) < 0.1)
                     {
-                        *(ptr_img_restore_mask + i * n_col + j) = 1;
-                        *(ptr_img_rho_new + i * n_col + j) = (*(ptr_img_rho + (i - 1) * n_col + j) + *(ptr_img_rho + (i + 1) * n_col + j)) * 0.5;
+                        *(ptr_img_restore_mask + i_ncols + j) = 1;
+                        *(ptr_img_rho_new + i_ncols + j) = (*(ptr_img_rho + (i - 1) * n_col + j) + *(ptr_img_rho + (i + 1) * n_col + j)) * 0.5;
                     }
                     else
                     {
-                        *(ptr_img_restore_mask + i * n_col + j) = 10;
-                        *(ptr_img_rho_new + i * n_col + j) = std::max(*(ptr_img_rho + (i - 1) * n_col + j), *(ptr_img_rho + (i + 1) * n_col + j));
+                        *(ptr_img_restore_mask + i_ncols + j) = 10;
+                        *(ptr_img_rho_new + i_ncols + j) = std::max(*(ptr_img_rho + (i - 1) * n_col + j), *(ptr_img_rho + (i + 1) * n_col + j));
                     }
                 }
 
@@ -1014,38 +1180,38 @@ void MaplessDynamic::interpRangeImage(StrRhoPts* str_in, int n_ring, int n_radia
                 {
                     if (fabsf32(*(ptr_img_rho + (i - 1) * n_col + j) - *(ptr_img_rho + (i + 2) * n_col + j)) < 0.1)
                     {
-                        *(ptr_img_restore_mask + i * n_col + j) = 2;
+                        *(ptr_img_restore_mask + i_ncols + j) = 2;
                         *(ptr_img_restore_mask + (i + 1) * n_col + j) = 3;
-                        *(ptr_img_rho_new + i * n_col + j) = *(ptr_img_rho + (i - 1) * n_col + j)*(0.6666667) + *(ptr_img_rho + (i + 2) * n_col + j)*(0.3333333);
+                        *(ptr_img_rho_new + i_ncols + j) = *(ptr_img_rho + (i - 1) * n_col + j)*(0.6666667) + *(ptr_img_rho + (i + 2) * n_col + j)*(0.3333333);
                         *(ptr_img_rho_new + (i+1) * n_col + j) = *(ptr_img_rho + (i - 1) * n_col + j)*(0.3333333) + *(ptr_img_rho + (i + 2) * n_col + j)*(0.6666667);
                     }
                     else
                     {
-                        *(ptr_img_restore_mask + i * n_col + j) = 20;
+                        *(ptr_img_restore_mask + i_ncols + j) = 20;
                         *(ptr_img_restore_mask + (i + 1) * n_col + j) = 30;
-                        *(ptr_img_rho_new + i * n_col + j) = std::max(*(ptr_img_rho + (i - 1) * n_col + j), *(ptr_img_rho + (i + 2) * n_col + j));
+                        *(ptr_img_rho_new + i_ncols + j) = std::max(*(ptr_img_rho + (i - 1) * n_col + j), *(ptr_img_rho + (i + 2) * n_col + j));
                         *(ptr_img_rho_new + (i+1) * n_col + j) = std::max(*(ptr_img_rho + (i - 1) * n_col + j), *(ptr_img_rho + (i + 2) * n_col + j));
                     }
                 }
             } // end if
 
-            if ((*(ptr_img_rho + i * n_col + (j - 1)) != 0) && (*(ptr_img_rho + i * n_col + (j + 1)) != 0))
+            if ((*(ptr_img_rho + i_ncols + (j - 1)) != 0) && (*(ptr_img_rho + i_ncols + (j + 1)) != 0))
             {
-                if (fabsf32(*(ptr_img_rho + i * n_col + (j - 1)) - *(ptr_img_rho + i * n_col + (j + 1))) < 0.05)
+                if (fabsf32(*(ptr_img_rho + i_ncols + (j - 1)) - *(ptr_img_rho + i_ncols + (j + 1))) < 0.05)
                 {
-                    *(ptr_img_restore_mask + i * n_col + j) = 4;
-                    *(ptr_img_rho_new + i * n_col + j) = (*(ptr_img_rho + i * n_col + (j - 1)) + *(ptr_img_rho + i * n_col + (j + 1))) * 0.5;
+                    *(ptr_img_restore_mask + i_ncols + j) = 4;
+                    *(ptr_img_rho_new + i_ncols + j) = (*(ptr_img_rho + i_ncols + (j - 1)) + *(ptr_img_rho + i_ncols + (j + 1))) * 0.5;
                 }
             }
 
-            else if ((*(ptr_img_rho + i * n_col + (j - 1)) != 0) && (*(ptr_img_rho + i * n_col + (j + 2)) != 0))
+            else if ((*(ptr_img_rho + i_ncols + (j - 1)) != 0) && (*(ptr_img_rho + i_ncols + (j + 2)) != 0))
             {
-                if (fabsf32(*(ptr_img_rho + i * n_col + (j - 1)) - *(ptr_img_rho + i * n_col + (j + 2))) < 0.05)
+                if (fabsf32(*(ptr_img_rho + i_ncols + (j - 1)) - *(ptr_img_rho + i_ncols + (j + 2))) < 0.05)
                 {
-                    *(ptr_img_restore_mask + i * n_col + j) = 5;
-                    *(ptr_img_restore_mask + i * n_col + (j + 1)) = 6;
-                    *(ptr_img_rho_new + i * n_col + j) = *(ptr_img_rho + i * n_col + (j - 1)) * (0.6666667) + *(ptr_img_rho + i * n_col + (j + 2)) * (0.3333333);
-                    *(ptr_img_rho_new + i * n_col + (j + 1)) = *(ptr_img_rho + i * n_col + (j - 1)) * (0.3333333) + *(ptr_img_rho + i * n_col + (j + 2)) * (0.6666667);
+                    *(ptr_img_restore_mask + i_ncols + j) = 5;
+                    *(ptr_img_restore_mask + i_ncols + (j + 1)) = 6;
+                    *(ptr_img_rho_new + i_ncols + j) = *(ptr_img_rho + i_ncols + (j - 1)) * (0.6666667) + *(ptr_img_rho + i_ncols + (j + 2)) * (0.3333333);
+                    *(ptr_img_rho_new + i_ncols + (j + 1)) = *(ptr_img_rho + i_ncols + (j - 1)) * (0.3333333) + *(ptr_img_rho + i_ncols + (j + 2)) * (0.6666667);
                 }
             }
 
@@ -1071,107 +1237,108 @@ void MaplessDynamic::interpPts(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts
 
     for (int i = 0; i < n_ring; ++i)
     {
+        int i_ncols = i * n_col;
         for (int j = 0; j < n_radial; ++j)
-        {
-            if (str_in->pts_per_pixel_rho[i * n_col + j].size() > 0)
+        {           
+            if (str_in->pts_per_pixel_rho[i_ncols + j].size() > 0)
             {
                 
-                for (int k = 0; k < (str_in->pts_per_pixel_rho[i * n_col + j].size()); ++k)
+                for (int k = 0; k < (str_in->pts_per_pixel_rho[i_ncols + j].size()); ++k)
                 {
                     
-                    if (std::abs((str_in->pts_per_pixel_rho[i * n_col + j][k] - *(ptr_img_rho + i * n_col + j))) < 0.5)
+                    if (std::abs((str_in->pts_per_pixel_rho[i_ncols + j][k] - *(ptr_img_rho + i_ncols + j))) < 0.5)
                     {
-                        str_in->pts_per_pixel_index_valid[i*n_col+j].push_back(str_in->pts_per_pixel_index[i * n_col + j][k]);
+                        str_in->pts_per_pixel_index_valid[i_ncols + j].push_back(str_in->pts_per_pixel_index[i_ncols + j][k]);
                     }
                 }
             } // end if
-            if (*(ptr_img_index+i*n_col+j)!=0 )
+            if (*(ptr_img_index + i_ncols + j) != 0)
             {
-                *(ptr_img_x + i * n_col + j) = pcl_in[*(ptr_img_index + i * n_col + j)].x;
-                *(ptr_img_y + i * n_col + j) = pcl_in[*(ptr_img_index + i * n_col + j)].y;
-                *(ptr_img_z + i * n_col + j) = pcl_in[*(ptr_img_index + i * n_col + j)].z;
+                *(ptr_img_x + i_ncols + j) = pcl_in[*(ptr_img_index + i_ncols + j)].x;
+                *(ptr_img_y + i_ncols + j) = pcl_in[*(ptr_img_index + i_ncols + j)].y;
+                *(ptr_img_z + i_ncols + j) = pcl_in[*(ptr_img_index + i_ncols + j)].z;
             }
 
-            if (*(ptr_img_restore_mask + i * n_col + j) == 1)
+            if (*(ptr_img_restore_mask + i_ncols + j) == 1)
             {
-                *(ptr_img_x + i * n_col + j) = 0.5 * (pcl_in[*(ptr_img_index + (i - 1) * n_col + j)].x + pcl_in[*(ptr_img_index + (i + 1) * n_col + j)].x);
-                *(ptr_img_y + i * n_col + j) = 0.5 * (pcl_in[*(ptr_img_index + (i - 1) * n_col + j)].y + pcl_in[*(ptr_img_index + (i + 1) * n_col + j)].y);
-                *(ptr_img_z + i * n_col + j) = 0.5 * (pcl_in[*(ptr_img_index + (i - 1) * n_col + j)].z + pcl_in[*(ptr_img_index + (i + 1) * n_col + j)].z);
+                *(ptr_img_x + i_ncols + j) = 0.5 * (pcl_in[*(ptr_img_index + (i - 1) * n_col + j)].x + pcl_in[*(ptr_img_index + (i + 1) * n_col + j)].x);
+                *(ptr_img_y + i_ncols + j) = 0.5 * (pcl_in[*(ptr_img_index + (i - 1) * n_col + j)].y + pcl_in[*(ptr_img_index + (i + 1) * n_col + j)].y);
+                *(ptr_img_z + i_ncols + j) = 0.5 * (pcl_in[*(ptr_img_index + (i - 1) * n_col + j)].z + pcl_in[*(ptr_img_index + (i + 1) * n_col + j)].z);
             }
-            else if (*(ptr_img_restore_mask + i * n_col + j) == 10)
+            else if (*(ptr_img_restore_mask + i_ncols + j) == 10)
             {
                 if ((*(ptr_img_rho + (i - 1) * n_col + j) > *(ptr_img_rho + (i + 1) * n_col + j)))
                 {
-                    *(ptr_img_x + i * n_col + j) = pcl_in[*(ptr_img_index + (i-1) * n_col + j)].x;
-                    *(ptr_img_y + i * n_col + j) = pcl_in[*(ptr_img_index + (i-1) * n_col + j)].y;
-                    *(ptr_img_z + i * n_col + j) = pcl_in[*(ptr_img_index + (i-1) * n_col + j)].z;
+                    *(ptr_img_x + i_ncols + j) = pcl_in[*(ptr_img_index + (i-1) * n_col + j)].x;
+                    *(ptr_img_y + i_ncols + j) = pcl_in[*(ptr_img_index + (i-1) * n_col + j)].y;
+                    *(ptr_img_z + i_ncols + j) = pcl_in[*(ptr_img_index + (i-1) * n_col + j)].z;
                 }
                 else
                 {
-                    *(ptr_img_x + i * n_col + j) = pcl_in[*(ptr_img_index + (i+1) * n_col + j)].x;
-                    *(ptr_img_y + i * n_col + j) = pcl_in[*(ptr_img_index + (i+1) * n_col + j)].y;
-                    *(ptr_img_z + i * n_col + j) = pcl_in[*(ptr_img_index + (i+1) * n_col + j)].z;
+                    *(ptr_img_x + i_ncols + j) = pcl_in[*(ptr_img_index + (i+1) * n_col + j)].x;
+                    *(ptr_img_y + i_ncols + j) = pcl_in[*(ptr_img_index + (i+1) * n_col + j)].y;
+                    *(ptr_img_z + i_ncols + j) = pcl_in[*(ptr_img_index + (i+1) * n_col + j)].z;
                 }
             }
-            else if (*(ptr_img_restore_mask + i * n_col + j) == 2)
+            else if (*(ptr_img_restore_mask + i_ncols + j) == 2)
             {
-                *(ptr_img_x + i * n_col + j) = (0.6666667) * pcl_in[*(ptr_img_index + (i - 1) * n_col + j)].x + (0.3333333) * pcl_in[*(ptr_img_index + (i + 2) * n_col + j)].x;
-                *(ptr_img_y + i * n_col + j) = (0.6666667) * pcl_in[*(ptr_img_index + (i - 1) * n_col + j)].y + (0.3333333) * pcl_in[*(ptr_img_index + (i + 2) * n_col + j)].y;
-                *(ptr_img_z + i * n_col + j) = (0.6666667) * pcl_in[*(ptr_img_index + (i - 1) * n_col + j)].z + (0.3333333) * pcl_in[*(ptr_img_index + (i + 2) * n_col + j)].z;
+                *(ptr_img_x + i_ncols + j) = (0.6666667) * pcl_in[*(ptr_img_index + (i - 1) * n_col + j)].x + (0.3333333) * pcl_in[*(ptr_img_index + (i + 2) * n_col + j)].x;
+                *(ptr_img_y + i_ncols + j) = (0.6666667) * pcl_in[*(ptr_img_index + (i - 1) * n_col + j)].y + (0.3333333) * pcl_in[*(ptr_img_index + (i + 2) * n_col + j)].y;
+                *(ptr_img_z + i_ncols + j) = (0.6666667) * pcl_in[*(ptr_img_index + (i - 1) * n_col + j)].z + (0.3333333) * pcl_in[*(ptr_img_index + (i + 2) * n_col + j)].z;
             }
-            else if (*(ptr_img_restore_mask + i * n_col + j) == 20)
+            else if (*(ptr_img_restore_mask + i_ncols + j) == 20)
             {
                 if ((*(ptr_img_rho + (i - 1) * n_col + j) > *(ptr_img_rho + (i + 2) * n_col + j)))
                 {
-                    *(ptr_img_x + i * n_col + j) = pcl_in[*(ptr_img_index + (i-1) * n_col + j)].x;
-                    *(ptr_img_y + i * n_col + j) = pcl_in[*(ptr_img_index + (i-1) * n_col + j)].y;
-                    *(ptr_img_z + i * n_col + j) = pcl_in[*(ptr_img_index + (i-1) * n_col + j)].z;
+                    *(ptr_img_x + i_ncols + j) = pcl_in[*(ptr_img_index + (i-1) * n_col + j)].x;
+                    *(ptr_img_y + i_ncols + j) = pcl_in[*(ptr_img_index + (i-1) * n_col + j)].y;
+                    *(ptr_img_z + i_ncols + j) = pcl_in[*(ptr_img_index + (i-1) * n_col + j)].z;
                 }
                 else
                 {
-                    *(ptr_img_x + i * n_col + j) = pcl_in[*(ptr_img_index + (i+2) * n_col + j)].x;
-                    *(ptr_img_y + i * n_col + j) = pcl_in[*(ptr_img_index + (i+2) * n_col + j)].y;
-                    *(ptr_img_z + i * n_col + j) = pcl_in[*(ptr_img_index + (i+2) * n_col + j)].z;
+                    *(ptr_img_x + i_ncols + j) = pcl_in[*(ptr_img_index + (i+2) * n_col + j)].x;
+                    *(ptr_img_y + i_ncols + j) = pcl_in[*(ptr_img_index + (i+2) * n_col + j)].y;
+                    *(ptr_img_z + i_ncols + j) = pcl_in[*(ptr_img_index + (i+2) * n_col + j)].z;
                 }
             }
-            else if (*(ptr_img_restore_mask + i * n_col + j) == 3)
+            else if (*(ptr_img_restore_mask + i_ncols + j) == 3)
             {
-                *(ptr_img_x + i * n_col + j) = (0.3333333) * pcl_in[*(ptr_img_index + (i - 2) * n_col + j)].x + (0.6666667) * pcl_in[*(ptr_img_index + (i + 1) * n_col + j)].x;
-                *(ptr_img_y + i * n_col + j) = (0.3333333) * pcl_in[*(ptr_img_index + (i - 2) * n_col + j)].y + (0.6666667) * pcl_in[*(ptr_img_index + (i + 1) * n_col + j)].y;
-                *(ptr_img_z + i * n_col + j) = (0.3333333) * pcl_in[*(ptr_img_index + (i - 2) * n_col + j)].z + (0.6666667) * pcl_in[*(ptr_img_index + (i + 1) * n_col + j)].z;
+                *(ptr_img_x + i_ncols + j) = (0.3333333) * pcl_in[*(ptr_img_index + (i - 2) * n_col + j)].x + (0.6666667) * pcl_in[*(ptr_img_index + (i + 1) * n_col + j)].x;
+                *(ptr_img_y + i_ncols + j) = (0.3333333) * pcl_in[*(ptr_img_index + (i - 2) * n_col + j)].y + (0.6666667) * pcl_in[*(ptr_img_index + (i + 1) * n_col + j)].y;
+                *(ptr_img_z + i_ncols + j) = (0.3333333) * pcl_in[*(ptr_img_index + (i - 2) * n_col + j)].z + (0.6666667) * pcl_in[*(ptr_img_index + (i + 1) * n_col + j)].z;
             }
-            else if (*(ptr_img_restore_mask + i * n_col + j) == 30)
+            else if (*(ptr_img_restore_mask + i_ncols + j) == 30)
             {
                 if ((*(ptr_img_rho + (i - 2) * n_col + j) > *(ptr_img_rho + (i + 1) * n_col + j)))
                 {
-                    *(ptr_img_x + i * n_col + j) = pcl_in[*(ptr_img_index + (i-2) * n_col + j)].x;
-                    *(ptr_img_y + i * n_col + j) = pcl_in[*(ptr_img_index + (i-2) * n_col + j)].y;
-                    *(ptr_img_z + i * n_col + j) = pcl_in[*(ptr_img_index + (i-2) * n_col + j)].z;
+                    *(ptr_img_x + i_ncols + j) = pcl_in[*(ptr_img_index + (i-2) * n_col + j)].x;
+                    *(ptr_img_y + i_ncols + j) = pcl_in[*(ptr_img_index + (i-2) * n_col + j)].y;
+                    *(ptr_img_z + i_ncols + j) = pcl_in[*(ptr_img_index + (i-2) * n_col + j)].z;
                 }
                 else
                 {
-                    *(ptr_img_x + i * n_col + j) = pcl_in[*(ptr_img_index + (i+1) * n_col + j)].x;
-                    *(ptr_img_y + i * n_col + j) = pcl_in[*(ptr_img_index + (i+1) * n_col + j)].y;
-                    *(ptr_img_z + i * n_col + j) = pcl_in[*(ptr_img_index + (i+1) * n_col + j)].z;
+                    *(ptr_img_x + i_ncols + j) = pcl_in[*(ptr_img_index + (i+1) * n_col + j)].x;
+                    *(ptr_img_y + i_ncols + j) = pcl_in[*(ptr_img_index + (i+1) * n_col + j)].y;
+                    *(ptr_img_z + i_ncols + j) = pcl_in[*(ptr_img_index + (i+1) * n_col + j)].z;
                 }
             }
-            else if (*(ptr_img_restore_mask + i * n_col + j) == 4)
+            else if (*(ptr_img_restore_mask + i_ncols + j) == 4)
             {
-                *(ptr_img_x + i * n_col + j) = 0.5 * (pcl_in[*(ptr_img_index + i * n_col + (j-1))].x + pcl_in[*(ptr_img_index + i * n_col + (j+1))].x);
-                *(ptr_img_y + i * n_col + j) = 0.5 * (pcl_in[*(ptr_img_index + i * n_col + (j-1))].y + pcl_in[*(ptr_img_index + i * n_col + (j+1))].y);
-                *(ptr_img_z + i * n_col + j) = 0.5 * (pcl_in[*(ptr_img_index + i * n_col + (j-1))].z + pcl_in[*(ptr_img_index + i * n_col + (j+1))].z);
+                *(ptr_img_x + i_ncols + j) = 0.5 * (pcl_in[*(ptr_img_index + i_ncols + (j-1))].x + pcl_in[*(ptr_img_index + i_ncols + (j+1))].x);
+                *(ptr_img_y + i_ncols + j) = 0.5 * (pcl_in[*(ptr_img_index + i_ncols + (j-1))].y + pcl_in[*(ptr_img_index + i_ncols + (j+1))].y);
+                *(ptr_img_z + i_ncols + j) = 0.5 * (pcl_in[*(ptr_img_index + i_ncols + (j-1))].z + pcl_in[*(ptr_img_index + i_ncols + (j+1))].z);
             }
-            else if (*(ptr_img_restore_mask + i * n_col + j) == 5)
+            else if (*(ptr_img_restore_mask + i_ncols + j) == 5)
             {
-                *(ptr_img_x + i * n_col + j) = (0.6666667) * pcl_in[*(ptr_img_index + i * n_col + (j-1))].x + (0.3333333)*pcl_in[*(ptr_img_index + i * n_col + (j+2))].x;
-                *(ptr_img_y + i * n_col + j) = (0.6666667) * pcl_in[*(ptr_img_index + i * n_col + (j-1))].y + (0.3333333)*pcl_in[*(ptr_img_index + i * n_col + (j+2))].y;
-                *(ptr_img_z + i * n_col + j) = (0.6666667) * pcl_in[*(ptr_img_index + i * n_col + (j-1))].z + (0.3333333)*pcl_in[*(ptr_img_index + i * n_col + (j+2))].z;
+                *(ptr_img_x + i_ncols + j) = (0.6666667) * pcl_in[*(ptr_img_index + i_ncols + (j-1))].x + (0.3333333)*pcl_in[*(ptr_img_index + i_ncols + (j+2))].x;
+                *(ptr_img_y + i_ncols + j) = (0.6666667) * pcl_in[*(ptr_img_index + i_ncols + (j-1))].y + (0.3333333)*pcl_in[*(ptr_img_index + i_ncols + (j+2))].y;
+                *(ptr_img_z + i_ncols + j) = (0.6666667) * pcl_in[*(ptr_img_index + i_ncols + (j-1))].z + (0.3333333)*pcl_in[*(ptr_img_index + i_ncols + (j+2))].z;
             }
-            else if (*(ptr_img_restore_mask + i * n_col + j) == 6)
+            else if (*(ptr_img_restore_mask + i_ncols + j) == 6)
             {
-                *(ptr_img_x + i * n_col + j) = (0.3333333) * pcl_in[*(ptr_img_index + i * n_col + (j-2))].x + (0.6666667)*pcl_in[*(ptr_img_index + i * n_col + (j+1))].x;
-                *(ptr_img_y + i * n_col + j) = (0.3333333) * pcl_in[*(ptr_img_index + i * n_col + (j-2))].y + (0.6666667)*pcl_in[*(ptr_img_index + i * n_col + (j+1))].y;
-                *(ptr_img_z + i * n_col + j) = (0.3333333) * pcl_in[*(ptr_img_index + i * n_col + (j-2))].z + (0.6666667)*pcl_in[*(ptr_img_index + i * n_col + (j+1))].z;
+                *(ptr_img_x + i_ncols + j) = (0.3333333) * pcl_in[*(ptr_img_index + i_ncols + (j-2))].x + (0.6666667)*pcl_in[*(ptr_img_index + i_ncols + (j+1))].x;
+                *(ptr_img_y + i_ncols + j) = (0.3333333) * pcl_in[*(ptr_img_index + i_ncols + (j-2))].y + (0.6666667)*pcl_in[*(ptr_img_index + i_ncols + (j+1))].y;
+                *(ptr_img_z + i_ncols + j) = (0.3333333) * pcl_in[*(ptr_img_index + i_ncols + (j-2))].z + (0.6666667)*pcl_in[*(ptr_img_index + i_ncols + (j+1))].z;
             }
 
         }     // end for j
@@ -1192,12 +1359,12 @@ void MaplessDynamic::dR_warpPointcloud(pcl::PointCloud<pcl::PointXYZ>& p0, Pose&
     // representative pts
     for (int i = 0; i < n_row; ++i)
     {
+        int i_ncols = i * n_col;
         for (int j = 0; j < n_col; ++j)
         {
-
-            if ((*(ptr_img_x + i * n_col + j) > 10.0) || (*(ptr_img_x + i * n_col + j) < -10.0) || (*(ptr_img_y + i * n_col + j) > 10.0) || (*(ptr_img_y + i * n_col + j) < -10.0))
+            if ((*(ptr_img_x + i_ncols + j) > 10.0) || (*(ptr_img_x + i_ncols + j) < -10.0) || (*(ptr_img_y + i_ncols + j) > 10.0) || (*(ptr_img_y + i_ncols + j) < -10.0))
             {
-                velo_cur_.push_back(pcl::PointXYZ(*(ptr_img_x + i * n_col + j), *(ptr_img_y + i * n_col + j), *(ptr_img_z + i * n_col + j)));
+                velo_cur_.push_back(pcl::PointXYZ(*(ptr_img_x + i_ncols + j), *(ptr_img_y + i_ncols + j), *(ptr_img_z + i_ncols + j)));
             }
         }
     }
@@ -1260,14 +1427,15 @@ void MaplessDynamic::compensateCurRhoZeroWarp(StrRhoPts* str_cur_, int n_ring, i
 
     for (int i=0+1; i<n_ring-1 ; ++i)
     {
+        int i_ncols = i * n_col;
         for (int j=0+1; j<n_radial-1 ; ++j)
         {
             left_dir_rho = 0.0;
             right_dir_rho = 0.0;
             up_dir_rho = 0.0;
             down_dir_rho = 0.0;
-
-            if (*(ptr_img_rho + i * n_col + j) == 0)
+            
+            if (*(ptr_img_rho + i_ncols + j) == 0)
             {
                     cnt_left = 1;
                     cnt_right = 1;
@@ -1281,7 +1449,7 @@ void MaplessDynamic::compensateCurRhoZeroWarp(StrRhoPts* str_cur_, int n_ring, i
                             left_dir_rho = 100.0;
                             break;
                         }
-                        left_dir_rho = *(ptr_img_rho + i * n_col + (j - cnt_left));
+                        left_dir_rho = *(ptr_img_rho + i_ncols + (j - cnt_left));
                         cnt_left += 1;
                     } // end while
                     //right
@@ -1292,7 +1460,7 @@ void MaplessDynamic::compensateCurRhoZeroWarp(StrRhoPts* str_cur_, int n_ring, i
                             right_dir_rho = 100.0;
                             break;
                         }
-                        right_dir_rho = *(ptr_img_rho + i * n_col + (j + cnt_right));
+                        right_dir_rho = *(ptr_img_rho + i_ncols + (j + cnt_right));
                         cnt_right += 1;
                     } // end while
                     //up
@@ -1356,57 +1524,58 @@ void MaplessDynamic::interpRangeImageMin(StrRhoPts* str_in, int n_ring, int n_ra
 
     for (int i = 0 + 2; i < (n_ring - 2); ++i)
     {
+        int i_ncols = i * n_col;
         for (int j = 0 + 2; j < (n_radial - 2); ++j)
-        {
-            if (*(ptr_img_rho + i * n_col + j) == 0)
+        {            
+            if (*(ptr_img_rho + i_ncols + j) == 0)
             {
                 if (*(ptr_img_rho + (i - 1) * n_col + j) != 0 && *(ptr_img_rho + (i + 1) * n_col + j) != 0)
                 {
                     if (fabsf32(*(ptr_img_rho + (i - 1) * n_col + j) - *(ptr_img_rho + (i + 1) * n_col + j)) < 0.1)
                     {
-                        *(ptr_img_restore_warp_mask + i * n_col + j) = 1;
-                        *(ptr_img_rho_new + i * n_col + j) = (*(ptr_img_rho + (i - 1) * n_col + j) + *(ptr_img_rho + (i + 1) * n_col + j)) * 0.5;
+                        *(ptr_img_restore_warp_mask + i_ncols + j) = 1;
+                        *(ptr_img_rho_new + i_ncols + j) = (*(ptr_img_rho + (i - 1) * n_col + j) + *(ptr_img_rho + (i + 1) * n_col + j)) * 0.5;
                     }
                     else
                     {
-                        *(ptr_img_restore_warp_mask + i * n_col + j) = 10;
-                        *(ptr_img_rho_new + i * n_col + j) = std::min(*(ptr_img_rho + (i - 1) * n_col + j), *(ptr_img_rho + (i + 1) * n_col + j));
+                        *(ptr_img_restore_warp_mask + i_ncols + j) = 10;
+                        *(ptr_img_rho_new + i_ncols + j) = std::min(*(ptr_img_rho + (i - 1) * n_col + j), *(ptr_img_rho + (i + 1) * n_col + j));
                     }
                 }
                 else if (*(ptr_img_rho + (i - 1) * n_col + j) != 0 && *(ptr_img_rho + (i + 2) * n_col + j) != 0)
                 {
                     if (fabsf32(*(ptr_img_rho + (i - 1) * n_col + j) - *(ptr_img_rho + (i + 2) * n_col + j)) < 0.1)
                     {
-                        *(ptr_img_restore_warp_mask + i * n_col + j) = 2;
+                        *(ptr_img_restore_warp_mask + i_ncols + j) = 2;
                         *(ptr_img_restore_warp_mask + (i + 1) * n_col + j) = 3;
-                        *(ptr_img_rho_new + i * n_col + j) = *(ptr_img_rho + (i - 1) * n_col + j) * (0.6666667) + *(ptr_img_rho + (i + 2) * n_col + j) * (0.3333333);
+                        *(ptr_img_rho_new + i_ncols + j) = *(ptr_img_rho + (i - 1) * n_col + j) * (0.6666667) + *(ptr_img_rho + (i + 2) * n_col + j) * (0.3333333);
                         *(ptr_img_rho_new + (i + 1) * n_col + j) = *(ptr_img_rho + (i - 1) * n_col + j) * (0.3333333) + *(ptr_img_rho + (i + 2) * n_col + j) * (0.6666667);
                     }
                     else
                     {
-                        *(ptr_img_restore_warp_mask + i * n_col + j) = 20;
+                        *(ptr_img_restore_warp_mask + i_ncols + j) = 20;
                         *(ptr_img_restore_warp_mask + (i + 1) * n_col + j) = 30;
-                        *(ptr_img_rho_new + i * n_col + j) = std::min(*(ptr_img_rho + (i - 1) * n_col + j), *(ptr_img_rho + (i + 2) * n_col + j));
+                        *(ptr_img_rho_new + i_ncols + j) = std::min(*(ptr_img_rho + (i - 1) * n_col + j), *(ptr_img_rho + (i + 2) * n_col + j));
                         *(ptr_img_rho_new + (i + 1) * n_col + j) = std::min(*(ptr_img_rho + (i - 1) * n_col + j), *(ptr_img_rho + (i + 2) * n_col + j));
                     }
                 }
 
-                if (*(ptr_img_rho + i * n_col + (j - 1)) != 0 && *(ptr_img_rho + i * n_col + (j + 1)) != 0)
+                if (*(ptr_img_rho + i_ncols + (j - 1)) != 0 && *(ptr_img_rho + i_ncols + (j + 1)) != 0)
                 {
-                    if (fabsf32(*(ptr_img_rho + i * n_col + (j - 1)) - *(ptr_img_rho + i * n_col + (j + 1))) < 0.05)
+                    if (fabsf32(*(ptr_img_rho + i_ncols + (j - 1)) - *(ptr_img_rho + i_ncols + (j + 1))) < 0.05)
                     {
-                        *(ptr_img_restore_warp_mask + i * n_col + j) = 4;
-                        *(ptr_img_rho_new + i * n_col + j) = (*(ptr_img_rho + i * n_col + (j - 1)) + *(ptr_img_rho + i * n_col + (j + 1))) * 0.5;
+                        *(ptr_img_restore_warp_mask + i_ncols + j) = 4;
+                        *(ptr_img_rho_new + i_ncols + j) = (*(ptr_img_rho + i_ncols + (j - 1)) + *(ptr_img_rho + i_ncols + (j + 1))) * 0.5;
                     }
                 }
-                else if (*(ptr_img_rho + i * n_col + (j - 1)) != 0 && *(ptr_img_rho + i * n_col + (j + 2)) != 0)
+                else if (*(ptr_img_rho + i_ncols + (j - 1)) != 0 && *(ptr_img_rho + i_ncols + (j + 2)) != 0)
                 {
-                    if (fabsf32(*(ptr_img_rho + i * n_col + (j - 1)) - *(ptr_img_rho + i * n_col + (j + 2))) < 0.05)
+                    if (fabsf32(*(ptr_img_rho + i_ncols + (j - 1)) - *(ptr_img_rho + i_ncols + (j + 2))) < 0.05)
                     {
-                        *(ptr_img_restore_warp_mask + i * n_col + j) = 5;
-                        *(ptr_img_restore_warp_mask + i * n_col + (j + 1)) = 6;
-                        *(ptr_img_rho_new + i * n_col + j) = *(ptr_img_rho + i * n_col + (j - 1)) * (0.6666667) + *(ptr_img_rho + i * n_col + (j + 2)) * (0.3333333);
-                        *(ptr_img_rho_new + i * n_col + (j + 1)) = *(ptr_img_rho + i * n_col + (j - 1)) * (0.3333333) + *(ptr_img_rho + i * n_col + (j + 2)) * (0.6666667);
+                        *(ptr_img_restore_warp_mask + i_ncols + j) = 5;
+                        *(ptr_img_restore_warp_mask + i_ncols + (j + 1)) = 6;
+                        *(ptr_img_rho_new + i_ncols + j) = *(ptr_img_rho + i_ncols + (j - 1)) * (0.6666667) + *(ptr_img_rho + i_ncols + (j + 2)) * (0.3333333);
+                        *(ptr_img_rho_new + i_ncols + (j + 1)) = *(ptr_img_rho + i_ncols + (j - 1)) * (0.3333333) + *(ptr_img_rho + i_ncols + (j + 2)) * (0.6666667);
                     }
                 }
             } // end if
@@ -1432,88 +1601,89 @@ void MaplessDynamic::interpPtsWarp(StrRhoPts* str_in, int n_ring, int n_radial)
 
     for (int i=0+2; i<n_row-2; ++i)
     {
+        int i_ncols = i * n_col;
         for (int j=0+2; j<n_col-2; ++j)
-        {
-            if (*(ptr_img_restore_warp_mask + i * n_col + j) == 1)
+        {            
+            if (*(ptr_img_restore_warp_mask + i_ncols + j) == 1)
             {
-                *(ptr_img_x + i * n_col + j) = 0.5 * (*(ptr_img_x + (i - 1) * n_col + j) + *(ptr_img_x + (i + 1) * n_col + j));
-                *(ptr_img_y + i * n_col + j) = 0.5 * (*(ptr_img_y + (i - 1) * n_col + j) + *(ptr_img_y + (i + 1) * n_col + j));
-                *(ptr_img_z + i * n_col + j) = 0.5 * (*(ptr_img_z + (i - 1) * n_col + j) + *(ptr_img_z + (i + 1) * n_col + j));
+                *(ptr_img_x + i_ncols + j) = 0.5 * (*(ptr_img_x + (i - 1) * n_col + j) + *(ptr_img_x + (i + 1) * n_col + j));
+                *(ptr_img_y + i_ncols + j) = 0.5 * (*(ptr_img_y + (i - 1) * n_col + j) + *(ptr_img_y + (i + 1) * n_col + j));
+                *(ptr_img_z + i_ncols + j) = 0.5 * (*(ptr_img_z + (i - 1) * n_col + j) + *(ptr_img_z + (i + 1) * n_col + j));
             }
-            else if (*(ptr_img_restore_warp_mask + i * n_col + j) == 10)
+            else if (*(ptr_img_restore_warp_mask + i_ncols + j) == 10)
             {
                 if ((*(ptr_img_rho + (i - 1) * n_col + j) < *(ptr_img_rho + (i + 1) * n_col + j)))
                 {
-                    *(ptr_img_x + i * n_col + j) = *(ptr_img_x + (i-1) * n_col + j);
-                    *(ptr_img_y + i * n_col + j) = *(ptr_img_y + (i-1) * n_col + j);
-                    *(ptr_img_z + i * n_col + j) = *(ptr_img_z + (i-1) * n_col + j);
+                    *(ptr_img_x + i_ncols + j) = *(ptr_img_x + (i-1) * n_col + j);
+                    *(ptr_img_y + i_ncols + j) = *(ptr_img_y + (i-1) * n_col + j);
+                    *(ptr_img_z + i_ncols + j) = *(ptr_img_z + (i-1) * n_col + j);
                 }
                 else
                 {
-                    *(ptr_img_x + i * n_col + j) = *(ptr_img_x + (i+1) * n_col + j);
-                    *(ptr_img_y + i * n_col + j) = *(ptr_img_y + (i+1) * n_col + j);
-                    *(ptr_img_z + i * n_col + j) = *(ptr_img_z + (i+1) * n_col + j);
+                    *(ptr_img_x + i_ncols + j) = *(ptr_img_x + (i+1) * n_col + j);
+                    *(ptr_img_y + i_ncols + j) = *(ptr_img_y + (i+1) * n_col + j);
+                    *(ptr_img_z + i_ncols + j) = *(ptr_img_z + (i+1) * n_col + j);
                 }
             }
-            else if (*(ptr_img_restore_warp_mask + i * n_col + j) == 2)
+            else if (*(ptr_img_restore_warp_mask + i_ncols + j) == 2)
             {
-                *(ptr_img_x + i * n_col + j) = (0.6666667) * (*(ptr_img_x + (i - 1) * n_col + j)) + (0.3333333) * (*(ptr_img_x + (i + 2) * n_col + j));
-                *(ptr_img_y + i * n_col + j) = (0.6666667) * (*(ptr_img_y + (i - 1) * n_col + j)) + (0.3333333) * (*(ptr_img_y + (i + 2) * n_col + j));
-                *(ptr_img_z + i * n_col + j) = (0.6666667) * (*(ptr_img_z + (i - 1) * n_col + j)) + (0.3333333) * (*(ptr_img_z + (i + 2) * n_col + j));
+                *(ptr_img_x + i_ncols + j) = (0.6666667) * (*(ptr_img_x + (i - 1) * n_col + j)) + (0.3333333) * (*(ptr_img_x + (i + 2) * n_col + j));
+                *(ptr_img_y + i_ncols + j) = (0.6666667) * (*(ptr_img_y + (i - 1) * n_col + j)) + (0.3333333) * (*(ptr_img_y + (i + 2) * n_col + j));
+                *(ptr_img_z + i_ncols + j) = (0.6666667) * (*(ptr_img_z + (i - 1) * n_col + j)) + (0.3333333) * (*(ptr_img_z + (i + 2) * n_col + j));
             }
-            else if (*(ptr_img_restore_warp_mask + i * n_col + j) == 20)
+            else if (*(ptr_img_restore_warp_mask + i_ncols + j) == 20)
             {
                 if ((*(ptr_img_rho + (i - 1) * n_col + j) < *(ptr_img_rho + (i + 2) * n_col + j)))
                 {
-                    *(ptr_img_x + i * n_col + j) = *(ptr_img_x + (i-1) * n_col + j);
-                    *(ptr_img_y + i * n_col + j) = *(ptr_img_y + (i-1) * n_col + j);
-                    *(ptr_img_z + i * n_col + j) = *(ptr_img_z + (i-1) * n_col + j);
+                    *(ptr_img_x + i_ncols + j) = *(ptr_img_x + (i-1) * n_col + j);
+                    *(ptr_img_y + i_ncols + j) = *(ptr_img_y + (i-1) * n_col + j);
+                    *(ptr_img_z + i_ncols + j) = *(ptr_img_z + (i-1) * n_col + j);
                 }
                 else
                 {
-                    *(ptr_img_x + i * n_col + j) = *(ptr_img_x + (i+2) * n_col + j);
-                    *(ptr_img_y + i * n_col + j) = *(ptr_img_y + (i+2) * n_col + j);
-                    *(ptr_img_z + i * n_col + j) = *(ptr_img_z + (i+2) * n_col + j);
+                    *(ptr_img_x + i_ncols + j) = *(ptr_img_x + (i+2) * n_col + j);
+                    *(ptr_img_y + i_ncols + j) = *(ptr_img_y + (i+2) * n_col + j);
+                    *(ptr_img_z + i_ncols + j) = *(ptr_img_z + (i+2) * n_col + j);
                 }
             }
-            else if (*(ptr_img_restore_warp_mask + i * n_col + j) == 3)
+            else if (*(ptr_img_restore_warp_mask + i_ncols + j) == 3)
             {
-                *(ptr_img_x + i * n_col + j) = (0.3333333) * (*(ptr_img_x + (i - 2) * n_col + j)) + (0.6666667) * (*(ptr_img_x + (i + 1) * n_col + j));
-                *(ptr_img_y + i * n_col + j) = (0.3333333) * (*(ptr_img_y + (i - 2) * n_col + j)) + (0.6666667) * (*(ptr_img_y + (i + 1) * n_col + j));
-                *(ptr_img_z + i * n_col + j) = (0.3333333) * (*(ptr_img_z + (i - 2) * n_col + j)) + (0.6666667) * (*(ptr_img_z + (i + 1) * n_col + j));
+                *(ptr_img_x + i_ncols + j) = (0.3333333) * (*(ptr_img_x + (i - 2) * n_col + j)) + (0.6666667) * (*(ptr_img_x + (i + 1) * n_col + j));
+                *(ptr_img_y + i_ncols + j) = (0.3333333) * (*(ptr_img_y + (i - 2) * n_col + j)) + (0.6666667) * (*(ptr_img_y + (i + 1) * n_col + j));
+                *(ptr_img_z + i_ncols + j) = (0.3333333) * (*(ptr_img_z + (i - 2) * n_col + j)) + (0.6666667) * (*(ptr_img_z + (i + 1) * n_col + j));
             }
-            else if (*(ptr_img_restore_warp_mask + i * n_col + j) == 30)
+            else if (*(ptr_img_restore_warp_mask + i_ncols + j) == 30)
             {
                 if ((*(ptr_img_rho + (i - 2) * n_col + j) < *(ptr_img_rho + (i + 1) * n_col + j)))
                 {
-                    *(ptr_img_x + i * n_col + j) = *(ptr_img_x + (i-2) * n_col + j);
-                    *(ptr_img_y + i * n_col + j) = *(ptr_img_y + (i-2) * n_col + j);
-                    *(ptr_img_z + i * n_col + j) = *(ptr_img_z + (i-2) * n_col + j);
+                    *(ptr_img_x + i_ncols + j) = *(ptr_img_x + (i-2) * n_col + j);
+                    *(ptr_img_y + i_ncols + j) = *(ptr_img_y + (i-2) * n_col + j);
+                    *(ptr_img_z + i_ncols + j) = *(ptr_img_z + (i-2) * n_col + j);
                 }
                 else
                 {
-                    *(ptr_img_x + i * n_col + j) = *(ptr_img_x + (i+1) * n_col + j);
-                    *(ptr_img_y + i * n_col + j) = *(ptr_img_y + (i+1) * n_col + j);
-                    *(ptr_img_z + i * n_col + j) = *(ptr_img_z + (i+1) * n_col + j);
+                    *(ptr_img_x + i_ncols + j) = *(ptr_img_x + (i+1) * n_col + j);
+                    *(ptr_img_y + i_ncols + j) = *(ptr_img_y + (i+1) * n_col + j);
+                    *(ptr_img_z + i_ncols + j) = *(ptr_img_z + (i+1) * n_col + j);
                 }
             }
-            else if (*(ptr_img_restore_warp_mask + i * n_col + j) == 4)
+            else if (*(ptr_img_restore_warp_mask + i_ncols + j) == 4)
             {
-                *(ptr_img_x + i * n_col + j) = 0.5 * (*(ptr_img_x + i * n_col + (j - 1)) + (*(ptr_img_x + i * n_col + (j + 1))));
-                *(ptr_img_y + i * n_col + j) = 0.5 * (*(ptr_img_y + i * n_col + (j - 1)) + (*(ptr_img_y + i * n_col + (j + 1))));
-                *(ptr_img_z + i * n_col + j) = 0.5 * (*(ptr_img_z + i * n_col + (j - 1)) + (*(ptr_img_z + i * n_col + (j + 1))));
+                *(ptr_img_x + i_ncols + j) = 0.5 * (*(ptr_img_x + i_ncols + (j - 1)) + (*(ptr_img_x + i_ncols + (j + 1))));
+                *(ptr_img_y + i_ncols + j) = 0.5 * (*(ptr_img_y + i_ncols + (j - 1)) + (*(ptr_img_y + i_ncols + (j + 1))));
+                *(ptr_img_z + i_ncols + j) = 0.5 * (*(ptr_img_z + i_ncols + (j - 1)) + (*(ptr_img_z + i_ncols + (j + 1))));
             }
-            else if (*(ptr_img_restore_warp_mask + i * n_col + j) == 5)
+            else if (*(ptr_img_restore_warp_mask + i_ncols + j) == 5)
             {
-                *(ptr_img_x + i * n_col + j) = (0.6666667) * (*(ptr_img_x + i * n_col + (j - 1))) + (0.3333333) * (*(ptr_img_x + i * n_col + (j + 2)));
-                *(ptr_img_y + i * n_col + j) = (0.6666667) * (*(ptr_img_y + i * n_col + (j - 1))) + (0.3333333) * (*(ptr_img_y + i * n_col + (j + 2)));
-                *(ptr_img_z + i * n_col + j) = (0.6666667) * (*(ptr_img_z + i * n_col + (j - 1))) + (0.3333333) * (*(ptr_img_z + i * n_col + (j + 2)));
+                *(ptr_img_x + i_ncols + j) = (0.6666667) * (*(ptr_img_x + i_ncols + (j - 1))) + (0.3333333) * (*(ptr_img_x + i_ncols + (j + 2)));
+                *(ptr_img_y + i_ncols + j) = (0.6666667) * (*(ptr_img_y + i_ncols + (j - 1))) + (0.3333333) * (*(ptr_img_y + i_ncols + (j + 2)));
+                *(ptr_img_z + i_ncols + j) = (0.6666667) * (*(ptr_img_z + i_ncols + (j - 1))) + (0.3333333) * (*(ptr_img_z + i_ncols + (j + 2)));
             }
-            else if (*(ptr_img_restore_warp_mask + i * n_col + j) == 6)
+            else if (*(ptr_img_restore_warp_mask + i_ncols + j) == 6)
             {
-                *(ptr_img_x + i * n_col + j) = (0.3333333) * (*(ptr_img_x + i * n_col + (j - 2))) + (0.6666667) * (*(ptr_img_x + i * n_col + (j + 1)));
-                *(ptr_img_y + i * n_col + j) = (0.3333333) * (*(ptr_img_y + i * n_col + (j - 2))) + (0.6666667) * (*(ptr_img_y + i * n_col + (j + 1)));
-                *(ptr_img_z + i * n_col + j) = (0.3333333) * (*(ptr_img_z + i * n_col + (j - 2))) + (0.6666667) * (*(ptr_img_z + i * n_col + (j + 1)));
+                *(ptr_img_x + i_ncols + j) = (0.3333333) * (*(ptr_img_x + i_ncols + (j - 2))) + (0.6666667) * (*(ptr_img_x + i_ncols + (j + 1)));
+                *(ptr_img_y + i_ncols + j) = (0.3333333) * (*(ptr_img_y + i_ncols + (j - 2))) + (0.6666667) * (*(ptr_img_y + i_ncols + (j + 1)));
+                *(ptr_img_z + i_ncols + j) = (0.3333333) * (*(ptr_img_z + i_ncols + (j - 2))) + (0.6666667) * (*(ptr_img_z + i_ncols + (j + 1)));
             }
         } // end for j
     } // end for i
@@ -1543,13 +1713,14 @@ void MaplessDynamic::warpPointcloud(StrRhoPts *str_cur_, const Pose &T01, /*outp
 
     for (int i = 0; i<n_row; ++i)
     {
+        int i_ncols = i * n_col;
         for (int j=0; j<n_col; ++j)
-        {
-            if (*(ptr_mat_in + i * n_col + j) != 0 && *(ptr_img_rho + i * n_col + j) != 0)
+        {            
+            if (*(ptr_mat_in + i_ncols + j) != 0 && *(ptr_img_rho + i_ncols + j) != 0)
             {
-                velo_xyz_.push_back(pcl::PointXYZ(*(ptr_img_x + i * n_col + j), *(ptr_img_y + i * n_col + j), *(ptr_img_z + i * n_col + j)));
+                velo_xyz_.push_back(pcl::PointXYZ(*(ptr_img_x + i_ncols + j), *(ptr_img_y + i_ncols + j), *(ptr_img_z + i_ncols + j)));
 
-                I_vec1.push_back(*(ptr_mat_in + i * n_col + j));
+                I_vec1.push_back(*(ptr_mat_in + i_ncols + j));
                 isempty_flag = 1;
             }
         } //end for i
@@ -1566,11 +1737,12 @@ void MaplessDynamic::warpPointcloud(StrRhoPts *str_cur_, const Pose &T01, /*outp
 
     for (int i = 0; i<n_row; ++i)
     {
+        int i_ncols = i * n_col;
         for (int j=0; j<n_col; ++j)
-        {
-            if (*(ptr_warp_img_index + i * n_col + j) != 0)
+        {            
+            if (*(ptr_warp_img_index + i_ncols + j) != 0)
             {
-                *(ptr_mat_out + i * n_col + j) = I_vec1[*(ptr_warp_img_index + i * n_col + j)];
+                *(ptr_mat_out + i_ncols + j) = I_vec1[*(ptr_warp_img_index + i_ncols + j)];
             } // end if
         } // end for j
     } //end for i
@@ -1592,15 +1764,16 @@ void MaplessDynamic::filterOutAccumdR(StrRhoPts* str_next_, StrRhoPts* str_cur_w
     // Accumulate the occlusion
     for (int i = 0; i<n_row; ++i)
     {
+        int i_ncols = i * n_col;
         for (int j=0; j<n_col; ++j)
         {
-            if (*(ptr_next_img_rho+i*n_col+j)<10)
+            if (*(ptr_next_img_rho + i_ncols + j) < 10)
             {
-                *(ptr_accumulated_dRdt_ + i * n_col + j) = coef_accum_w[0] * (*(ptr_accumulated_dRdt_ + i * n_col + j)) + *(ptr_residual_ + i * n_col + j);
+                *(ptr_accumulated_dRdt_ + i_ncols + j) = coef_accum_w[0] * (*(ptr_accumulated_dRdt_ + i_ncols + j)) + *(ptr_residual_ + i_ncols + j);
             }
             else // >10
             {
-                *(ptr_accumulated_dRdt_ + i * n_col + j) = coef_accum_w[1] * (*(ptr_accumulated_dRdt_ + i * n_col + j)) + *(ptr_residual_ + i * n_col + j);
+                *(ptr_accumulated_dRdt_ + i_ncols + j) = coef_accum_w[1] * (*(ptr_accumulated_dRdt_ + i_ncols + j)) + *(ptr_residual_ + i_ncols + j);
             }            
         }
     }
@@ -1608,15 +1781,16 @@ void MaplessDynamic::filterOutAccumdR(StrRhoPts* str_next_, StrRhoPts* str_cur_w
     // Extract candidate for objects
     for (int i = 0; i<n_row; ++i)
     {
+        int i_ncols = i * n_col;
         for (int j = 0; j < n_col; ++j)
         {
-            if ( (*(ptr_next_img_rho + i * n_col + j) > 40) 
-            || (*(ptr_accumulated_dRdt_ + i * n_col + j) < alpha_ * (*(ptr_next_img_rho + i * n_col + j)))
-            ||  (*(ptr_next_img_rho + i * n_col + j) == 0) 
-            || (*(ptr_cur_warped_img_rho + i * n_col + j) == 0)
-            || (*(ptr_residual_ + i * n_col + j) < (- beta_ * (*(ptr_next_img_rho + i * n_col + j)))) )
+            if ( (*(ptr_next_img_rho + i_ncols + j) > 40) 
+            || (*(ptr_accumulated_dRdt_ + i_ncols + j) < alpha_ * (*(ptr_next_img_rho + i_ncols + j)))
+            ||  (*(ptr_next_img_rho + i_ncols + j) == 0) 
+            || (*(ptr_cur_warped_img_rho + i_ncols + j) == 0)
+            || (*(ptr_residual_ + i_ncols + j) < (- beta_ * (*(ptr_next_img_rho + i_ncols + j)))) )
             {
-                *(ptr_accumulated_dRdt_ + i * n_col + j) = 0;
+                *(ptr_accumulated_dRdt_ + i_ncols + j) = 0;
             }
         }
     }
@@ -1636,11 +1810,12 @@ void MaplessDynamic::extractObjectCandidate(cv::Mat& accumulated_dRdt, StrRhoPts
 
     for (int i=0; i<n_row; ++i)
     {
+        int i_ncols = i * n_col;
         for (int j=0; j<n_col; ++j)
         {
-            if (*(ptr_accumulated_dRdt + i * n_col + j) > 0)
+            if (*(ptr_accumulated_dRdt + i_ncols + j) > 0)
             {
-                *(ptr_object_mask+i*n_col+j) = 255;
+                *(ptr_object_mask + i_ncols + j) = 255;
                 cnt += 1;
             }
         }
@@ -1688,25 +1863,26 @@ void MaplessDynamic::extractObjectCandidate(cv::Mat& accumulated_dRdt, StrRhoPts
             continue;
         }
 
-        object_row.clear();
-        object_col.clear();
-        object_rho_roi.clear();
-        max_his_object_rho_roi.clear();
-        disconti_row.clear();
-        disconti_col.clear();
-        diff_object_area_bw_disconti_row.clear();
-        diff_object_area_bw_disconti_col.clear();
-        diff_z.clear();
+        object_row.resize(0);
+        object_col.resize(0);
+        object_rho_roi.resize(0);
+        max_his_object_rho_roi.resize(0);
+        disconti_row.resize(0);
+        disconti_col.resize(0);
+        diff_object_area_bw_disconti_row.resize(0);
+        diff_object_area_bw_disconti_col.resize(0);
+        diff_z.resize(0);
         for (int i=0; i<n_row; ++i)
         {
+            int i_ncols = i * n_col;
             for (int j=0; j<n_col; ++j)
             {
-                if(*(ptr_object_label+i*n_col+j)==object_idx)
+                if (*(ptr_object_label + i_ncols + j) == object_idx)
                 {
                     object_row.push_back(i);
                     object_col.push_back(j);
-                    object_rho_roi.push_back(*(ptr_accumulated_dRdt + i * n_col + j));
-                    *(ptr_object_rho_mat + i * n_col + j) = *(ptr_accumulated_dRdt + i * n_col + j);
+                    object_rho_roi.push_back(*(ptr_accumulated_dRdt + i_ncols + j));
+                    *(ptr_object_rho_mat + i_ncols + j) = *(ptr_accumulated_dRdt + i_ncols + j);
                 }
             }
         }
@@ -1851,11 +2027,12 @@ void MaplessDynamic::segmentGround(StrRhoPts* str_in)
 
     for (int i=0; i<n_row; ++i)
     {
+        int i_ncols = i * n_col;
         for (int j=0; j<n_col; ++j)
         {
-            if (*(ptr_img_z + i * n_col + j) < -1.6)
+            if (*(ptr_img_z + i_ncols + j) < -1.5)
             {
-                *(ptr_groundPtsIdx_next + i * n_col + j) = 255;
+                *(ptr_groundPtsIdx_next + i_ncols + j) = 255;
             }
         }
     }
@@ -1891,9 +2068,10 @@ void MaplessDynamic::checkSegment(cv::Mat& accumulated_dRdt, StrRhoPts* str_next
 
     for (int i=0; i<n_row; ++i)
     {
-        for (int j=0; j<n_col; ++j)
+        int i_ncols = i * n_col;
+        for (int j = 0; j < n_col; ++j)
         {
-            if (*(ptr_accumulated_dRdt + i * n_col + j) != 0)
+            if (*(ptr_accumulated_dRdt + i_ncols + j) != 0)
             {
                 // std::cout << accumulated_dRdt.at<float>(i,j) << std::endl;
                 // std::cout<<i<<" " <<j<<std::endl;
@@ -1901,7 +2079,7 @@ void MaplessDynamic::checkSegment(cv::Mat& accumulated_dRdt, StrRhoPts* str_next
                 idx_col.push_back(j);
                 check.push_back(0);
                 isempty = false;
-                *(ptr_roi_up+i*n_col+j) = 1;
+                *(ptr_roi_up + i_ncols + j) = 1;
             }
         }
     }
@@ -1954,28 +2132,28 @@ void MaplessDynamic::checkSegment(cv::Mat& accumulated_dRdt, StrRhoPts* str_next
                 {
                     continue;
                 }
-
-                if ((*(ptr_roi_up + i * n_col + j) == 0) && (*(ptr_img_rho + i * n_col + j) > 0))
+                int i_ncols_j = i * n_col + j;
+                if ((*(ptr_roi_up + i_ncols_j) == 0) && (*(ptr_img_rho + i_ncols_j) > 0))
                 {
-                    if (*(ptr_groundPtsIdx_next + i * n_col + j) == 255)
+                    if (*(ptr_groundPtsIdx_next + i_ncols_j) == 255)
                     {
                         continue;
                     }
 
-                    d1 = std::max(R, *(ptr_img_rho + i * n_col + j));
-                    d2 = std::min(R, *(ptr_img_rho + i * n_col + j));
+                    d1 = std::max(R, *(ptr_img_rho + i_ncols_j));
+                    d2 = std::min(R, *(ptr_img_rho + i_ncols_j));
                     if (atan2f(d2 * sinf(phi * D2R), (d1 - d2 * cosf(phi * D2R))) > 10.0 * D2R)
                     {
                         idx_row.push_back(i);
                         idx_col.push_back(j);
                         check.push_back(0);
-                        *(ptr_roi_up + i * n_col + j) = 1;
-                        *(ptr_accumulated_dRdt + i * n_col + j) = weight_factor * *(ptr_accumulated_dRdt + row * n_col + col);
+                        *(ptr_roi_up + i_ncols_j) = 1;
+                        *(ptr_accumulated_dRdt + i_ncols_j) = weight_factor * *(ptr_accumulated_dRdt + row * n_col + col);
                     }
                 }
-                else if ((*(ptr_roi_up + i * n_col + j) == 0) && (*(ptr_img_rho + i * n_col + j) == 0))
+                else if ((*(ptr_roi_up + i_ncols_j) == 0) && (*(ptr_img_rho + i_ncols_j) == 0))
                 {
-                    if (*(ptr_groundPtsIdx_next + i * n_col + j) == 255)
+                    if (*(ptr_groundPtsIdx_next + i_ncols_j) == 255)
                     {
                         continue;
                     }
@@ -2008,17 +2186,17 @@ void MaplessDynamic::checkSegment(cv::Mat& accumulated_dRdt, StrRhoPts* str_next
                     {
                         continue;
                     }
-
-                    if (*(ptr_groundPtsIdx_next + ii * n_col + jj) == 255)
+                    int ii_ncols_jj = ii * n_col + jj;
+                    if (*(ptr_groundPtsIdx_next + ii_ncols_jj) == 255)
                     {
                         continue;
                     }
 
-                    if (*(ptr_roi_up + ii * n_col + jj) == 1){}
+                    if (*(ptr_roi_up + ii_ncols_jj) == 1){}
                     else
                     {
-                        d1 = std::max(R, *(ptr_img_rho + ii * n_col + jj));
-                        d2 = std::min(R, *(ptr_img_rho + ii * n_col + jj));
+                        d1 = std::max(R, *(ptr_img_rho + ii_ncols_jj));
+                        d2 = std::min(R, *(ptr_img_rho + ii_ncols_jj));
 
                         if (atan2f(d2 * sinf(2.0 * phi * D2R), (d1 - d2 * cosf(2.0 * phi * D2R))) > 10.0 * D2R)
                         {
@@ -2026,8 +2204,8 @@ void MaplessDynamic::checkSegment(cv::Mat& accumulated_dRdt, StrRhoPts* str_next
                             idx_col.push_back(jj);
 
                             check.push_back(0);
-                            *(ptr_roi_up + ii * n_col + jj) = 1;
-                            *(ptr_accumulated_dRdt + ii * n_col + jj) = weight_factor * (*(ptr_accumulated_dRdt + row * n_col + col));
+                            *(ptr_roi_up + ii_ncols_jj) = 1;
+                            *(ptr_accumulated_dRdt + ii_ncols_jj) = weight_factor * (*(ptr_accumulated_dRdt + row * n_col + col));
                             if (idx_cw == 1)
                             {
                                 *(ptr_accumulated_dRdt + (ii + 1) * n_col + jj) = weight_factor * (*(ptr_accumulated_dRdt + row * n_col + col));
@@ -2062,6 +2240,7 @@ void MaplessDynamic::checkSegment(cv::Mat& accumulated_dRdt, StrRhoPts* str_next
         {
             break;
         }
+            // std::cout << "checkSegment cnt: "<< cnt << std::endl;
     }
 
     // cv::imshow("accumulated_dRdt", accumulated_dRdt);
@@ -2078,25 +2257,27 @@ void MaplessDynamic::updateScore(cv::Mat& accumulated_dRdt, cv::Mat& accumulated
     
     for (int i=1; i<n_row; ++i)
     {
+        int i_ncols = i * n_col;
         for (int j=1; j<n_col; ++j)
         {
-            if (*(ptr_accumulated_dRdt+i*n_col+j)!=0)
+            if (*(ptr_accumulated_dRdt + i_ncols + j) != 0)
             {
-                *(ptr_accumulated_dRdt_score+i*n_col+j) += 1;
+                *(ptr_accumulated_dRdt_score + i_ncols + j) += 1;
             }
         }
     }
 
     for (int i=1; i<n_row; ++i)
     {
+        int i_ncols = i * n_col;
         for (int j=1; j<n_col; ++j)
         {
-            if (*(ptr_accumulated_dRdt_score+i*n_col+j)>2.0)
+            if (*(ptr_accumulated_dRdt_score + i_ncols + j) > 2.0)
             {
-                *(ptr_accumulated_dRdt+i*n_col+j) *= 5.0;
-                if (*(ptr_accumulated_dRdt+i*n_col+j) > 1e3)
+                *(ptr_accumulated_dRdt + i_ncols + j) *= 5.0;
+                if (*(ptr_accumulated_dRdt + i_ncols + j) > 1e3)
                 {
-                    *(ptr_accumulated_dRdt+i*n_col+j) = 1e3;
+                    *(ptr_accumulated_dRdt + i_ncols + j) = 1e3;
                 }
             }
         }
@@ -2118,25 +2299,27 @@ void MaplessDynamic::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accu
 
     for (int i=0; i<n_row; ++i)
     {
+        int i_ncols = i * n_col;
         for (int j=0; j<n_col; ++j)
-        {
-            if (*(ptr_accumulated_dRdt+i*n_col+j)!=0)
+        {            
+            if (*(ptr_accumulated_dRdt + i_ncols + j) != 0)
             {
-                *(ptr_dRdt_bin+i*n_col+j) = 255;
+                *(ptr_dRdt_bin + i_ncols + j) = 255;
             }
         }
     }
 
-    for (int i=0; i<n_row; ++i)
+    for (int i = 0; i < n_row; ++i)
     {
-        for (int j=0; j<n_col; ++j)
+        int i_ncols = i * n_col;
+        for (int j = 0; j < n_col; ++j)
         {
-            if (*(ptr_accumulated_dRdt_score+i*n_col+j)!=0)
+            if (*(ptr_accumulated_dRdt_score + i_ncols + j) != 0)
             {
-                *(ptr_dRdt_score_bin+i*n_col+j) = 255;
+                *(ptr_dRdt_score_bin + i_ncols + j) = 255;
             }
         }
-    }    
+    }
     // imfill 
     //invert dRdt_bin
     cv::Mat dRdt_bin_inv = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
@@ -2160,11 +2343,12 @@ void MaplessDynamic::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accu
 
     for (int i=1; i<n_row; ++i)
     {
+        int i_ncols = i * n_col;
         for (int j=0; j<n_col; ++j)
         {
-            if (*(ptr_rho_zero_value + i * n_col + j) == 0)
+            if (*(ptr_rho_zero_value + i_ncols + j) == 0)
             {
-                *(ptr_rho_zero_value + i * n_col + j) = 255;
+                *(ptr_rho_zero_value + i_ncols + j) = 255;
             }
         }
     }
@@ -2174,11 +2358,12 @@ void MaplessDynamic::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accu
 
     for (int i=1; i<n_row; ++i)
     {
+        int i_ncols = i * n_col;
         for (int j=0; j<n_col; ++j)
         {
-            if (*(ptr_input_img_mask + i * n_col + j) == 0)
+            if (*(ptr_input_img_mask + i_ncols + j) == 0)
             {
-                *(ptr_input_img_mask + i * n_col + j) = 255;
+                *(ptr_input_img_mask + i_ncols + j) = 255;
             }
         }
     }
@@ -2239,29 +2424,30 @@ void MaplessDynamic::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accu
             continue;
         }
 
-        object_row.clear();
-        object_col.clear();
-        object_rho_roi.clear();
-        filled_object_row.clear();
-        filled_object_col.clear();
-        filled_object_rho_roi.clear();
-        max_his_filled_object_rho_roi.clear();
-        rho_zero_filled_value_row.clear();
-        rho_zero_filled_value_col.clear();
-        rho_zero_filled_value_rho_roi.clear();
-        disconti_row.clear();
-        disconti_col.clear();
+        object_row.resize(0);
+        object_col.resize(0);
+        object_rho_roi.resize(0);
+        filled_object_row.resize(0);
+        filled_object_col.resize(0);
+        filled_object_rho_roi.resize(0);
+        max_his_filled_object_rho_roi.resize(0);
+        rho_zero_filled_value_row.resize(0);
+        rho_zero_filled_value_col.resize(0);
+        rho_zero_filled_value_rho_roi.resize(0);
+        disconti_row.resize(0);
+        disconti_col.resize(0);
 
         for (int i=0; i<n_row; ++i)
         {
+            int i_ncols = i * n_col;
             for (int j=0; j<n_col; ++j)
             {
-                if(*(ptr_object_label+i*n_col+j)==object_idx)
+                if (*(ptr_object_label + i_ncols + j) == object_idx)
                 {
                     object_row.push_back(i);
                     object_col.push_back(j);
-                    object_rho_roi.push_back(*(ptr_accumulated_dRdt + i * n_col + j));
-                    *(ptr_object_area + i * n_col + j) = 255;
+                    object_rho_roi.push_back(*(ptr_accumulated_dRdt + i_ncols + j));
+                    *(ptr_object_area + i_ncols + j) = 255;
                 }
             }
         }
@@ -2287,11 +2473,12 @@ void MaplessDynamic::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accu
 
             for (int i=0; i<n_row; ++i)
             {
-                for (int j=0; j<n_col; ++j)
+                int i_ncols = i * n_col;
+                for (int j = 0; j < n_col; ++j)
                 {
-                    if(*(ptr_object_area_filled+i*n_col+j)!=0 && *(ptr_input_img_mask+i*n_col+j)!=0)
+                    if (*(ptr_object_area_filled + i_ncols + j) != 0 && *(ptr_input_img_mask + i_ncols + j) != 0)
                     {
-                        connect_zero_mean += *(ptr_accumulated_dRdt+i*n_col + j);
+                        connect_zero_mean += *(ptr_accumulated_dRdt + i_ncols + j);
                         n_connet_zero += 1;
                     }
                 }
@@ -2302,11 +2489,12 @@ void MaplessDynamic::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accu
 
                 for (int i = 0; i < n_row; ++i)
                 {
+                    int i_ncols = i * n_col;
                     for (int j = 0; j < n_col; ++j)
                     {
-                        if(*(ptr_object_area_filled+i*n_col+j)!=0 && *(ptr_input_img_mask+i*n_col+j)==0)
+                        if (*(ptr_object_area_filled + i_ncols + j) != 0 && *(ptr_input_img_mask + i_ncols + j) == 0)
                         {
-                            *(ptr_img_rho + i * n_col + j) = connect_zero_mean;
+                            *(ptr_img_rho + i_ncols + j) = connect_zero_mean;
                         }
                     }
                 }
@@ -2318,14 +2506,15 @@ void MaplessDynamic::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accu
 
             for (int i = 0; i < n_row; ++i)
             {
+                int i_ncols = i * n_col;
                 for (int j = 0; j < n_col; ++j)
                 {
-                    if (*(ptr_object_area_filled + i * n_col + j) != 0 && *(ptr_input_img_mask + i * n_col + j) == 0 && *(ptr_img_rho + i * n_col + j) != 0)
+                    if (*(ptr_object_area_filled + i_ncols + j) != 0 && *(ptr_input_img_mask + i_ncols + j) == 0 && *(ptr_img_rho + i_ncols + j) != 0)
                     {
                         filled_object_row.push_back(i);
                         filled_object_col.push_back(j);
-                        filled_object_rho_roi.push_back(*(ptr_img_rho + i * n_col + j));
-                        *(ptr_filled_object_rho_mat + i * n_col + j) = 255;
+                        filled_object_rho_roi.push_back(*(ptr_img_rho + i_ncols + j));
+                        *(ptr_filled_object_rho_mat + i_ncols + j) = 255;
                     }
                 }
             }
@@ -2380,13 +2569,14 @@ void MaplessDynamic::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accu
             //
             for (int i = 0; i < n_row; ++i)
             {
+                int i_ncols = i * n_col;
                 for (int j = 0; j < n_col; ++j)
                 {
-                    if (*(ptr_object_area_filled + i * n_col + j) != 0 && *(ptr_img_rho + i * n_col + j) != 0)
+                    if (*(ptr_object_area_filled + i_ncols + j) != 0 && *(ptr_img_rho + i_ncols + j) != 0)
                     {
                         rho_zero_filled_value_row.push_back(i);
                         rho_zero_filled_value_col.push_back(j);
-                        rho_zero_filled_value_rho_roi.push_back(*(ptr_img_rho + i * n_col + j));
+                        rho_zero_filled_value_rho_roi.push_back(*(ptr_img_rho + i_ncols + j));
                     }
                 }
             }
@@ -2443,9 +2633,10 @@ void MaplessDynamic::interpAndfill_image(cv::Mat& input_img, cv::Mat& filled_bin
 
     for (int i=0; i<n_row; ++i)
     {
+        int i_ncols = i * n_col;
         for (int j=0; j<n_col; ++j)
         {
-            if ((*(ptr_input_img + i * n_col + j) == 0) && (*(ptr_filled_bin + i * n_col + j) > 0))
+            if ((*(ptr_input_img + i_ncols + j) == 0) && (*(ptr_filled_bin + i_ncols + j) > 0))
             {
                 row.push_back(i);
                 col.push_back(j);
@@ -2532,13 +2723,14 @@ void MaplessDynamic::countZerofloat(cv::Mat& input_mat)
     int n_col = input_mat.cols;
     float* ptr_input_mat = input_mat.ptr<float>(0);
     int cnt = 0;
-    for (int i=0; i<n_row; ++i)
+    for (int i = 0; i < n_row; ++i)
     {
-        for (int j=0; j<n_col; ++j)
+        int i_ncols = i * n_col;
+        for (int j = 0; j < n_col; ++j)
         {
-            if(*(ptr_input_mat+i*n_col+j)!=0)
+            if (*(ptr_input_mat + i_ncols + j) != 0)
             {
-                cnt+=1;
+                cnt += 1;
             }
         }
     }
@@ -2549,36 +2741,38 @@ void MaplessDynamic::countZeroint(cv::Mat& input_mat)
 {
     int n_row = input_mat.rows;
     int n_col = input_mat.cols;
-    int* ptr_input_mat = input_mat.ptr<int>(0);
+    int *ptr_input_mat = input_mat.ptr<int>(0);
     int cnt = 0;
-    for (int i=0; i<n_row; ++i)
+    for (int i = 0; i < n_row; ++i)
     {
-        for (int j=0; j<n_col; ++j)
+        int i_ncols = i * n_col;
+        for (int j = 0; j < n_col; ++j)
         {
-            if(*(ptr_input_mat+i*n_col+j)!=0)
+            if (*(ptr_input_mat + i_ncols + j) != 0)
             {
-                cnt+=1;
+                cnt += 1;
             }
         }
     }
-    std::cout<<"# of non zero: "<<cnt <<std::endl;
+    std::cout << "# of non zero: " << cnt << std::endl;
 }
 
 void MaplessDynamic::countZerouchar(cv::Mat& input_mat)
 {
     int n_row = input_mat.rows;
     int n_col = input_mat.cols;
-    uchar* ptr_input_mat = input_mat.ptr<uchar>(0);
+    uchar *ptr_input_mat = input_mat.ptr<uchar>(0);
     int cnt = 0;
-    for (int i=0; i<n_row; ++i)
+    for (int i = 0; i < n_row; ++i)
     {
-        for (int j=0; j<n_col; ++j)
+        int i_ncols = i * n_col;
+        for (int j = 0; j < n_col; ++j)
         {
-            if(*(ptr_input_mat+i*n_col+j)!=0)
+            if (*(ptr_input_mat + i_ncols + j) != 0)
             {
-                cnt+=1;
+                cnt += 1;
             }
         }
     }
-    std::cout<<"# of non zero: "<<cnt <<std::endl;
+    std::cout << "# of non zero: " << cnt << std::endl;
 }

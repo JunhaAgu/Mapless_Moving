@@ -27,7 +27,7 @@ ROSWrapper::~ROSWrapper(){
 };
 
 void ROSWrapper::run(){
-    int freq_spin = 10; // [Hz]
+    int freq_spin = 5; // [Hz]
     ros::Rate rate(freq_spin);
     ROS_INFO_STREAM("ROSWrapper - 'run()' - run at [" << freq_spin << "] Hz.");
     while(ros::ok()){

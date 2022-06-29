@@ -17,7 +17,7 @@ typedef Eigen::Matrix4d   Pose;
 
 #define NORM(x, y, z) (pow(((x) * (x) + (y) * (y) + (z) * (z)), 0.5))
 
-#define R2D 180/M_PI
-#define D2R M_PI/180
+#define R2D (float)180/M_PI
+#define D2R M_PI/(float)180
 
 #endif
