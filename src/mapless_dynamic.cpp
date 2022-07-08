@@ -10,18 +10,15 @@ MaplessDynamic::MaplessDynamic(ros::NodeHandle& nh, bool test_flag)
     ROS_INFO_STREAM("MaplessDynamic - constructed.");
     // IMPLEMENT YOUR CODE FROM THIS LINE.
 
-    // do something...
-
-    // END YOUR CODE
     pub_dynamic_pts_ = nh_.advertise<sensor_msgs::PointCloud2>("/dynamic_pts",1);
     pub_static_pts_  = nh_.advertise<sensor_msgs::PointCloud2>("/static_pts",1);
 
     this->getUserSettingParameters();
 
     // allocation for solver
-    accumulated_dRdt_ = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    accumulated_dRdt_       = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
     accumulated_dRdt_score_ = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-    residual_ = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    residual_               = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
 
     str_cur_            = new StrRhoPts();
     str_next_           = new StrRhoPts();
@@ -31,17 +28,17 @@ MaplessDynamic::MaplessDynamic(ros::NodeHandle& nh, bool test_flag)
     str_cur_->rho.reserve(500000);
     str_cur_->phi.reserve(500000);
     str_cur_->theta.reserve(500000);
-    str_cur_->img_rho = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    str_cur_->img_rho   = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
     str_cur_->img_index = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
 
-    str_cur_->img_x = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-    str_cur_->img_y = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-    str_cur_->img_z = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    str_cur_->img_x     = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    str_cur_->img_y     = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    str_cur_->img_z     = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
 
-    str_cur_->img_restore_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
     str_cur_->pts_per_pixel_n.resize(img_height_*img_width_);
     str_cur_->pts_per_pixel_index.resize(img_height_*img_width_);
     str_cur_->pts_per_pixel_rho.resize(img_height_ * img_width_);
+    str_cur_->pts_per_pixel_index_valid.resize(img_height_ * img_width_);
     for (int i=0; i<img_height_*img_width_; ++i)
     {
         str_cur_->pts_per_pixel_index[i].reserve(500);
@@ -50,17 +47,14 @@ MaplessDynamic::MaplessDynamic(ros::NodeHandle& nh, bool test_flag)
     {
         str_cur_->pts_per_pixel_rho[i].reserve(500);
     }
-    str_cur_->pts_per_pixel_index_valid.resize(img_height_ * img_width_);
     for (int i=0; i<img_height_*img_width_; ++i)
     {
         str_cur_->pts_per_pixel_index_valid[i].reserve(500);
     }
-    // str_cur_->valid_original_pts_idx_.reserve(500000);
     str_cur_->pts        = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
     str_cur_->ptsInImage = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
+    str_cur_->img_restore_mask      = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
     str_cur_->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
-
-    
 
     str_next_->rho.reserve(500000);
     str_next_->phi.reserve(500000);
@@ -72,10 +66,10 @@ MaplessDynamic::MaplessDynamic(ros::NodeHandle& nh, bool test_flag)
     str_next_->img_y     = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
     str_next_->img_z     = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
 
-    str_next_->img_restore_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
     str_next_->pts_per_pixel_n.resize(img_height_*img_width_);
     str_next_->pts_per_pixel_index.resize(img_height_*img_width_);
     str_next_->pts_per_pixel_rho.resize(img_height_ * img_width_);
+    str_next_->pts_per_pixel_index_valid.resize(img_height_ * img_width_);
     for (int i=0; i<img_height_*img_width_; ++i)
     {
         str_next_->pts_per_pixel_index[i].reserve(500);
@@ -84,14 +78,13 @@ MaplessDynamic::MaplessDynamic(ros::NodeHandle& nh, bool test_flag)
     {
         str_next_->pts_per_pixel_rho[i].reserve(500);
     }
-    str_next_->pts_per_pixel_index_valid.resize(img_height_ * img_width_);
     for (int i=0; i<img_height_*img_width_; ++i)
     {
         str_next_->pts_per_pixel_index_valid[i].reserve(500);
     }
-    // str_next_->valid_original_pts_idx_.reserve(500000);
     str_next_->pts        = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
     str_next_->ptsInImage = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
+    str_next_->img_restore_mask      = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
     str_next_->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
     
     groundPtsIdx_next_ = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
@@ -106,10 +99,10 @@ MaplessDynamic::MaplessDynamic(ros::NodeHandle& nh, bool test_flag)
     str_cur_warped_->img_y = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
     str_cur_warped_->img_z = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
 
-    str_cur_warped_->img_restore_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
     str_cur_warped_->pts_per_pixel_n.resize(img_height_*img_width_);
     str_cur_warped_->pts_per_pixel_index.resize(img_height_*img_width_);
     str_cur_warped_->pts_per_pixel_rho.resize(img_height_ * img_width_);
+    str_cur_warped_->pts_per_pixel_index_valid.resize(img_height_ * img_width_);
     for (int i=0; i<img_height_*img_width_; ++i)
     {
         str_cur_warped_->pts_per_pixel_index[i].reserve(500);
@@ -118,33 +111,29 @@ MaplessDynamic::MaplessDynamic(ros::NodeHandle& nh, bool test_flag)
     {
         str_cur_warped_->pts_per_pixel_rho[i].reserve(500);
     }
-    str_cur_warped_->pts_per_pixel_index_valid.resize(img_height_ * img_width_);
     for (int i=0; i<img_height_*img_width_; ++i)
     {
         str_cur_warped_->pts_per_pixel_index_valid[i].reserve(500);
     }
-    // str_cur_warped_->valid_original_pts_idx_.reserve(500000);
     str_cur_warped_->pts        = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
     str_cur_warped_->ptsInImage = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
+    str_cur_warped_->img_restore_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
     str_cur_warped_->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
-
-    velo_cur_.reserve(500000);
-    velo_xyz_.reserve(500000);
 
     str_warpPointcloud_->rho.reserve(500000);
     str_warpPointcloud_->phi.reserve(500000);
     str_warpPointcloud_->theta.reserve(500000);
-    str_warpPointcloud_->img_rho = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    str_warpPointcloud_->img_rho   = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
     str_warpPointcloud_->img_index = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
 
     str_warpPointcloud_->img_x = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
     str_warpPointcloud_->img_y = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
     str_warpPointcloud_->img_z = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
 
-    str_warpPointcloud_->img_restore_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
-    str_warpPointcloud_->pts_per_pixel_n.resize(img_height_*img_width_);
-    str_warpPointcloud_->pts_per_pixel_index.resize(img_height_*img_width_);
+    str_warpPointcloud_->pts_per_pixel_n.resize(img_height_ * img_width_);
+    str_warpPointcloud_->pts_per_pixel_index.resize(img_height_ * img_width_);
     str_warpPointcloud_->pts_per_pixel_rho.resize(img_height_ * img_width_);
+    str_warpPointcloud_->pts_per_pixel_index_valid.resize(img_height_ * img_width_);
     for (int i=0; i<img_height_*img_width_; ++i)
     {
         str_warpPointcloud_->pts_per_pixel_index[i].reserve(500);
@@ -153,22 +142,24 @@ MaplessDynamic::MaplessDynamic(ros::NodeHandle& nh, bool test_flag)
     {
         str_warpPointcloud_->pts_per_pixel_rho[i].reserve(500);
     }
-    str_warpPointcloud_->pts_per_pixel_index_valid.resize(img_height_ * img_width_);
     for (int i=0; i<img_height_*img_width_; ++i)
     {
         str_warpPointcloud_->pts_per_pixel_index_valid[i].reserve(500);
     }
-    // str_warpPointcloud_->valid_original_pts_idx_.reserve(500000);
     str_warpPointcloud_->pts        = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
     str_warpPointcloud_->ptsInImage = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
+    str_warpPointcloud_->img_restore_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
     str_warpPointcloud_->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
 
+    velo_cur_.reserve(500000);
+    velo_xyz_.reserve(500000);
     ptr_cur_pts_warped_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
     pts_warpewd_        = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
 
     if (test_flag_){
         this->loadTestData();
     }
+    // END YOUR CODE
 };
 
 
@@ -177,13 +168,12 @@ MaplessDynamic::~MaplessDynamic() {
     ROS_INFO_STREAM("MaplessDynamic - deleted.");
     // IMPLEMENT YOUR CODE FROM THIS LINE.
 
-    // do something...
-
-    // END YOUR CODE
     delete str_cur_;
     delete str_next_;
     delete str_cur_warped_;
     delete str_warpPointcloud_;
+
+    // END YOUR CODE
 };
 
 
@@ -191,7 +181,7 @@ void MaplessDynamic::TEST(){
     static int cnt_data = 0;
     std::cout<< data_buf_.size() << std::endl;
     std::cout<< "Test iter: "<< cnt_data << std::endl;
-    exit(0);
+    // exit(0);
     // The test function.
     // IMPLEMENT YOUR CODE FROM THIS LINE.
 
@@ -233,11 +223,11 @@ void MaplessDynamic::TEST(){
         ROS_INFO_STREAM("elapsed time for 'SLAM' :" << dt_slam << " [ms]");
 
         // 2. Solve the Mapless Dynamic algorithm.
-        timer::tic();
+        // timer::tic();
         Mask mask1;
         this->solve(p0_pcl_test_, p1_pcl_test_, T01, mask1, cnt_data);
-        double dt_solver = timer::toc(); // milliseconds
-        ROS_INFO_STREAM("elapsed time for 'solver' :" << dt_solver << " [ms]");
+        // double dt_solver = timer::toc(); // milliseconds
+        // ROS_INFO_STREAM("elapsed time for 'solver' :" << dt_solver << " [ms]");
 
         // 3. Update the previous variables
         // updatePreviousVariables(p1, mask1);
@@ -260,7 +250,7 @@ void MaplessDynamic::TEST(){
 
 
 void MaplessDynamic::loadTestData(){
-    std::string data_num = "07";
+    std::string data_num = "01";
     std::string dataset_dir = "/home/junhakim/KITTI_odometry/";
     float pose_arr[12];
     Pose T_tmp;
@@ -488,25 +478,41 @@ void MaplessDynamic::solve(
     //     exit(0);
     // }
 
+    // timer::tic();
+    // double dt_slam = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'compensateCurRhoZeroWarp' :" << dt_slam << " [ms]");
+
     // pointcloud input, p1
     // p0 is already processed in initial step
+    timer::tic();
     genRangeImages(p1, str_next_);
+    double dt_toc1 = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'genRangeImages' :" << dt_toc1 << " [ms]");
 
     // Warp pcl represented in current frame to next frame
     T_next2cur_ = T01;
     
     // Segment ground
+    timer::tic();
     segmentGround(str_next_);
+    double dt_toc2 = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'segmentSGround' :" << dt_toc2 << " [ms]");
 
     //// Occlusion accumulation ////
     // Compute the occlusion dRdt
     
-    dR_warpPointcloud(p0, T_next2cur_, cnt_data);
+    timer::tic();
+    dR_warpPointcloud(str_next_, str_cur_, p0, T_next2cur_, cnt_data, str_cur_warped_, residual_);
+    double dt_toc3 = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'dR_warpPointcloud' :" << dt_toc3 << " [ms]");
     // str_next_->state();
 
+    timer::tic();
     // warp the occlusion accumulation map
     warpPointcloud(str_cur_, T_next2cur_, accumulated_dRdt_, cnt_data);
     warpPointcloud(str_cur_, T_next2cur_, accumulated_dRdt_score_, cnt_data);
+    double dt_toc4 = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'warpPointcloud' :" << dt_toc4 << " [ms]");
     
     //     if (cnt_data == 2)
     // {
@@ -516,8 +522,11 @@ void MaplessDynamic::solve(
     //     countZerofloat(accumulated_dRdt_score_);
     // }
 
+    timer::tic();
     // filter out outliers
     filterOutAccumdR(str_next_, str_cur_warped_, accumulated_dRdt_, accumulated_dRdt_score_, residual_);
+    double dt_toc5 = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'filterOutAccumdR' :" << dt_toc5 << " [ms]");
     // if (cnt_data == 2)
     // {
     //     cv::imshow("d", accumulated_dRdt_);
@@ -528,25 +537,35 @@ void MaplessDynamic::solve(
     //     exit(0);
     // }
 
-    // timer::tic();
+    timer::tic();
     // Extract object candidate via connected components in 2-D binary image
     extractObjectCandidate(accumulated_dRdt_, str_next_, object_threshold_);
     // double dt_extractObjectCandidate = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'dt_extractObjectCandidate' :" << dt_extractObjectCandidate << " [ms]");
+    double dt_toc6 = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'extractObjectCandidate' :" <<  dt_toc6 << " [ms]");
 
     //// update object_mask
     //object_mask = accumulated_dRdt>0;
-
+    timer::tic();
     // Fast Segment
     checkSegment(accumulated_dRdt_, str_next_, groundPtsIdx_next_);
+    double dt_toc7 = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'checkSegment' :" <<  dt_toc7 << " [ms]");
 
     //// update object_mask
     //object_mask = accumulated_dRdt>0;
-
+    timer::tic();
     updateScore(accumulated_dRdt_, accumulated_dRdt_score_);
+    double dt_toc8 = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'updateScore' :" <<  dt_toc8 << " [ms]");
 
+    timer::tic();
     plugImageZeroHoles(accumulated_dRdt_, accumulated_dRdt_score_, str_next_, groundPtsIdx_next_, object_threshold_);
+    double dt_toc9 = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'plugImageZeroHoles' :" <<  dt_toc9 << " [ms]");
 
+    timer::tic();
     float* ptr_accumulated_dRdt_ = accumulated_dRdt_.ptr<float>(0);
     float* ptr_accumulated_dRdt_score_ = accumulated_dRdt_score_.ptr<float>(0);
     float *ptr_next_img_rho = str_next_->img_rho.ptr<float>(0);
@@ -621,7 +640,10 @@ void MaplessDynamic::solve(
             }
         }
     }
+    double dt_toc10 = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'segmentWholePts' :" <<  dt_toc10 << " [ms]");
 
+    timer::tic();
     //// visualization ////
     // dynamic //
     sensor_msgs::PointCloud2 converted_msg_d;
@@ -635,7 +657,10 @@ void MaplessDynamic::solve(
     pub_static_pts_.publish(converted_msg_s);
     // if (cnt_data == 3)
     // {exit(0);}
+    double dt_toc11 = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'publish' :" <<  dt_toc11 << " [ms]");
 
+    timer::tic();
     //// update for next iteration
     for (int i = 0; i < img_height_; ++i)
     {
@@ -650,6 +675,8 @@ void MaplessDynamic::solve(
     }
 
     copyStruct(str_next_, str_cur_, p1, p0, cnt_data);
+    double dt_toc12 = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'copyRemove' :" <<  dt_toc12 << " [ms]");
 
 
 };
@@ -879,22 +906,20 @@ void MaplessDynamic::copyStruct(StrRhoPts* str_next, StrRhoPts* str_cur, pcl::Po
 void MaplessDynamic::getUserSettingParameters(){
     // IMPLEMENT YOUR CODE FROM THIS LINE.
 
-    // do something...
-
-    // END YOUR CODE  
-
-    img_height_ = 64/1;
-    img_width_ = 4500/5+1;
+    img_height_ = 64 / 1;
+    img_width_ = 4500 / 5 + 1;
     object_threshold_ = 30;
 
     alpha_ = 0.3;
     beta_ = 0.1;
 
-    //initialize
+    // initialize
     score_cnt_ = 0;
 
-    //for test
-    test_data_type_ = "KITTI";      
+    // for test
+    test_data_type_ = "KITTI";
+
+    // END YOUR CODE   
 };
 
 void MaplessDynamic::calculateGTpose(int cnt_line)
@@ -967,38 +992,38 @@ void MaplessDynamic::readKittiPclBinData(std::string &in_file, int file_num)
     data_buf_[valid_cnt]->pcl_->resize(i-1);
     pcl::toROSMsg(*data_buf_[valid_cnt]->pcl_, *(data_buf_[valid_cnt]->pcl_msg_));
 
-    std::cout<< "bin_num: "<<file_num <<" "<<"num_pts: "<<data_buf_[valid_cnt]->pcl_->size() <<std::endl;
+    // std::cout<< "bin_num: "<<file_num <<" "<<"num_pts: "<<data_buf_[valid_cnt]->pcl_->size() <<std::endl;
     // std::cout<< "bin_num: "<<file_num <<" "<<"final pts: "<<data_buf_[file_num]->pcl_->at((data_buf_[file_num]->pcl_)->size()-2) <<std::endl;
-    std::cout<< "valid_num: "<<valid_cnt <<" "<<"num_pts: "<<data_buf_[valid_cnt]->pcl_msg_->width <<std::endl;
+    // std::cout<< "valid_num: "<<valid_cnt <<" "<<"num_pts: "<<data_buf_[valid_cnt]->pcl_msg_->width <<std::endl;
     input.close();
     valid_cnt+=1;
 }
 
-void MaplessDynamic::genRangeImages(pcl::PointCloud<pcl::PointXYZ>& pcl_in1, StrRhoPts* str_in1)
+void MaplessDynamic::genRangeImages(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts* str_in)
 {
     int h_factor = 5;
     int v_factor = 1;
-    float azimuth_res = 0.08*h_factor;
+    float azimuth_res = 0.08*(float)h_factor;
 
     // generate range images
-    float az_step = 1/azimuth_res; // 0.08 degrees step.
+    float az_step = 1.0f/azimuth_res; // 0.08 degrees step.
     int n_radial = 360*az_step+1;
     int n_ring = 64/v_factor;
-    int n_pts = pcl_in1.size();
+    int n_pts = pcl_in.size();
 
-    calcuateRho(pcl_in1, str_in1);
-    makeRangeImageAndPtsPerPixel(str_in1, n_pts, n_ring, n_radial, az_step);
-    interpRangeImage(str_in1, n_ring, n_radial);
-    interpPts(pcl_in1, str_in1, n_ring, n_radial);
+    calcuateRho(pcl_in, str_in);
+    makeRangeImageAndPtsPerPixel(str_in, n_pts, n_ring, n_radial, az_step);
+    interpRangeImage(str_in, n_ring, n_radial);
+    interpPts(pcl_in, str_in, n_ring, n_radial);
 
     // int cnt1 = 0;
     // int cnt2 = 0;
     // int cnt3 = 0;
     // int cnt4 = 0;
-    // float* ptr_img_rho = str_in1->img_rho.ptr<float>(0);
-    // float *ptr_x = str_in1->img_x.ptr<float>(0);
-    // float* ptr_y = str_in1->img_y.ptr<float>(0);
-    // float* ptr_z = str_in1->img_z.ptr<float>(0);
+    // float* ptr_img_rho = str_in->img_rho.ptr<float>(0);
+    // float *ptr_x = str_in->img_x.ptr<float>(0);
+    // float* ptr_y = str_in->img_y.ptr<float>(0);
+    // float* ptr_z = str_in->img_z.ptr<float>(0);
 
     // for (int i = 0; i < n_ring; ++i)
     // {
@@ -1023,8 +1048,8 @@ void MaplessDynamic::genRangeImages(pcl::PointCloud<pcl::PointXYZ>& pcl_in1, Str
 
 void MaplessDynamic::calcuateRho(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts* str_in)
 {
-    float twopi = 2*M_PI;
-    float offset_theta = M_PI;
+    float twopi         = 2.0*M_PI;
+    float offset_theta  = M_PI;
 
     int n_pts = pcl_in.size();
     float invrhocos = 0.0;
@@ -1034,7 +1059,6 @@ void MaplessDynamic::calcuateRho(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoP
     for (int i = 0; i < n_pts; ++i)
     {
         str_in->rho.push_back(NORM(pcl_in.points[i].x, pcl_in.points[i].y, pcl_in.points[i].z));
-        // std::cout << NORM(pcl_in.points[i].x, pcl_in.points[i].y, pcl_in.points[i].z) <<std::endl;
         str_in->phi.push_back(asin(pcl_in.points[i].z / str_in->rho[i]));
         invrhocos = (float)1.0 / (str_in->rho[i] * cos(str_in->phi[i]));
 
@@ -1100,10 +1124,12 @@ void MaplessDynamic::makeRangeImageAndPtsPerPixel(StrRhoPts *str_in, int n_pts, 
                 i_row = kk;
                 break;
             }
+            else{}
             if (kk == (n_ring-1))
             {
                 i_row = n_ring - 1;
             }
+            else{}
         }
         i_col = roundf(str_in->theta[i]*az_step*R2D);
 
@@ -1111,24 +1137,23 @@ void MaplessDynamic::makeRangeImageAndPtsPerPixel(StrRhoPts *str_in, int n_pts, 
         {
             continue;
         }
-
-        if (*(ptr_img_rho + i_row * n_col + i_col) == 0) //(str_in->img_rho.at<float>(i_row,i_col) == 0)
+        
+        int i_row_ncols_i_col = i_row * n_col + i_col;
+        if (*(ptr_img_rho + i_row_ncols_i_col) == 0) //(str_in->img_rho.at<float>(i_row,i_col) == 0)
         {   
-            *(ptr_img_rho + i_row * n_col + i_col) = str_in->rho[i];
-            *(ptr_img_index + i_row * n_col + i_col) = i;
+            *(ptr_img_rho + i_row_ncols_i_col) = str_in->rho[i];
+            *(ptr_img_index + i_row_ncols_i_col) = i;
         }
-        else if (*(ptr_img_rho + i_row * n_col + i_col) > str_in->rho[i])
+        else if (*(ptr_img_rho + i_row_ncols_i_col) > str_in->rho[i])
         {
-            *(ptr_img_rho + i_row * n_col + i_col) = str_in->rho[i];
-            *(ptr_img_index + i_row * n_col + i_col) = i;
+            *(ptr_img_rho + i_row_ncols_i_col) = str_in->rho[i];
+            *(ptr_img_index + i_row_ncols_i_col) = i;
         }
+        else{}
 
-        str_in->pts_per_pixel_n[(i_row)*n_col + i_col] += 1;
-
-        str_in->pts_per_pixel_index[(i_row)*n_col + i_col].push_back(i);
-        str_in->pts_per_pixel_rho[(i_row)*n_col + i_col].push_back(str_in->rho[i]);
-        // str_in->pts_per_pixel_index[n_ring*(i_col)+i_row][str_in->pts_per_pixel_n[n_ring*(i_col)+i_row-1] -1] = i;
-        // str_in->pts_per_pixel_rho[n_ring*(i_col)+i_row][str_in->pts_per_pixel_n[n_ring*(i_col)+i_row-1] -1] = str_in->rho[i];
+        str_in->pts_per_pixel_n[i_row_ncols_i_col] += 1;
+        str_in->pts_per_pixel_index[i_row_ncols_i_col].push_back(i);
+        str_in->pts_per_pixel_rho[i_row_ncols_i_col].push_back(str_in->rho[i]);
     } // end for
 
     // for(int a=0; a < str_in->pts_per_pixel_rho.size(); ++a)
@@ -1141,16 +1166,15 @@ void MaplessDynamic::makeRangeImageAndPtsPerPixel(StrRhoPts *str_in, int n_pts, 
     //     std::cout << std::endl;
     // }
     // exit(0);
-
-
 }
 
 void MaplessDynamic::interpRangeImage(StrRhoPts* str_in, int n_ring, int n_radial)
 {
     cv::Mat img_rho_new = str_in->img_rho.clone();
+    float* ptr_img_rho_new = img_rho_new.ptr<float>(0);
+
     float* ptr_img_rho = str_in->img_rho.ptr<float>(0);
     int* ptr_img_index = str_in->img_index.ptr<int>(0);
-    float* ptr_img_rho_new = img_rho_new.ptr<float>(0);
     int* ptr_img_restore_mask = str_in->img_restore_mask.ptr<int>(0);
     int n_col = str_in->img_rho.cols;
     int n_row = str_in->img_rho.rows;
@@ -1175,7 +1199,6 @@ void MaplessDynamic::interpRangeImage(StrRhoPts* str_in, int n_ring, int n_radia
                         *(ptr_img_rho_new + i_ncols + j) = std::max(*(ptr_img_rho + (i - 1) * n_col + j), *(ptr_img_rho + (i + 1) * n_col + j));
                     }
                 }
-
                 else if ((*(ptr_img_rho + (i - 1) * n_col + j) != 0) && (*(ptr_img_rho + (i + 2) * n_col + j) != 0))
                 {
                     if (fabsf32(*(ptr_img_rho + (i - 1) * n_col + j) - *(ptr_img_rho + (i + 2) * n_col + j)) < 0.1)
@@ -1193,7 +1216,9 @@ void MaplessDynamic::interpRangeImage(StrRhoPts* str_in, int n_ring, int n_radia
                         *(ptr_img_rho_new + (i+1) * n_col + j) = std::max(*(ptr_img_rho + (i - 1) * n_col + j), *(ptr_img_rho + (i + 2) * n_col + j));
                     }
                 }
+                else{}
             } // end if
+            else{}
 
             if ((*(ptr_img_rho + i_ncols + (j - 1)) != 0) && (*(ptr_img_rho + i_ncols + (j + 1)) != 0))
             {
@@ -1202,8 +1227,8 @@ void MaplessDynamic::interpRangeImage(StrRhoPts* str_in, int n_ring, int n_radia
                     *(ptr_img_restore_mask + i_ncols + j) = 4;
                     *(ptr_img_rho_new + i_ncols + j) = (*(ptr_img_rho + i_ncols + (j - 1)) + *(ptr_img_rho + i_ncols + (j + 1))) * 0.5;
                 }
+                else{}
             }
-
             else if ((*(ptr_img_rho + i_ncols + (j - 1)) != 0) && (*(ptr_img_rho + i_ncols + (j + 2)) != 0))
             {
                 if (fabsf32(*(ptr_img_rho + i_ncols + (j - 1)) - *(ptr_img_rho + i_ncols + (j + 2))) < 0.05)
@@ -1213,7 +1238,9 @@ void MaplessDynamic::interpRangeImage(StrRhoPts* str_in, int n_ring, int n_radia
                     *(ptr_img_rho_new + i_ncols + j) = *(ptr_img_rho + i_ncols + (j - 1)) * (0.6666667) + *(ptr_img_rho + i_ncols + (j + 2)) * (0.3333333);
                     *(ptr_img_rho_new + i_ncols + (j + 1)) = *(ptr_img_rho + i_ncols + (j - 1)) * (0.3333333) + *(ptr_img_rho + i_ncols + (j + 2)) * (0.6666667);
                 }
+                else{}
             }
+            else{}
 
         } // end col
 
@@ -1224,6 +1251,8 @@ void MaplessDynamic::interpRangeImage(StrRhoPts* str_in, int n_ring, int n_radia
 
 void MaplessDynamic::interpPts(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts* str_in, int n_ring, int n_radial)
 {
+    int n_col = str_in->img_rho.cols;
+    int n_row = str_in->img_rho.rows;
     
     float* ptr_img_rho = str_in->img_rho.ptr<float>(0);
     int* ptr_img_index = str_in->img_index.ptr<int>(0);
@@ -1231,9 +1260,6 @@ void MaplessDynamic::interpPts(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts
     float* ptr_img_y = str_in->img_y.ptr<float>(0);
     float* ptr_img_z = str_in->img_z.ptr<float>(0);
     int* ptr_img_restore_mask = str_in->img_restore_mask.ptr<int>(0);
-
-    int n_col = str_in->img_rho.cols;
-    int n_row = str_in->img_rho.rows;
 
     for (int i = 0; i < n_ring; ++i)
     {
@@ -1245,19 +1271,22 @@ void MaplessDynamic::interpPts(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts
                 
                 for (int k = 0; k < (str_in->pts_per_pixel_rho[i_ncols + j].size()); ++k)
                 {
-                    
                     if (std::abs((str_in->pts_per_pixel_rho[i_ncols + j][k] - *(ptr_img_rho + i_ncols + j))) < 0.5)
                     {
                         str_in->pts_per_pixel_index_valid[i_ncols + j].push_back(str_in->pts_per_pixel_index[i_ncols + j][k]);
                     }
+                    else{}
                 }
             } // end if
+            else{}
+
             if (*(ptr_img_index + i_ncols + j) != 0)
             {
                 *(ptr_img_x + i_ncols + j) = pcl_in[*(ptr_img_index + i_ncols + j)].x;
                 *(ptr_img_y + i_ncols + j) = pcl_in[*(ptr_img_index + i_ncols + j)].y;
                 *(ptr_img_z + i_ncols + j) = pcl_in[*(ptr_img_index + i_ncols + j)].z;
             }
+            else{}
 
             if (*(ptr_img_restore_mask + i_ncols + j) == 1)
             {
@@ -1340,20 +1369,20 @@ void MaplessDynamic::interpPts(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts
                 *(ptr_img_y + i_ncols + j) = (0.3333333) * pcl_in[*(ptr_img_index + i_ncols + (j-2))].y + (0.6666667)*pcl_in[*(ptr_img_index + i_ncols + (j+1))].y;
                 *(ptr_img_z + i_ncols + j) = (0.3333333) * pcl_in[*(ptr_img_index + i_ncols + (j-2))].z + (0.6666667)*pcl_in[*(ptr_img_index + i_ncols + (j+1))].z;
             }
-
+            else{}
         }     // end for j
     }         // end for i
 }
 
-void MaplessDynamic::dR_warpPointcloud(pcl::PointCloud<pcl::PointXYZ>& p0, Pose& T01, int cnt_data)
+void MaplessDynamic::dR_warpPointcloud(StrRhoPts* str_next, StrRhoPts* str_cur, pcl::PointCloud<pcl::PointXYZ>& p0, Pose& T01, int cnt_data, StrRhoPts* str_cur_warped, cv::Mat& dRdt)
 {
-    int n_row = str_next_->img_rho.rows;
-    int n_col = str_next_->img_rho.cols;
+    int n_row = str_next->img_rho.rows;
+    int n_col = str_next->img_rho.cols;
     int n_ring = n_row;
     int n_radial = n_col;
-    float* ptr_img_x = str_cur_->img_x.ptr<float>(0);
-    float* ptr_img_y = str_cur_->img_y.ptr<float>(0);
-    float* ptr_img_z = str_cur_->img_z.ptr<float>(0);
+    float* ptr_cur_img_x = str_cur->img_x.ptr<float>(0);
+    float* ptr_cur_img_y = str_cur->img_y.ptr<float>(0);
+    float* ptr_cur_img_z = str_cur->img_z.ptr<float>(0);
     // int cnt = 0;
 
     // representative pts
@@ -1362,16 +1391,16 @@ void MaplessDynamic::dR_warpPointcloud(pcl::PointCloud<pcl::PointXYZ>& p0, Pose&
         int i_ncols = i * n_col;
         for (int j = 0; j < n_col; ++j)
         {
-            if ((*(ptr_img_x + i_ncols + j) > 10.0) || (*(ptr_img_x + i_ncols + j) < -10.0) || (*(ptr_img_y + i_ncols + j) > 10.0) || (*(ptr_img_y + i_ncols + j) < -10.0))
+            if ((*(ptr_cur_img_x + i_ncols + j) > 10.0) || (*(ptr_cur_img_x + i_ncols + j) < -10.0) || (*(ptr_cur_img_y + i_ncols + j) > 10.0) || (*(ptr_cur_img_y + i_ncols + j) < -10.0))
             {
-                velo_cur_.push_back(pcl::PointXYZ(*(ptr_img_x + i_ncols + j), *(ptr_img_y + i_ncols + j), *(ptr_img_z + i_ncols + j)));
+                velo_cur_.push_back(pcl::PointXYZ(*(ptr_cur_img_x + i_ncols + j), *(ptr_cur_img_y + i_ncols + j), *(ptr_cur_img_z + i_ncols + j)));
             }
         }
     }
     
 
     // Far pts are warped by the original pts
-    for (int i=0; i<p0.size(); ++i)
+    for (int i = 0; i < p0.size(); ++i)
     {
         if( (p0[i].x < 10) && (p0[i].x > -10.0) && (p0[i].y < 10.0) && (p0[i].y > -10.0) )
         {
@@ -1381,40 +1410,40 @@ void MaplessDynamic::dR_warpPointcloud(pcl::PointCloud<pcl::PointXYZ>& p0, Pose&
 
     // compensate zero in current rho image for warping
     // timer::tic();
-    compensateCurRhoZeroWarp(str_cur_, n_ring, n_radial, v_angle_, velo_cur_);
+    compensateCurRhoZeroWarp(str_cur, n_ring, n_radial, v_angle_, velo_cur_);
     // double dt_slam = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'compensateCurRhoZeroWarp' :" << dt_slam << " [ms]");
     // exit(0);
     pcl::transformPointCloud(velo_cur_, *ptr_cur_pts_warped_, T01);
     
     // current warped image
-    genRangeImages(*(ptr_cur_pts_warped_), str_cur_warped_);
+    genRangeImages(*(ptr_cur_pts_warped_), str_cur_warped);
 
     // fill range image using interpolation
-    interpRangeImageMin(str_cur_warped_, n_ring, n_radial);
+    interpRangeImageMin(str_cur_warped, n_ring, n_radial);
 
     // fill pts corresponding to filled range image (no affect the original pts)
-    interpPtsWarp(str_cur_warped_, n_ring, n_radial);
+    interpPtsWarp(str_cur_warped, n_ring, n_radial);
 
     // calculate occlusions
-    cv::subtract(str_cur_warped_->img_rho, str_next_->img_rho, residual_); 
+    cv::subtract(str_cur_warped->img_rho, str_next_->img_rho, dRdt); 
     // residual_ = str_cur_warped_->img_rho - str_next_->img_rho;    
 }
 
-void MaplessDynamic::compensateCurRhoZeroWarp(StrRhoPts* str_cur_, int n_ring, int n_radial, std::vector<float>& v_angle_, pcl::PointCloud<pcl::PointXYZ>& velo_cur_)
+void MaplessDynamic::compensateCurRhoZeroWarp(StrRhoPts* str_cur, int n_ring, int n_radial, std::vector<float>& v_angle, pcl::PointCloud<pcl::PointXYZ>& velo_cur)
 {
     int n_row = n_ring;
     int n_col = n_radial;
-    float left_dir_rho = 0;
+    float left_dir_rho  = 0;
     float right_dir_rho = 0;
-    float up_dir_rho = 0;
-    float down_dir_rho = 0;
-    float* ptr_img_rho = str_cur_->img_rho.ptr<float>(0);
+    float up_dir_rho    = 0;
+    float down_dir_rho  = 0;
+    float* ptr_cur_img_rho = str_cur->img_rho.ptr<float>(0);
 
-    int cnt_left = 1;
-    int cnt_right = 1;
-    int cnt_up = 1;
-    int cnt_down = 1;
+    int cnt_left    = 1;
+    int cnt_right   = 1;
+    int cnt_up      = 1;
+    int cnt_down    = 1;
 
     float min = 0.0 ;
     int min_index = 0;
@@ -1425,17 +1454,18 @@ void MaplessDynamic::compensateCurRhoZeroWarp(StrRhoPts* str_cur_, int n_ring, i
     float new_phi = 0.0;
     float new_theta = 0.0;
 
-    for (int i=0+1; i<n_ring-1 ; ++i)
+    for (int i = 0 + 1; i < n_ring - 1; ++i)
     {
         int i_ncols = i * n_col;
-        for (int j=0+1; j<n_radial-1 ; ++j)
+        for (int j = 0 + 1; j < n_radial - 1; ++j)
         {
+            // initialization every iteration
             left_dir_rho = 0.0;
             right_dir_rho = 0.0;
             up_dir_rho = 0.0;
             down_dir_rho = 0.0;
             
-            if (*(ptr_img_rho + i_ncols + j) == 0)
+            if (*(ptr_cur_img_rho + i_ncols + j) == 0)
             {
                     cnt_left = 1;
                     cnt_right = 1;
@@ -1449,7 +1479,7 @@ void MaplessDynamic::compensateCurRhoZeroWarp(StrRhoPts* str_cur_, int n_ring, i
                             left_dir_rho = 100.0;
                             break;
                         }
-                        left_dir_rho = *(ptr_img_rho + i_ncols + (j - cnt_left));
+                        left_dir_rho = *(ptr_cur_img_rho + i_ncols + (j - cnt_left));
                         cnt_left += 1;
                     } // end while
                     //right
@@ -1460,7 +1490,7 @@ void MaplessDynamic::compensateCurRhoZeroWarp(StrRhoPts* str_cur_, int n_ring, i
                             right_dir_rho = 100.0;
                             break;
                         }
-                        right_dir_rho = *(ptr_img_rho + i_ncols + (j + cnt_right));
+                        right_dir_rho = *(ptr_cur_img_rho + i_ncols + (j + cnt_right));
                         cnt_right += 1;
                     } // end while
                     //up
@@ -1471,7 +1501,7 @@ void MaplessDynamic::compensateCurRhoZeroWarp(StrRhoPts* str_cur_, int n_ring, i
                             up_dir_rho = 100.0;
                             break;
                         }
-                        up_dir_rho = *(ptr_img_rho + (i - cnt_up) * n_col + j);
+                        up_dir_rho = *(ptr_cur_img_rho + (i - cnt_up) * n_col + j);
                         cnt_up += 1;
                     } // end while
                     //down
@@ -1482,7 +1512,7 @@ void MaplessDynamic::compensateCurRhoZeroWarp(StrRhoPts* str_cur_, int n_ring, i
                             down_dir_rho = 100.0;
                             break;
                         }
-                        down_dir_rho = *(ptr_img_rho + (i + cnt_down) * n_col + j);
+                        down_dir_rho = *(ptr_cur_img_rho + (i + cnt_down) * n_col + j);
                         cnt_down += 1;
                     } // end while
                     four_dir[0] = (left_dir_rho);
@@ -1494,19 +1524,21 @@ void MaplessDynamic::compensateCurRhoZeroWarp(StrRhoPts* str_cur_, int n_ring, i
 
                     if (min<40.0)
                     {
-                        new_phi = v_angle_[i] * D2R;
+                        new_phi = v_angle[i] * D2R;
                         new_theta = 0.4 * j *D2R;
                         for (int m = 0; m < 5; ++m)
                         {
                             for (int p = 0; p < 5; ++p)
                             {
-                                velo_cur_.push_back(pcl::PointXYZ(-min * cosf(new_phi + (float)(m - 2) * D2R) * cosf(new_theta + (float)(p - 2) * 0.08 * D2R),
-                                                                  -min * cosf(new_phi + (float)(m - 2) * D2R) * sinf(new_theta + ((float)p - 2) * 0.08 * D2R),
+                                velo_cur.push_back(pcl::PointXYZ(-min * cosf(new_phi + (float)(m - 2) * D2R) * cosf(new_theta + (float)(p - 2) * 0.08 * D2R),
+                                                                  -min * cosf(new_phi + (float)(m - 2) * D2R) * sinf(new_theta + (float)(p - 2) * 0.08 * D2R),
                                                                    min * sinf(new_phi + (float)(m - 2) * D2R)));
                             }
                         }
                     } // end if
+                    else{}
             } // end if
+            else{}
         } // end for j
     } //end for i
     
@@ -1567,6 +1599,7 @@ void MaplessDynamic::interpRangeImageMin(StrRhoPts* str_in, int n_ring, int n_ra
                         *(ptr_img_restore_warp_mask + i_ncols + j) = 4;
                         *(ptr_img_rho_new + i_ncols + j) = (*(ptr_img_rho + i_ncols + (j - 1)) + *(ptr_img_rho + i_ncols + (j + 1))) * 0.5;
                     }
+                    else{}
                 }
                 else if (*(ptr_img_rho + i_ncols + (j - 1)) != 0 && *(ptr_img_rho + i_ncols + (j + 2)) != 0)
                 {
@@ -1577,9 +1610,10 @@ void MaplessDynamic::interpRangeImageMin(StrRhoPts* str_in, int n_ring, int n_ra
                         *(ptr_img_rho_new + i_ncols + j) = *(ptr_img_rho + i_ncols + (j - 1)) * (0.6666667) + *(ptr_img_rho + i_ncols + (j + 2)) * (0.3333333);
                         *(ptr_img_rho_new + i_ncols + (j + 1)) = *(ptr_img_rho + i_ncols + (j - 1)) * (0.3333333) + *(ptr_img_rho + i_ncols + (j + 2)) * (0.6666667);
                     }
+                    else{}
                 }
             } // end if
-
+            else{}
         } // end col
 
     } // end row
@@ -1589,20 +1623,19 @@ void MaplessDynamic::interpRangeImageMin(StrRhoPts* str_in, int n_ring, int n_ra
 
 void MaplessDynamic::interpPtsWarp(StrRhoPts* str_in, int n_ring, int n_radial)
 {
-    int n_col = n_radial;
     int n_row = n_ring;
+    int n_col = n_radial;
     int* ptr_img_index = str_in->img_index.ptr<int>(0);
     float* ptr_img_rho = str_in->img_rho.ptr<float>(0);
     float* ptr_img_x = str_in->img_x.ptr<float>(0);
     float* ptr_img_y = str_in->img_y.ptr<float>(0);
     float* ptr_img_z = str_in->img_z.ptr<float>(0);
     int* ptr_img_restore_warp_mask = str_in->img_restore_warp_mask.ptr<int>(0);
-    
 
-    for (int i=0+2; i<n_row-2; ++i)
+    for (int i = 0 + 2; i < n_row - 2; ++i)
     {
         int i_ncols = i * n_col;
-        for (int j=0+2; j<n_col-2; ++j)
+        for (int j = 0 + 2; j < n_col - 2; ++j)
         {            
             if (*(ptr_img_restore_warp_mask + i_ncols + j) == 1)
             {
@@ -1685,6 +1718,7 @@ void MaplessDynamic::interpPtsWarp(StrRhoPts* str_in, int n_ring, int n_radial)
                 *(ptr_img_y + i_ncols + j) = (0.3333333) * (*(ptr_img_y + i_ncols + (j - 2))) + (0.6666667) * (*(ptr_img_y + i_ncols + (j + 1)));
                 *(ptr_img_z + i_ncols + j) = (0.3333333) * (*(ptr_img_z + i_ncols + (j - 2))) + (0.6666667) * (*(ptr_img_z + i_ncols + (j + 1)));
             }
+            else{}
         } // end for j
     } // end for i
 }
@@ -1903,9 +1937,9 @@ void MaplessDynamic::extractObjectCandidate(cv::Mat& accumulated_dRdt, StrRhoPts
             const int* channel_numbers = {0};
             const float* his_ranges= his_range;
             int number_bins = 50;
-            std::cout<<object_rho_roi.size()<<std::endl;
-            std::cout<<his_range[0]<<std::endl;
-            std::cout<<his_range[1]<<std::endl;
+            // std::cout<<object_rho_roi.size()<<std::endl;
+            // std::cout<<his_range[0]<<std::endl;
+            // std::cout<<his_range[1]<<std::endl;
             cv::calcHist(&object_rho_mat, 1, channel_numbers, cv::Mat(), histogram, 1, &number_bins, &his_ranges);
 
             int max_n = 0;

@@ -166,7 +166,7 @@ private:
     void getUserSettingParameters();
     // void func1();
     // ...
-    void genRangeImages(pcl::PointCloud<pcl::PointXYZ>& pcl_in1, StrRhoPts* str_in1);
+    void genRangeImages(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts* str_in);
     void calcuateRho(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts* str_in);
     void makeRangeImageAndPtsPerPixel(StrRhoPts* str_in, int n_pts, int n_ring,int n_radial,float az_step);
     void interpRangeImage(StrRhoPts* str_in, int n_ring, int n_radial);
@@ -174,8 +174,8 @@ private:
 
     void segmentGround(StrRhoPts* str_in);
     
-    void dR_warpPointcloud(pcl::PointCloud<pcl::PointXYZ>& p0, Pose& T01, int cnt_data);
-    void compensateCurRhoZeroWarp(StrRhoPts* str_cur_, int n_ring, int n_radial, std::vector<float>& v_angle_, pcl::PointCloud<pcl::PointXYZ>& velo_cur_);
+    void dR_warpPointcloud(StrRhoPts* str_next, StrRhoPts* str_cur, pcl::PointCloud<pcl::PointXYZ>& p0, Pose& T01, int cnt_data, StrRhoPts* str_cur_warped, cv::Mat& dRdt);
+    void compensateCurRhoZeroWarp(StrRhoPts* str_cur, int n_ring, int n_radial, std::vector<float>& v_angle, pcl::PointCloud<pcl::PointXYZ>& velo_cur);
     void interpRangeImageMin(StrRhoPts* str_in, int n_ring, int n_radial);
     void interpPtsWarp(StrRhoPts* str_cur_warped_, int n_ring, int n_radial);
     
