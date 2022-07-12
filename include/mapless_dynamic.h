@@ -20,6 +20,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
+#include <opencv2/opencv.hpp>
 
 struct TestData 
 {
@@ -177,10 +178,11 @@ private:
     void dR_warpPointcloud(StrRhoPts* str_next, StrRhoPts* str_cur, pcl::PointCloud<pcl::PointXYZ>& p0, Pose& T01, int cnt_data, StrRhoPts* str_cur_warped, cv::Mat& dRdt);
     void compensateCurRhoZeroWarp(StrRhoPts* str_cur, int n_ring, int n_radial, std::vector<float>& v_angle, pcl::PointCloud<pcl::PointXYZ>& velo_cur);
     void interpRangeImageMin(StrRhoPts* str_in, int n_ring, int n_radial);
-    void interpPtsWarp(StrRhoPts* str_cur_warped_, int n_ring, int n_radial);
+    void interpPtsWarp(StrRhoPts* str_in, int n_ring, int n_radial);
     
-    void warpPointcloud(StrRhoPts* str_cur_, const Pose& T01, cv::Mat& mat_in, int cnt_data);
-    void filterOutAccumdR(StrRhoPts* str_next_,StrRhoPts* str_cur_warped_,cv::Mat& accumulated_dRdt_,cv::Mat& accumulated_dRdt_score_,cv::Mat& residual_);
+    void warpPointcloud(StrRhoPts* str_cur, const Pose& T01, cv::Mat& mat_in, int cnt_data);
+    void initializeStructAndPcl();
+    void filterOutAccumdR(StrRhoPts* str_next, StrRhoPts* str_cur_warped, cv::Mat& accumulated_dRdt ,cv::Mat& accumulated_dRdt_score ,cv::Mat& residual);
     void extractObjectCandidate(cv::Mat& accumulated_dRdt, StrRhoPts* str_next, int object_threshold);
 
     void checkSegment(cv::Mat& accumulated_dRdt, StrRhoPts* str_next, cv::Mat& groundPtsIdx_next);
