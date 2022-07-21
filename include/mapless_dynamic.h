@@ -22,6 +22,9 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/opencv.hpp>
 
+#include <numeric>
+#include <random>
+
 struct TestData 
 {
     Pose T_gt_;
@@ -83,6 +86,15 @@ struct StrRhoPts
     }
 };
 
+struct StrRANSAC
+{
+    int iter;
+    float thr;
+    float a_thr;
+    float b_thr[2];
+    int min_inlier;
+};
+
 class MaplessDynamic{
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
@@ -106,6 +118,8 @@ private:
     float alpha_;
     float beta_;
 
+    StrRANSAC paramRANSAC_;
+    
     cv::Mat accumulated_dRdt_;
     cv::Mat accumulated_dRdt_score_;
     cv::Mat background_mask_;
@@ -173,7 +187,8 @@ private:
     void interpRangeImage(StrRhoPts* str_in, int n_ring, int n_radial);
     void interpPts(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts* str_in1, int n_ring, int n_radial);
 
-    void segmentGround(StrRhoPts* str_in);
+    void fastsegmentGround(StrRhoPts* str_in);
+    void ransacLine(std::vector<float>& points_rho, std::vector<float>& points_z, /*output*/ std::vector<bool>& mask_inlier, int num_seg);
     
     void dR_warpPointcloud(StrRhoPts* str_next, StrRhoPts* str_cur, pcl::PointCloud<pcl::PointXYZ>& p0, Pose& T01, int cnt_data, StrRhoPts* str_cur_warped, cv::Mat& dRdt);
     void compensateCurRhoZeroWarp(StrRhoPts* str_cur, int n_ring, int n_radial, std::vector<float>& v_angle, pcl::PointCloud<pcl::PointXYZ>& velo_cur);

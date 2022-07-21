@@ -250,7 +250,7 @@ void MaplessDynamic::TEST(){
 
 
 void MaplessDynamic::loadTestData(){
-    std::string data_num = "05";
+    std::string data_num = "07";
     std::string dataset_dir = "/home/junhakim/KITTI_odometry/";
     float pose_arr[12];
     Pose T_tmp;
@@ -275,7 +275,7 @@ void MaplessDynamic::loadTestData(){
         final_num = 950 + 1; // 1 ~ 91+2
     }
     else if (data_num == "05"){
-        start_num = 2350 + 00;
+        start_num = 2350 + 144+41;
         final_num = 2670 + 1; // 1 ~ 321+2
         //         start_num = 2350+269; final_num = 2670+1; // 1 ~ 321+2
     }
@@ -494,7 +494,7 @@ void MaplessDynamic::solve(
     
     // Segment ground
     timer::tic();
-    segmentGround(str_next_);
+    fastsegmentGround(str_next_);
     double dt_toc2 = timer::toc(); // milliseconds
     ROS_INFO_STREAM("elapsed time for 'segmentSGround' :" << dt_toc2 << " [ms]");
 
@@ -958,6 +958,13 @@ void MaplessDynamic::getUserSettingParameters(){
 
     alpha_ = 0.3;
     beta_ = 0.1;
+
+    paramRANSAC_.iter = 100;
+    paramRANSAC_.thr = 0.1;
+    paramRANSAC_.a_thr = 0.1;
+    paramRANSAC_.b_thr[0] = -0.5;
+    paramRANSAC_.b_thr[1] = -1.2;
+    paramRANSAC_.min_inlier = 5;
 
     // initialize
     score_cnt_ = 0;
@@ -2132,24 +2139,487 @@ void MaplessDynamic::extractObjectCandidate(cv::Mat& accumulated_dRdt, StrRhoPts
 
 }
 
-void MaplessDynamic::segmentGround(StrRhoPts* str_in)
+void MaplessDynamic::fastsegmentGround(StrRhoPts* str_in)
 {
     int n_row = str_in->img_rho.rows;
     int n_col = str_in->img_rho.cols;
     float* ptr_img_z = str_in->img_z.ptr<float>(0);
+    float* ptr_img_rho = str_in->img_rho.ptr<float>(0);
     uchar* ptr_groundPtsIdx_next = groundPtsIdx_next_.ptr<uchar>(0);
+
+    int downsample_size = 10;
+    int n_col_sample = std::round(n_col/downsample_size);
+
+    cv::Mat pts_z_sample = cv::Mat::zeros(n_row, n_col_sample, CV_32FC1);
+    float* ptr_pts_z_sample = pts_z_sample.ptr<float>(0);
+    cv::Mat rho_sample   = cv::Mat::zeros(n_row, n_col_sample, CV_32FC1);
+    float* ptr_rho_sample = rho_sample.ptr<float>(0);
+
+    std::vector<int> col_range;
+    std::vector<float> pts_z_col_range;
+    std::vector<float> rho_col_range;
+    col_range.reserve(downsample_size);
+    pts_z_col_range.reserve(downsample_size);
+    rho_col_range.reserve(downsample_size);
 
     for (int i=0; i<n_row; ++i)
     {
         int i_ncols = i * n_col;
-        for (int j=0; j<n_col; ++j)
-        {
-            if (*(ptr_img_z + i_ncols + j) < -1.5)
+        int i_ncols_sample = i * n_col_sample;
+        for (int j=0; j<n_col_sample; ++j)
+        {   
+            col_range.resize(0);
+            pts_z_col_range.resize(0);
+            rho_col_range.resize(0);
+            float min_z = 0.0;
+            int min_idx = 0;
+            int j_downsample_size = j * downsample_size;
+            for (int k=0; k<downsample_size; ++k)
             {
-                *(ptr_groundPtsIdx_next + i_ncols + j) = 255;
+                col_range.push_back(j_downsample_size + k);
+                pts_z_col_range.push_back(*(ptr_img_z + i_ncols + j_downsample_size + k));
+                rho_col_range.push_back(*(ptr_img_rho + i_ncols + j_downsample_size + k));
+            }
+            min_z = *min_element(pts_z_col_range.begin(), pts_z_col_range.end());
+            min_idx = min_element(pts_z_col_range.begin(), pts_z_col_range.end()) - pts_z_col_range.begin();
+
+            if (min_z == 0)
+            {
+                continue;
+            }
+            *(ptr_pts_z_sample + i_ncols_sample + j)   = min_z;
+            *(ptr_rho_sample + i_ncols_sample + j)     = *(ptr_img_rho + i_ncols + col_range[0] + min_idx);
+            // std::cout << j << " "<<*(ptr_rho_sample + i_ncols + j) << std::endl;
+        }
+    }
+
+    std::vector<float> points_rho;
+    std::vector<float> points_z;
+    std::vector<bool> mask_inlier;
+    points_rho.reserve(n_row);
+    points_z.reserve(n_row);
+    mask_inlier.reserve(n_row);
+
+    cv::Mat mask_inlier_mat = cv::Mat::zeros(n_row, n_col_sample, CV_32FC1);
+    float* ptr_mask_inlier_mat = mask_inlier_mat.ptr<float>(0);
+    
+    for (int j=0; j<n_col_sample; ++j)
+    {
+        points_rho.resize(0);
+        points_z.resize(0);
+        mask_inlier.clear();
+        mask_inlier.resize(n_row, false);
+        for (int i = 0; i < n_row; ++i)
+        {
+            points_rho.push_back(*(ptr_rho_sample + i * n_col_sample + j));
+            points_z.push_back(*(ptr_pts_z_sample + i * n_col_sample + j));
+            // std::cout << (*(ptr_rho_sample + i * n_col_sample + j)) << " " << (*(ptr_pts_z_sample + i * n_col_sample + j)) <<std::endl;
+        }
+        
+        ransacLine(points_rho, points_z, /*output*/ mask_inlier, j);
+
+
+        for (int i=0; i<n_row; ++i)
+        {
+            if (mask_inlier[i]==true)
+            {
+                *(ptr_mask_inlier_mat + i * n_col_sample + j) = 255;
             }
         }
     }
+    // std::cout << mask_inlier_mat <<std::endl;
+    // exit(0);
+    
+    // cv::imshow("mat", mask_inlier_mat);
+    // cv::waitKey(0);
+
+    float rep_z_value = 0.0;
+    std::vector<bool> bin_ground_mask;
+    bin_ground_mask.reserve(downsample_size);
+    for (int i = 0; i < n_row; ++i)
+    {
+        int i_ncols = i * n_col;
+        for (int j = 0; j < n_col_sample; ++j)
+        {
+            col_range.resize(0);
+            pts_z_col_range.resize(0);
+            bin_ground_mask.resize(0);
+            int j_downsample_size = j * downsample_size;
+            if (*(ptr_mask_inlier_mat + i * n_col_sample + j) == 255)
+            {
+                rep_z_value = *(ptr_pts_z_sample + i * n_col_sample + j);
+                if (rep_z_value == 0)
+                {
+                    continue;
+                }
+                else{}
+
+                for (int k = 0; k < downsample_size; ++k)
+                {
+                    col_range.push_back(j_downsample_size + k);
+                    pts_z_col_range.push_back(*(ptr_img_z + i_ncols + j_downsample_size + k));
+                    if ((pts_z_col_range[k] != 0) && (pts_z_col_range[k] < (rep_z_value + 0.05)))
+                    {
+                        bin_ground_mask.push_back(true);
+                        *(ptr_groundPtsIdx_next + i_ncols + col_range[k]) = 255;
+                    }
+                    else
+                    {
+                        bin_ground_mask.push_back(false);
+                        *(ptr_groundPtsIdx_next + i_ncols + col_range[k]) = 0;
+                    }                    
+                }
+
+                // for (int ii = 0 ; ii<col_range.size(); ++ii)
+                // {
+                //     if (bin_ground_mask[ii] == true)
+                //     {
+                //         *(ptr_groundPtsIdx_next + i_ncols + col_range[ii]) = 255;
+                //     }
+                //     else
+                //     {
+                //         *(ptr_groundPtsIdx_next + i_ncols + col_range[ii]) = 0;
+                //     }
+                // }
+            }
+        }
+    }
+    // cv::imshow("groundPtsIdx_next", groundPtsIdx_next_);
+    // cv::waitKey(0);
+}
+
+void MaplessDynamic::ransacLine(std::vector<float>& points_rho, std::vector<float>& points_z, /*output*/ std::vector<bool>& mask_inlier, int num_seg)
+{
+    timer::tic();
+    std::vector<float> points_rho_dup;
+    points_rho_dup.resize(points_rho.size());
+    std::copy(points_rho.begin(), points_rho.end(), points_rho_dup.begin());
+    
+    std::vector<float> points_z_dup;
+    points_z_dup.resize(points_rho.size());
+    std::copy(points_z.begin(), points_z.end(), points_z_dup.begin());
+    int max_range = 100;
+    int n_bin_per_seg = points_rho.size();
+
+    std::vector<bool> mask_temp;
+    mask_temp.resize(n_bin_per_seg, false);
+    bool flag_nnz_mask_temp = false;
+
+    std::vector<float> points_rho_sort_temp;
+    std::vector<float> points_z_sort_temp;
+    points_rho_sort_temp.reserve(n_bin_per_seg);
+    points_z_sort_temp.reserve(n_bin_per_seg);
+
+    std::vector<int> idx_non_zero_mask_temp;
+    idx_non_zero_mask_temp.reserve(n_bin_per_seg);
+
+    std::vector<int> valid_points_idx;
+    valid_points_idx.reserve(max_range);
+    
+    for (int i=0; i<max_range; ++i)
+    {
+        mask_temp.clear();
+        mask_temp.resize(n_bin_per_seg, false);
+        flag_nnz_mask_temp = false;
+        points_rho_sort_temp.resize(0);
+        points_z_sort_temp.resize(0);
+        idx_non_zero_mask_temp.resize(0);
+
+        for (int j=0; j<n_bin_per_seg; ++j)
+        {
+            if (points_rho[j] > i && points_rho[j] < i + 1.0)
+            {
+                mask_temp[j] = true;
+                flag_nnz_mask_temp = true;
+
+                points_rho_sort_temp.push_back(points_rho[j]);
+                points_z_sort_temp.push_back(points_z[j]);
+                idx_non_zero_mask_temp.push_back(j);
+            }
+            else{}
+        }
+        if (flag_nnz_mask_temp == true)
+        {
+            float min_z = *min_element(points_z_sort_temp.begin(), points_z_sort_temp.end());
+            int min_idx = min_element(points_z_sort_temp.begin(), points_z_sort_temp.end()) - points_z_sort_temp.begin();
+            if (min_z > -1.0)
+            {
+                continue;
+            }
+            // std::cout << min_idx << std::endl;
+            // std::cout << idx_non_zero_mask_temp[min_idx] << std::endl;
+            // exit(0);
+            valid_points_idx.push_back(idx_non_zero_mask_temp[min_idx]);
+        }
+    }
+    // for (int i=0; i<valid_points_idx.size(); ++i)
+    // {
+    //     std::cout << valid_points_idx[i] << std::endl;
+    // }
+    // exit(0);
+    std::vector<bool> non_zero_points_mask;
+    non_zero_points_mask.resize(points_rho.size(), false);
+    for (int i=0; i<valid_points_idx.size(); ++i)
+    {
+        non_zero_points_mask[valid_points_idx[i]] = true;
+    }
+
+    // std::vector<bool> mask_inlier;
+    // mask_inlier.resize(non_zero_points_mask.size(), false);
+
+    std::vector<float> points_valid_rho;
+    points_valid_rho.reserve(points_rho.size());
+
+    std::vector<float> points_valid_z;
+    points_valid_z.reserve(points_rho.size());
+
+    for (int i=0; i<valid_points_idx.size(); ++i)
+    {
+        points_valid_rho.push_back(points_rho[valid_points_idx[i]]);
+        points_valid_z.push_back(points_z[valid_points_idx[i]]);
+    }
+
+    // for (int i=0; i<valid_points_idx.size(); ++i)
+    // {
+    //     std::cout << points_valid_rho[i] << std::endl;
+    // }
+    // for (int i=0; i<valid_points_idx.size(); ++i)
+    // {
+    //     std::cout << points_valid_z[i] << std::endl;
+    // }
+    
+    if (points_valid_rho.size() < 2)
+    {
+        // ROS_INFO_STREAM("Not enough pts for RANSAC");
+        // std::cout << "number of segment: " << num_seg << std::endl; 
+        return;
+    }
+
+    int iter = paramRANSAC_.iter;
+    float thr = paramRANSAC_.thr;
+    float a_thr = paramRANSAC_.a_thr; // abs
+    float b_thr[2] = {paramRANSAC_.b_thr[0], paramRANSAC_.b_thr[1]}; // under
+    int mini_inlier = paramRANSAC_.min_inlier;
+    int n_sample = 2;
+    int n_pts_valid = points_valid_rho.size();
+
+    std::vector<bool> id_good_fit;
+    id_good_fit.resize(iter, false);
+
+    std::vector<std::vector<bool>> ini_inlier(iter, std::vector<bool>(n_pts_valid, false));
+    std::vector<std::vector<bool>> mask(iter, std::vector<bool>(n_pts_valid, false));
+    std::vector<std::vector<float>> residual(iter, std::vector<float>(n_pts_valid, 0.0));
+    std::vector<int> inlier_cnt(iter, 0);
+
+    std::vector<pcl::PointCloud<pcl::PointXY>> inlier;
+    inlier.resize(iter);
+    for (int i=0; i<iter; ++i)
+    {
+        inlier[i].reserve(points_rho.size());
+    }
+    std::vector<float> line_A(iter, 0);
+    std::vector<float> line_B(iter, 0);
+
+    int n1 = 0;
+    int n2 = 0;
+    float x1 = 0.0, x2 = 0.0, y1 = 0.0, y2 = 0.0;
+
+    
+    for (int m=0; m<iter; ++m)
+    {
+        inlier_cnt[m] = 1;
+
+        while(1)
+        { 
+            std::random_device rd;
+            std::mt19937 gen(rd());
+            std::uniform_int_distribution<int> dis(0,n_pts_valid-1);
+            n1 = dis(gen);
+            n2 = dis(gen);
+            if (n1 != n2)
+            {
+                break;
+            }
+        }
+
+        x1 = points_valid_rho[n1];
+        y1 = points_valid_z[n1];
+        x2 = points_valid_rho[n2];
+        y2 = points_valid_z[n2];
+
+        line_A[m] = (y2 - y1) / (x2 - x1);
+        line_B[m] = -line_A[m] * x1 + y1;
+
+        if (line_A[m] < 0.0)
+        {
+            if (line_A[m] < -a_thr || line_B[m] > b_thr[0])
+            {
+                continue;
+            }
+            else{}
+        }
+        else{}
+
+        if (line_A[m] > 0.0)
+        {
+            if (line_A[m] > a_thr || line_B[m] > b_thr[1])
+            {
+                continue;
+            }
+            else{}
+        }
+        else{}
+
+        for (int i=0; i<n_pts_valid; ++i)
+        {
+            residual[m][i] = std::abs(line_A[m]*points_valid_rho[i] - points_valid_z[i] + line_B[m]) /
+                            std::sqrt(line_A[m]*line_A[m] + 1.0);
+             
+            if (residual[m][i] < thr)
+            {
+                ini_inlier[m][i] = true;
+                mask[m][i] = true;
+            }
+        }
+
+
+        pcl::PointXY point_xy;
+
+        for (int j=0; j<n_pts_valid; ++j)
+        {
+            if (ini_inlier[m][j]==true)
+            {
+                point_xy.x = points_valid_rho[j];
+                point_xy.y = points_valid_z[j];
+                inlier[m].push_back(point_xy);
+                inlier_cnt[m] += 1;
+            }
+        }
+        if ((inlier_cnt[m] - 1) > mini_inlier)
+        {
+            id_good_fit[m] = true;
+        }
+    }
+
+
+    int max_inlier_cnt = 0;
+    std::vector<int> max_inlier_cnt_index;
+    max_inlier_cnt_index.reserve(100);
+
+    max_inlier_cnt = *max_element(inlier_cnt.begin(), inlier_cnt.end());
+
+    for (int i=0; i<inlier_cnt.size(); ++i)
+    {
+        if (inlier_cnt[i] == max_inlier_cnt)
+        {
+            max_inlier_cnt_index.push_back(i);
+        }
+    }
+
+    float mini_pre = 1e3;
+
+
+    if (max_inlier_cnt_index.size()==0)
+    {
+        return;
+    }
+    
+    int id_mini = 0;
+    int max_inlier_cnt_index_1 = 0;
+    if (max_inlier_cnt_index.size()>1)
+    {
+        int n_candi = max_inlier_cnt_index.size();
+        for (int i_candi=0; i_candi<n_candi; ++i_candi)
+        {
+            float mean_residual = 0.0;
+            for (int k=0; k<residual[max_inlier_cnt_index[i_candi]].size(); ++k)
+            {
+                mean_residual += residual[max_inlier_cnt_index[i_candi]][k];
+            }
+
+            mean_residual /= residual[max_inlier_cnt_index[i_candi]].size();
+
+            float mini = std::min(mean_residual, mini_pre);
+            
+            if (mini < mini_pre)
+            {
+                id_mini = i_candi;
+            }
+            mini_pre = mini;
+        }
+        max_inlier_cnt_index_1 = max_inlier_cnt_index[id_mini];
+    }
+    else
+    {
+        max_inlier_cnt_index_1 = max_inlier_cnt_index[0];
+    }
+    int best_n_inlier = inlier_cnt[max_inlier_cnt_index_1] - 1;
+
+    if (best_n_inlier < 3)
+    {
+        // ROS_INFO_STREAM("inlier pts < 3");
+        // std::cout << "number of segment: " << num_seg << std::endl; 
+        // return;
+    }
+    if (best_n_inlier == 0)
+    {
+        // ROS_INFO_STREAM("# of inlier pts = 0");
+        return;
+    }
+
+    Eigen::MatrixXf A = Eigen::MatrixXf::Zero(best_n_inlier,3);
+    for (int i=0; i<best_n_inlier; ++i)
+    {
+        A(i,0) = inlier[max_inlier_cnt_index_1][i].x;
+        A(i,1) = inlier[max_inlier_cnt_index_1][i].y;
+        A(i,2) = 1;
+    }
+    
+    Eigen::Vector3f t;
+    if (A.rows()>2)
+    {
+        Eigen::JacobiSVD<Eigen::MatrixXf> svd(A, Eigen::ComputeThinU | Eigen::ComputeThinV);
+        t = svd.matrixV().col(2);
+    }
+    else
+    {
+        Eigen::JacobiSVD<Eigen::MatrixXf> svd(A.transpose()*A, Eigen::ComputeThinU | Eigen::ComputeThinV);
+        t = svd.matrixV().col(2);
+        // std::cout << svd.matrixU() << std::endl;
+        // std::cout << "***************" << std::endl;
+        // std::cout << svd.matrixV() << std::endl;
+        // std::cout << "***************" << std::endl;
+        // std::cout << svd.singularValues() << std::endl;
+        // exit(0);
+    }
+
+    // Eigen::JacobiSVD<Eigen::MatrixXf> svd(A, Eigen::ComputeThinU | Eigen::ComputeThinV);
+    // // cout << "Its singular values are:" << endl << svd.singularValues() << endl;
+    // // cout << "Its left singular vectors are the columns of the thin U matrix:" << endl << svd.matrixU() << endl;
+    // // cout << "Its right singular vectors are the columns of the thin V matrix:" << endl << svd.matrixV() << endl;
+
+    t = -t/t(1,0);
+
+    Eigen::Vector2f line;
+    line << t(0), t(2); //y = ax + b
+
+    float residual_leastsquare = 0.0;
+    float line_updown = 0.0;
+
+    for (int i=0; i<points_rho_dup.size(); ++i)
+    {
+        residual_leastsquare = std::abs(t(0)*points_rho_dup[i] + t(1)*points_z_dup[i] + t(2)) /
+                                std::sqrt(t(0)*t(0)+t(1)*t(1));
+        line_updown = t(0)*points_rho_dup[i] + t(1)*points_z_dup[i] + t(2);
+
+        if ((residual_leastsquare < thr) || (line_updown > 0))
+        {
+            mask_inlier[i] = true;
+        }
+    }
+                        double dt_toc1 = timer::toc(); // milliseconds
+        ROS_INFO_STREAM("elapsed time for 'ransacLine' :" << dt_toc1 << " [ms]");
+    // output: mask_inlier
 }
 
 void MaplessDynamic::checkSegment(cv::Mat& accumulated_dRdt, StrRhoPts* str_next, cv::Mat& groundPtsIdx_next)
@@ -2406,12 +2876,12 @@ void MaplessDynamic::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accu
 {
     int n_row = accumulated_dRdt.rows;
     int n_col = accumulated_dRdt.cols;
-    float* ptr_accumulated_dRdt = accumulated_dRdt.ptr<float>(0);
-    float* ptr_accumulated_dRdt_score = accumulated_dRdt_score.ptr<float>(0);
-    cv::Mat dRdt_bin = cv::Mat::zeros(img_height_,img_width_, CV_8UC1);
-    cv::Mat dRdt_score_bin = cv::Mat::zeros(img_height_,img_width_, CV_8UC1);
-    uchar* ptr_dRdt_bin = dRdt_bin.ptr<uchar>(0);
-    uchar* ptr_dRdt_score_bin = dRdt_score_bin.ptr<uchar>(0);
+    float* ptr_accumulated_dRdt         = accumulated_dRdt.ptr<float>(0);
+    float* ptr_accumulated_dRdt_score   = accumulated_dRdt_score.ptr<float>(0);
+    cv::Mat dRdt_bin        = cv::Mat::zeros(img_height_,img_width_, CV_8UC1);
+    cv::Mat dRdt_score_bin  = cv::Mat::zeros(img_height_,img_width_, CV_8UC1);
+    uchar* ptr_dRdt_bin         = dRdt_bin.ptr<uchar>(0);
+    uchar* ptr_dRdt_score_bin   = dRdt_score_bin.ptr<uchar>(0);
 
     float* ptr_img_rho = str_next->img_rho.ptr<float>(0);
 
@@ -2438,16 +2908,28 @@ void MaplessDynamic::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accu
             }
         }
     }
+ 
+
     // imfill 
     //invert dRdt_bin
     cv::Mat dRdt_bin_inv = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
     cv::bitwise_not(dRdt_bin, dRdt_bin_inv);
+    uchar *ptr_dRdt_bin_inv = dRdt_bin_inv.ptr<uchar>(0);
+    for (int j = 0; j < n_col; ++j)
+    {
+        *(ptr_dRdt_bin_inv + (n_row - 1) * n_col + j) = 255;
+    }
     cv::floodFill(dRdt_bin_inv, cv::Point(0,0), cv::Scalar(0));
     cv::Mat dRdt_bin_filled = (dRdt_bin | dRdt_bin_inv);
     interpAndfill_image(accumulated_dRdt, dRdt_bin_filled);
 
     cv::Mat dRdt_score_bin_inv = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
     cv::bitwise_not(dRdt_score_bin, dRdt_score_bin_inv);
+    uchar *ptr_dRdt_score_bin_inv = dRdt_score_bin_inv.ptr<uchar>(0);
+    for (int j = 0; j < n_col; ++j)
+    {
+        *(ptr_dRdt_score_bin_inv + (n_row - 1) * n_col + j) = 255;
+    }
     cv::floodFill(dRdt_score_bin_inv, cv::Point(0,0), cv::Scalar(0));
     cv::Mat dRdt_score_bin_filled = (dRdt_score_bin | dRdt_score_bin_inv);
     interpAndfill_image(accumulated_dRdt_score, dRdt_score_bin_filled);
@@ -2487,8 +2969,9 @@ void MaplessDynamic::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accu
     }
 
     cv::Mat input_img_tmp = accumulated_dRdt.clone();
-    float* ptr_input_img_tmp = input_img_tmp.ptr<float>(0); 
+    float* ptr_input_img_tmp = input_img_tmp.ptr<float>(0);
 
+    // Label objects
     cv::Mat connect_input = (rho_zero_value | input_img_mask);
     cv::Mat object_label = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
 
@@ -2528,10 +3011,17 @@ void MaplessDynamic::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accu
     disconti_row.reserve(100000);
     disconti_col.reserve(100000);
 
+    cv::Mat object_area = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
+    uchar *ptr_object_area = object_area.ptr<uchar>(0);
+    cv::Mat object_area_filled = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
+    uchar *ptr_object_area_filled = object_area_filled.ptr<uchar>(0);
+    cv::Mat filled_object_rho_mat = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    float *ptr_filled_object_rho_mat = filled_object_rho_mat.ptr<float>(0);
+
     cv::MatND histogram;
     for (int object_idx = 0; object_idx < n_label; ++object_idx)
     {
-        if (object_idx==0) //background
+        if (object_idx==0) //0: background
         {
             continue;
         }
@@ -2548,12 +3038,9 @@ void MaplessDynamic::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accu
         rho_zero_filled_value_rho_roi.resize(0);
         disconti_row.resize(0);
         disconti_col.resize(0);
-        cv::Mat object_area = cv::Mat::zeros(img_height_,img_width_, CV_8UC1);
-        uchar *ptr_object_area = object_area.ptr<uchar>(0);
-        cv::Mat object_area_filled = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
-        uchar *ptr_object_area_filled = object_area_filled.ptr<uchar>(0);
-        cv::Mat filled_object_rho_mat = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-        float *ptr_filled_object_rho_mat = filled_object_rho_mat.ptr<float>(0);
+        object_area             = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
+        object_area_filled      = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
+        filled_object_rho_mat   = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
 
         for (int i=0; i<n_row; ++i)
         {
@@ -2576,8 +3063,8 @@ void MaplessDynamic::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accu
             {
                 *(ptr_rho_zero_value + object_row[i] * n_col + object_col[i]) = 0;
                 *(ptr_accumulated_dRdt + object_row[i] * n_col + object_col[i]) = 0.0;
-                continue;
             }
+            continue;
         }
         else
         {
@@ -2586,6 +3073,11 @@ void MaplessDynamic::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accu
 
             cv::Mat object_area_inv = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
             cv::bitwise_not(object_area, object_area_inv);
+            uchar* ptr_object_area_inv = object_area_inv.ptr<uchar>(0);
+            for (int j = 0; j < n_col; ++j)
+            {
+                *(ptr_object_area_inv + (img_height_-1) * n_col + j) = 255;
+            }
             cv::floodFill(object_area_inv, cv::Point(0, 0), cv::Scalar(0));
             object_area_filled = (object_area | object_area_inv);
 

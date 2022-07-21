@@ -4,4 +4,10 @@
     <node pkg="mapless_dynamic" name="mapless_dynamic_node" type="mapless_dynamic_node" output="screen">
         <param name="topicname_lidar" type="string" value="$(arg topicname_lidar)"/>
     </node>
+
+    <arg name="rviz" default="true" />
+    <group if="$(arg rviz)">
+        <node launch-prefix="nice" pkg="rviz" type="rviz" name="rviz" args="-d $(find mapless_dynamic)/rviz_cfg/mapless_dynamic_base.rviz" />
+    </group>
+    
 </launch>
