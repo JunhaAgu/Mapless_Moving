@@ -25,6 +25,8 @@
 #include <numeric>
 #include <random>
 
+#include <algorithm>
+
 struct TestData 
 {
     Pose T_gt_;
@@ -188,7 +190,7 @@ private:
     void interpPts(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts* str_in1, int n_ring, int n_radial);
 
     void fastsegmentGround(StrRhoPts* str_in);
-    void ransacLine(std::vector<float>& points_rho, std::vector<float>& points_z, /*output*/ std::vector<bool>& mask_inlier, int num_seg);
+    void ransacLine(std::vector<float>& points_rho, std::vector<float>& points_z, /*output*/ bool mask_inlier[], int num_seg);
     
     void dR_warpPointcloud(StrRhoPts* str_next, StrRhoPts* str_cur, pcl::PointCloud<pcl::PointXYZ>& p0, Pose& T01, int cnt_data, StrRhoPts* str_cur_warped, cv::Mat& dRdt);
     void compensateCurRhoZeroWarp(StrRhoPts* str_cur, int n_ring, int n_radial, std::vector<float>& v_angle, pcl::PointCloud<pcl::PointXYZ>& velo_cur);

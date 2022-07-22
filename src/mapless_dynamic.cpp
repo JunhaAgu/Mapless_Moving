@@ -1104,6 +1104,8 @@ void MaplessDynamic::genRangeImages(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrR
 
 void MaplessDynamic::calcuateRho(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts* str_in)
 {
+    timer::tic();
+
     float twopi         = 2.0*M_PI;
     float offset_theta  = M_PI;
 
@@ -1159,6 +1161,8 @@ void MaplessDynamic::calcuateRho(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoP
         }
         // std::cout << str_in->rho[i] << " " << str_in->phi[i] << " " << str_in->theta[i]<< std::endl;
     }
+    double dt_slam = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'calcuateRho' :" << dt_slam << " [ms]");
 }
 
 void MaplessDynamic::makeRangeImageAndPtsPerPixel(StrRhoPts *str_in, int n_pts, int n_ring, int n_radial, float az_step)
@@ -2197,10 +2201,9 @@ void MaplessDynamic::fastsegmentGround(StrRhoPts* str_in)
 
     std::vector<float> points_rho;
     std::vector<float> points_z;
-    std::vector<bool> mask_inlier;
+    bool mask_inlier[n_row];
     points_rho.reserve(n_row);
     points_z.reserve(n_row);
-    mask_inlier.reserve(n_row);
 
     cv::Mat mask_inlier_mat = cv::Mat::zeros(n_row, n_col_sample, CV_32FC1);
     float* ptr_mask_inlier_mat = mask_inlier_mat.ptr<float>(0);
@@ -2209,8 +2212,7 @@ void MaplessDynamic::fastsegmentGround(StrRhoPts* str_in)
     {
         points_rho.resize(0);
         points_z.resize(0);
-        mask_inlier.clear();
-        mask_inlier.resize(n_row, false);
+        for (int i_mask=0; i_mask<n_row; ++i_mask) {mask_inlier[i_mask] = false;}
         for (int i = 0; i < n_row; ++i)
         {
             points_rho.push_back(*(ptr_rho_sample + i * n_col_sample + j));
@@ -2290,9 +2292,8 @@ void MaplessDynamic::fastsegmentGround(StrRhoPts* str_in)
     // cv::waitKey(0);
 }
 
-void MaplessDynamic::ransacLine(std::vector<float>& points_rho, std::vector<float>& points_z, /*output*/ std::vector<bool>& mask_inlier, int num_seg)
+void MaplessDynamic::ransacLine(std::vector<float>& points_rho, std::vector<float>& points_z, /*output*/ bool mask_inlier[], int num_seg)
 {
-    timer::tic();
 
     float* ptr_points_rho = points_rho.data();
     float* ptr_points_z = points_z.data();
@@ -2373,6 +2374,7 @@ void MaplessDynamic::ransacLine(std::vector<float>& points_rho, std::vector<floa
     // exit(0);
 
     bool non_zero_points_mask[n_bin_per_seg];
+    for (int i=0; i<n_bin_per_seg; ++i){non_zero_points_mask[i] = false;}
     for (int i=0; i<valid_points_idx.size(); ++i)
     {
         non_zero_points_mask[ptr_valid_points_idx[i]] = true;
@@ -2419,13 +2421,42 @@ void MaplessDynamic::ransacLine(std::vector<float>& points_rho, std::vector<floa
     int n_sample = 2;
     int n_pts_valid = points_valid_rho.size();
 
-    std::vector<bool> id_good_fit;
-    id_good_fit.resize(iter, false);
+    bool id_good_fit[iter];
+    for (int i=0; i<iter; ++i)
+    {
+        id_good_fit[i] = false;
+    }
 
-    std::vector<std::vector<bool>> ini_inlier(iter, std::vector<bool>(n_pts_valid, false));
-    std::vector<std::vector<bool>> mask(iter, std::vector<bool>(n_pts_valid, false));
-    std::vector<std::vector<float>> residual(iter, std::vector<float>(n_pts_valid, 0.0));
-    std::vector<int> inlier_cnt(iter, 0);
+    bool ini_inlier[iter][n_pts_valid];
+    for (int i = 0; i < iter; ++i)
+    {
+        for (int j = 0; j < n_pts_valid; ++j)
+        {
+            ini_inlier[i][j] = false;
+        }
+    }
+    bool mask[iter][n_pts_valid];
+    for (int i = 0; i < iter; ++i)
+    {
+        for (int j = 0; j < n_pts_valid; ++j)
+        {
+            mask[i][j] = false;
+        }
+    }
+    float residual[iter][n_pts_valid];
+    for (int i = 0; i < iter; ++i)
+    {
+        for (int j = 0; j < n_pts_valid; ++j)
+        {
+            residual[i][j] = 0.0;
+        }
+    }
+    // std::vector<int> inlier_cnt(iter, 0);
+    int inlier_cnt[iter];
+    for (int i = 0; i < iter; ++i)
+    {
+        inlier_cnt[i] = 0;
+    }
 
     std::vector<pcl::PointCloud<pcl::PointXY>> inlier;
     inlier.resize(iter);
@@ -2433,23 +2464,32 @@ void MaplessDynamic::ransacLine(std::vector<float>& points_rho, std::vector<floa
     {
         inlier[i].reserve(points_rho.size());
     }
-    std::vector<float> line_A(iter, 0);
-    std::vector<float> line_B(iter, 0);
+
+    float line_A[iter];
+    for (int i=0; i<iter; ++i)
+    {
+        line_A[i] = 0.0;
+    }
+    float line_B[iter];
+    for (int i=0; i<iter; ++i)
+    {
+        line_B[i] = 0.0;
+    }
 
     int n1 = 0;
     int n2 = 0;
     float x1 = 0.0, x2 = 0.0, y1 = 0.0, y2 = 0.0;
 
-    
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<int> dis(0, n_pts_valid - 1);
+
     for (int m=0; m<iter; ++m)
     {
         inlier_cnt[m] = 1;
 
         while(1)
         { 
-            std::random_device rd;
-            std::mt19937 gen(rd());
-            std::uniform_int_distribution<int> dis(0,n_pts_valid-1);
             n1 = dis(gen);
             n2 = dis(gen);
             if (n1 != n2)
@@ -2488,8 +2528,8 @@ void MaplessDynamic::ransacLine(std::vector<float>& points_rho, std::vector<floa
 
         for (int i=0; i<n_pts_valid; ++i)
         {
-            residual[m][i] = std::abs(line_A[m]*ptr_points_valid_rho[i] - ptr_points_valid_z[i] + line_B[m]) /
-                            std::sqrt(line_A[m]*line_A[m] + 1.0);
+            residual[m][i] = std::abs(line_A[m]*ptr_points_valid_rho[i] - ptr_points_valid_z[i] + line_B[m])
+                            / std::sqrt(line_A[m]*line_A[m] + 1.0);
              
             if (residual[m][i] < thr)
             {
@@ -2522,9 +2562,9 @@ void MaplessDynamic::ransacLine(std::vector<float>& points_rho, std::vector<floa
     std::vector<int> max_inlier_cnt_index;
     max_inlier_cnt_index.reserve(100);
 
-    max_inlier_cnt = *max_element(inlier_cnt.begin(), inlier_cnt.end());
+    max_inlier_cnt = *std::max_element(inlier_cnt, inlier_cnt + iter);
 
-    for (int i=0; i<inlier_cnt.size(); ++i)
+    for (int i=0; i<iter; ++i)
     {
         if (inlier_cnt[i] == max_inlier_cnt)
         {
@@ -2545,15 +2585,15 @@ void MaplessDynamic::ransacLine(std::vector<float>& points_rho, std::vector<floa
     if (max_inlier_cnt_index.size()>1)
     {
         int n_candi = max_inlier_cnt_index.size();
-        for (int i_candi=0; i_candi<n_candi; ++i_candi)
+        for (int i_candi = 0; i_candi < n_candi; ++i_candi)
         {
             float mean_residual = 0.0;
-            for (int k=0; k<residual[max_inlier_cnt_index[i_candi]].size(); ++k)
+            for (int k=0; k<n_pts_valid; ++k)
             {
                 mean_residual += residual[max_inlier_cnt_index[i_candi]][k];
             }
 
-            mean_residual /= residual[max_inlier_cnt_index[i_candi]].size();
+            mean_residual /= n_pts_valid;
 
             float mini = std::min(mean_residual, mini_pre);
             
@@ -2571,12 +2611,12 @@ void MaplessDynamic::ransacLine(std::vector<float>& points_rho, std::vector<floa
     }
     int best_n_inlier = inlier_cnt[max_inlier_cnt_index_1] - 1;
 
-    if (best_n_inlier < 3)
-    {
-        // ROS_INFO_STREAM("inlier pts < 3");
-        // std::cout << "number of segment: " << num_seg << std::endl; 
-        // return;
-    }
+    // if (best_n_inlier < 3)
+    // {
+    //     // ROS_INFO_STREAM("inlier pts < 3");
+    //     // std::cout << "number of segment: " << num_seg << std::endl; 
+    //     // return;
+    // }
     if (best_n_inlier == 0)
     {
         // ROS_INFO_STREAM("# of inlier pts = 0");
@@ -2592,22 +2632,14 @@ void MaplessDynamic::ransacLine(std::vector<float>& points_rho, std::vector<floa
     }
     
     Eigen::Vector3f t;
-    if (A.rows()>2)
-    {
-        Eigen::JacobiSVD<Eigen::MatrixXf> svd(A, Eigen::ComputeThinU | Eigen::ComputeThinV);
-        t = svd.matrixV().col(2);
-    }
-    else
-    {
-        Eigen::JacobiSVD<Eigen::MatrixXf> svd(A.transpose()*A, Eigen::ComputeThinU | Eigen::ComputeThinV);
-        t = svd.matrixV().col(2);
+    Eigen::JacobiSVD<Eigen::MatrixXf> svd(A, Eigen::ComputeFullU | Eigen::ComputeFullV);
+    t = svd.matrixV().col(2);
         // std::cout << svd.matrixU() << std::endl;
         // std::cout << "***************" << std::endl;
         // std::cout << svd.matrixV() << std::endl;
         // std::cout << "***************" << std::endl;
         // std::cout << svd.singularValues() << std::endl;
         // exit(0);
-    }
 
     // Eigen::JacobiSVD<Eigen::MatrixXf> svd(A, Eigen::ComputeThinU | Eigen::ComputeThinV);
     // // cout << "Its singular values are:" << endl << svd.singularValues() << endl;
@@ -2633,8 +2665,6 @@ void MaplessDynamic::ransacLine(std::vector<float>& points_rho, std::vector<floa
             mask_inlier[i] = true;
         }
     }
-                        double dt_toc1 = timer::toc(); // milliseconds
-        ROS_INFO_STREAM("elapsed time for 'ransacLine' :" << dt_toc1 << " [ms]");
     // output: mask_inlier
 }
 
