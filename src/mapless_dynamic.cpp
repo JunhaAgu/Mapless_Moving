@@ -959,7 +959,7 @@ void MaplessDynamic::getUserSettingParameters(){
     alpha_ = 0.3;
     beta_ = 0.1;
 
-    paramRANSAC_.iter = 100;
+    paramRANSAC_.iter = 50; //100;
     paramRANSAC_.thr = 0.1;
     paramRANSAC_.a_thr = 0.1;
     paramRANSAC_.b_thr[0] = -0.5;
@@ -2161,6 +2161,9 @@ void MaplessDynamic::fastsegmentGround(StrRhoPts* str_in)
     col_range.reserve(downsample_size);
     pts_z_col_range.reserve(downsample_size);
     rho_col_range.reserve(downsample_size);
+    
+    float min_z = 0.0;
+    int min_idx = 0;
 
     for (int i=0; i<n_row; ++i)
     {
@@ -2171,8 +2174,7 @@ void MaplessDynamic::fastsegmentGround(StrRhoPts* str_in)
             col_range.resize(0);
             pts_z_col_range.resize(0);
             rho_col_range.resize(0);
-            float min_z = 0.0;
-            int min_idx = 0;
+
             int j_downsample_size = j * downsample_size;
             for (int k=0; k<downsample_size; ++k)
             {
@@ -2291,18 +2293,24 @@ void MaplessDynamic::fastsegmentGround(StrRhoPts* str_in)
 void MaplessDynamic::ransacLine(std::vector<float>& points_rho, std::vector<float>& points_z, /*output*/ std::vector<bool>& mask_inlier, int num_seg)
 {
     timer::tic();
+
+    float* ptr_points_rho = points_rho.data();
+    float* ptr_points_z = points_z.data();
+
     std::vector<float> points_rho_dup;
     points_rho_dup.resize(points_rho.size());
     std::copy(points_rho.begin(), points_rho.end(), points_rho_dup.begin());
+    float* ptr_points_rho_dup = points_rho_dup.data();
     
     std::vector<float> points_z_dup;
     points_z_dup.resize(points_rho.size());
     std::copy(points_z.begin(), points_z.end(), points_z_dup.begin());
+    float* ptr_points_z_dup = points_z_dup.data();
+
     int max_range = 100;
     int n_bin_per_seg = points_rho.size();
 
-    std::vector<bool> mask_temp;
-    mask_temp.resize(n_bin_per_seg, false);
+    bool mask_temp[n_bin_per_seg];
     bool flag_nnz_mask_temp = false;
 
     std::vector<float> points_rho_sort_temp;
@@ -2312,36 +2320,42 @@ void MaplessDynamic::ransacLine(std::vector<float>& points_rho, std::vector<floa
 
     std::vector<int> idx_non_zero_mask_temp;
     idx_non_zero_mask_temp.reserve(n_bin_per_seg);
+    int* ptr_idx_non_zero_mask_temp = idx_non_zero_mask_temp.data();
 
     std::vector<int> valid_points_idx;
     valid_points_idx.reserve(max_range);
+    int* ptr_valid_points_idx = valid_points_idx.data();
     
     for (int i=0; i<max_range; ++i)
     {
-        mask_temp.clear();
-        mask_temp.resize(n_bin_per_seg, false);
+        for (int i_mask = 0; i_mask < n_bin_per_seg; ++i_mask)
+        {
+            mask_temp[i_mask] = false;
+        }
         flag_nnz_mask_temp = false;
         points_rho_sort_temp.resize(0);
         points_z_sort_temp.resize(0);
         idx_non_zero_mask_temp.resize(0);
+        float min_z = 0.0;
+        int min_idx = 0;
 
         for (int j=0; j<n_bin_per_seg; ++j)
         {
-            if (points_rho[j] > i && points_rho[j] < i + 1.0)
+            if (ptr_points_rho[j] > i && ptr_points_rho[j] < i + 1.0)
             {
                 mask_temp[j] = true;
                 flag_nnz_mask_temp = true;
 
-                points_rho_sort_temp.push_back(points_rho[j]);
-                points_z_sort_temp.push_back(points_z[j]);
+                points_rho_sort_temp.push_back(ptr_points_rho[j]);
+                points_z_sort_temp.push_back(ptr_points_z[j]);
                 idx_non_zero_mask_temp.push_back(j);
             }
             else{}
         }
         if (flag_nnz_mask_temp == true)
         {
-            float min_z = *min_element(points_z_sort_temp.begin(), points_z_sort_temp.end());
-            int min_idx = min_element(points_z_sort_temp.begin(), points_z_sort_temp.end()) - points_z_sort_temp.begin();
+            min_z = *min_element(points_z_sort_temp.begin(), points_z_sort_temp.end());
+            min_idx = min_element(points_z_sort_temp.begin(), points_z_sort_temp.end()) - points_z_sort_temp.begin();
             if (min_z > -1.0)
             {
                 continue;
@@ -2349,7 +2363,7 @@ void MaplessDynamic::ransacLine(std::vector<float>& points_rho, std::vector<floa
             // std::cout << min_idx << std::endl;
             // std::cout << idx_non_zero_mask_temp[min_idx] << std::endl;
             // exit(0);
-            valid_points_idx.push_back(idx_non_zero_mask_temp[min_idx]);
+            valid_points_idx.push_back(ptr_idx_non_zero_mask_temp[min_idx]);
         }
     }
     // for (int i=0; i<valid_points_idx.size(); ++i)
@@ -2357,11 +2371,11 @@ void MaplessDynamic::ransacLine(std::vector<float>& points_rho, std::vector<floa
     //     std::cout << valid_points_idx[i] << std::endl;
     // }
     // exit(0);
-    std::vector<bool> non_zero_points_mask;
-    non_zero_points_mask.resize(points_rho.size(), false);
+
+    bool non_zero_points_mask[n_bin_per_seg];
     for (int i=0; i<valid_points_idx.size(); ++i)
     {
-        non_zero_points_mask[valid_points_idx[i]] = true;
+        non_zero_points_mask[ptr_valid_points_idx[i]] = true;
     }
 
     // std::vector<bool> mask_inlier;
@@ -2369,14 +2383,16 @@ void MaplessDynamic::ransacLine(std::vector<float>& points_rho, std::vector<floa
 
     std::vector<float> points_valid_rho;
     points_valid_rho.reserve(points_rho.size());
+    float* ptr_points_valid_rho = points_valid_rho.data();
 
     std::vector<float> points_valid_z;
     points_valid_z.reserve(points_rho.size());
+    float *ptr_points_valid_z = points_valid_z.data();
 
     for (int i=0; i<valid_points_idx.size(); ++i)
     {
-        points_valid_rho.push_back(points_rho[valid_points_idx[i]]);
-        points_valid_z.push_back(points_z[valid_points_idx[i]]);
+        points_valid_rho.push_back(ptr_points_rho[ptr_valid_points_idx[i]]);
+        points_valid_z.push_back(ptr_points_z[ptr_valid_points_idx[i]]);
     }
 
     // for (int i=0; i<valid_points_idx.size(); ++i)
@@ -2442,10 +2458,10 @@ void MaplessDynamic::ransacLine(std::vector<float>& points_rho, std::vector<floa
             }
         }
 
-        x1 = points_valid_rho[n1];
-        y1 = points_valid_z[n1];
-        x2 = points_valid_rho[n2];
-        y2 = points_valid_z[n2];
+        x1 = ptr_points_valid_rho[n1];
+        y1 = ptr_points_valid_z[n1];
+        x2 = ptr_points_valid_rho[n2];
+        y2 = ptr_points_valid_z[n2];
 
         line_A[m] = (y2 - y1) / (x2 - x1);
         line_B[m] = -line_A[m] * x1 + y1;
@@ -2472,7 +2488,7 @@ void MaplessDynamic::ransacLine(std::vector<float>& points_rho, std::vector<floa
 
         for (int i=0; i<n_pts_valid; ++i)
         {
-            residual[m][i] = std::abs(line_A[m]*points_valid_rho[i] - points_valid_z[i] + line_B[m]) /
+            residual[m][i] = std::abs(line_A[m]*ptr_points_valid_rho[i] - ptr_points_valid_z[i] + line_B[m]) /
                             std::sqrt(line_A[m]*line_A[m] + 1.0);
              
             if (residual[m][i] < thr)
@@ -2489,8 +2505,8 @@ void MaplessDynamic::ransacLine(std::vector<float>& points_rho, std::vector<floa
         {
             if (ini_inlier[m][j]==true)
             {
-                point_xy.x = points_valid_rho[j];
-                point_xy.y = points_valid_z[j];
+                point_xy.x = ptr_points_valid_rho[j];
+                point_xy.y = ptr_points_valid_z[j];
                 inlier[m].push_back(point_xy);
                 inlier_cnt[m] += 1;
             }
@@ -2608,9 +2624,9 @@ void MaplessDynamic::ransacLine(std::vector<float>& points_rho, std::vector<floa
 
     for (int i=0; i<points_rho_dup.size(); ++i)
     {
-        residual_leastsquare = std::abs(t(0)*points_rho_dup[i] + t(1)*points_z_dup[i] + t(2)) /
+        residual_leastsquare = std::abs(t(0)*ptr_points_rho_dup[i] + t(1)*ptr_points_z_dup[i] + t(2)) /
                                 std::sqrt(t(0)*t(0)+t(1)*t(1));
-        line_updown = t(0)*points_rho_dup[i] + t(1)*points_z_dup[i] + t(2);
+        line_updown = t(0)*ptr_points_rho_dup[i] + t(1)*ptr_points_z_dup[i] + t(2);
 
         if ((residual_leastsquare < thr) || (line_updown > 0))
         {
