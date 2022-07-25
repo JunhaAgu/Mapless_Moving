@@ -484,36 +484,36 @@ void MaplessDynamic::solve(
 
     // pointcloud input, p1
     // p0 is already processed in initial step
-    timer::tic();
+    // timer::tic();
     genRangeImages(p1, str_next_);
-    double dt_toc1 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'genRangeImages' :" << dt_toc1 << " [ms]");
+    // double dt_toc1 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'genRangeImages' :" << dt_toc1 << " [ms]");
 
     // Warp pcl represented in current frame to next frame
     T_next2cur_ = T01;
     
     // Segment ground
-    timer::tic();
+    // timer::tic();
     fastsegmentGround(str_next_);
-    double dt_toc2 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'segmentSGround' :" << dt_toc2 << " [ms]");
+    // double dt_toc2 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'segmentSGround' :" << dt_toc2 << " [ms]");
 
     //// Occlusion accumulation ////
     // Compute the occlusion dRdt
     
-    timer::tic();
+    // timer::tic();
     dR_warpPointcloud(str_next_, str_cur_, p0, T_next2cur_, cnt_data, str_cur_warped_, residual_);
-    double dt_toc3 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'dR_warpPointcloud' :" << dt_toc3 << " [ms]");
+    // double dt_toc3 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'dR_warpPointcloud' :" << dt_toc3 << " [ms]");
     // str_next_->state();
 
-    timer::tic();
+    // timer::tic();
     // warp the occlusion accumulation map
     warpPointcloud(str_cur_, T_next2cur_, accumulated_dRdt_, cnt_data);
     initializeStructAndPcl();
     warpPointcloud(str_cur_, T_next2cur_, accumulated_dRdt_score_, cnt_data);
-    double dt_toc4 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'warpPointcloud' :" << dt_toc4 << " [ms]");
+    // double dt_toc4 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'warpPointcloud' :" << dt_toc4 << " [ms]");
     
     //     if (cnt_data == 2)
     // {
@@ -522,11 +522,11 @@ void MaplessDynamic::solve(
     //     cv::imshow("before  k", accumulated_dRdt_score_);
     //     countZerofloat(accumulated_dRdt_score_);
     // }
-    timer::tic();
+    // timer::tic();
     // filter out outliers
     filterOutAccumdR(str_next_, str_cur_warped_, accumulated_dRdt_, accumulated_dRdt_score_, residual_);
-    double dt_toc5 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'filterOutAccumdR' :" << dt_toc5 << " [ms]");
+    // double dt_toc5 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'filterOutAccumdR' :" << dt_toc5 << " [ms]");
     // if (cnt_data == 2)
     // {
     //     cv::imshow("d", accumulated_dRdt_);
@@ -536,35 +536,33 @@ void MaplessDynamic::solve(
     //     cv::waitKey(0);
     //     exit(0);
     // }
-    timer::tic();
+    // timer::tic();
     // Extract object candidate via connected components in 2-D binary image
     extractObjectCandidate(accumulated_dRdt_, str_next_, object_threshold_);
-    // double dt_extractObjectCandidate = timer::toc(); // milliseconds
-    // ROS_INFO_STREAM("elapsed time for 'dt_extractObjectCandidate' :" << dt_extractObjectCandidate << " [ms]");
-    double dt_toc6 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'extractObjectCandidate' :" <<  dt_toc6 << " [ms]");
+    // double dt_toc6 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'extractObjectCandidate' :" <<  dt_toc6 << " [ms]");
 
     //// update object_mask
     //object_mask = accumulated_dRdt>0;
-    timer::tic();
+    // timer::tic();
     // Fast Segment
     checkSegment(accumulated_dRdt_, str_next_, groundPtsIdx_next_);
-    double dt_toc7 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'checkSegment' :" <<  dt_toc7 << " [ms]");
+    // double dt_toc7 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'checkSegment' :" <<  dt_toc7 << " [ms]");
 
     //// update object_mask
     //object_mask = accumulated_dRdt>0;
-    timer::tic();
+    // timer::tic();
     updateScore(accumulated_dRdt_, accumulated_dRdt_score_);
-    double dt_toc8 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'updateScore' :" <<  dt_toc8 << " [ms]");
+    // double dt_toc8 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'updateScore' :" <<  dt_toc8 << " [ms]");
 
-    timer::tic();
+    // timer::tic();
     plugImageZeroHoles(accumulated_dRdt_, accumulated_dRdt_score_, str_next_, groundPtsIdx_next_, object_threshold_);
-    double dt_toc9 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'plugImageZeroHoles' :" <<  dt_toc9 << " [ms]");
+    // double dt_toc9 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'plugImageZeroHoles' :" <<  dt_toc9 << " [ms]");
 
-    timer::tic();
+    // timer::tic();
     float* ptr_accumulated_dRdt_ = accumulated_dRdt_.ptr<float>(0);
     float* ptr_accumulated_dRdt_score_ = accumulated_dRdt_score_.ptr<float>(0);
     float *ptr_next_img_rho = str_next_->img_rho.ptr<float>(0);
@@ -639,10 +637,10 @@ void MaplessDynamic::solve(
             }
         }
     }
-    double dt_toc10 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'segmentWholePts' :" <<  dt_toc10 << " [ms]");
+    // double dt_toc10 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'segmentWholePts' :" <<  dt_toc10 << " [ms]");
 
-    timer::tic();
+    // timer::tic();
     //// visualization ////
     // dynamic //
     sensor_msgs::PointCloud2 converted_msg_d;
@@ -656,10 +654,10 @@ void MaplessDynamic::solve(
     pub_static_pts_.publish(converted_msg_s);
     // if (cnt_data == 3)
     // {exit(0);}
-    double dt_toc11 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'publish' :" <<  dt_toc11 << " [ms]");
+    // double dt_toc11 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'publish' :" <<  dt_toc11 << " [ms]");
 
-    timer::tic();
+    // timer::tic();
     //// update for next iteration
     for (int i = 0; i < img_height_; ++i)
     {
@@ -674,8 +672,8 @@ void MaplessDynamic::solve(
     }
 
     copyStruct(str_next_, str_cur_, p1, p0, cnt_data);
-    double dt_toc12 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'copyRemove' :" <<  dt_toc12 << " [ms]");
+    // double dt_toc12 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'copyRemove' :" <<  dt_toc12 << " [ms]");
 };
 
 void MaplessDynamic::initializeStructAndPcl()
@@ -1064,12 +1062,27 @@ void MaplessDynamic::genRangeImages(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrR
     int n_ring = 64/v_factor;
     int n_pts = pcl_in.size();
 
+    timer::tic();
     calcuateRho(pcl_in, str_in);
+    double dt_slam = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'calcuateRho' :" << dt_slam << " [ms]");
+
+    timer::tic();
     makeRangeImageAndPtsPerPixel(str_in, n_pts, n_ring, n_radial, az_step);
+    dt_slam = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'makeRangeImageAndPtsPerPixel' :" << dt_slam << " [ms]");
+
+    timer::tic();
     // countZerofloat(str_in->img_rho);
     interpRangeImage(str_in, n_ring, n_radial);
+    dt_slam = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'interpRangeImage' :" << dt_slam << " [ms]");
+
+    timer::tic();
     // countZerofloat(str_in->img_rho);
     interpPts(pcl_in, str_in, n_ring, n_radial);
+    dt_slam = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'interpPts' :" << dt_slam << " [ms]");
     // countZerofloat(str_in->img_rho);
 
     // int cnt1 = 0;
@@ -1104,7 +1117,7 @@ void MaplessDynamic::genRangeImages(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrR
 
 void MaplessDynamic::calcuateRho(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts* str_in)
 {
-    timer::tic();
+    // timer::tic();
 
     float twopi         = 2.0*M_PI;
     float offset_theta  = M_PI;
@@ -1114,11 +1127,23 @@ void MaplessDynamic::calcuateRho(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoP
     float cospsi = 0.0;
     float sinpsi = 0.0;
 
+    float* ptr_rho = str_in->rho.data();
+    float* ptr_phi = str_in->phi.data();
+    float* ptr_theta = str_in->theta.data();
+
+    pcl::PointXYZ origin;
+    origin.x = 0.0f;
+    origin.y = 0.0f;
+    origin.z = 0.0f;
+
+    float M_PI_plus_offset_theta = M_PI + offset_theta;
+    float twopi_plus_offset_theta = twopi + offset_theta;
+
     for (int i = 0; i < n_pts; ++i)
     {
         str_in->rho.push_back(NORM(pcl_in.points[i].x, pcl_in.points[i].y, pcl_in.points[i].z));
-        str_in->phi.push_back(asin(pcl_in.points[i].z / str_in->rho[i]));
-        invrhocos = (float)1.0 / (str_in->rho[i] * cos(str_in->phi[i]));
+        str_in->phi.push_back(asin(pcl_in.points[i].z / ptr_rho[i]));
+        invrhocos = (float)1.0 / (ptr_rho[i] * cos(ptr_phi[i]));
 
         cospsi = pcl_in.points[i].x * invrhocos;
         if (cospsi > 1)
@@ -1129,6 +1154,7 @@ void MaplessDynamic::calcuateRho(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoP
         {
             cospsi = -(float)1.0;
         }
+        else{}
 
         sinpsi = pcl_in.points[i].y * invrhocos;
 
@@ -1140,58 +1166,87 @@ void MaplessDynamic::calcuateRho(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoP
             }
             else // 4 quadrant
             {
-                str_in->theta.push_back(twopi - acos(cospsi) + offset_theta);
+                str_in->theta.push_back(twopi_plus_offset_theta - acos(cospsi));
             }
         }
         else
         {
             if (sinpsi >= 0) // 2 quadrant
             {
-                str_in->theta.push_back(M_PI - acos(-cospsi) + offset_theta);
+                str_in->theta.push_back(M_PI_plus_offset_theta - acos(-cospsi));
             }
             else // 3 quadrant
             {
-                str_in->theta.push_back(M_PI + acos(-cospsi) + offset_theta);
+                str_in->theta.push_back(M_PI_plus_offset_theta + acos(-cospsi));
             }
         }
 
-        if (str_in->theta[i] >= twopi)
+        if (ptr_theta[i] >= twopi)
         {
-            str_in->theta[i] = str_in->theta[i] - twopi;
+            ptr_theta[i] = ptr_theta[i] - twopi;
         }
         // std::cout << str_in->rho[i] << " " << str_in->phi[i] << " " << str_in->theta[i]<< std::endl;
     }
-    double dt_slam = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'calcuateRho' :" << dt_slam << " [ms]");
+    // double dt_slam = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'calcuateRho' :" << dt_slam << " [ms]");
 }
 
 void MaplessDynamic::makeRangeImageAndPtsPerPixel(StrRhoPts *str_in, int n_pts, int n_ring, int n_radial, float az_step)
 {
+    // timer::tic();
     int i_row = 0;
     int i_col = 0;
     float* ptr_img_rho = str_in->img_rho.ptr<float>(0);
     int* ptr_img_index = str_in->img_index.ptr<int>(0);
     int n_row = str_in->img_rho.rows;
     int n_col = str_in->img_rho.cols;
+
+    float* ptr_rho = str_in->rho.data();
+    float* ptr_phi = str_in->phi.data();
+    float* ptr_theta = str_in->theta.data();
+    float* ptr_v_angle = v_angle_.data();
+
+    float az_step_R2D = az_step*R2D;
     
     for (int i = 0; i < n_pts; ++i)
     {   
+        float phi_R2D = (ptr_phi[i] * R2D);
         // std::cout << str_in->rho[i] << " " << str_in->phi[i] << " " << str_in->theta[i]<< std::endl;
-        for (int kk = 0; kk < n_ring; ++kk)
+        // for (int kk = 0; kk < n_ring; ++kk)
+        // {
+        //     if (ptr_v_angle[kk] < phi_R2D)
+        //     {
+        //         i_row = kk;
+        //         break;
+        //     }
+        //     else{}
+        //     if (kk == (n_ring-1))
+        //     {
+        //         i_row = n_ring - 1;
+        //     }
+        //     else{}
+        // }
+        if (phi_R2D>2.5)
         {
-            if (v_angle_[kk] < (str_in->phi[i] * R2D))
-            {
-                i_row = kk;
-                break;
-            }
-            else{}
-            if (kk == (n_ring-1))
-            {
-                i_row = n_ring - 1;
-            }
-            else{}
+            i_row = 0;
         }
-        i_col = roundf(str_in->theta[i]*az_step*R2D);
+        else if (phi_R2D>-8.0)
+        {
+            i_row = (int)(-2.9523810*phi_R2D+7.3809524);
+        }
+        else if (phi_R2D>-8.5)
+        {
+            i_row = 32;
+        }
+        else if (phi_R2D>-23.8)
+        {
+            i_row = (int)(-2.0261438*phi_R2D+14.7777778);
+        }
+        else
+        {
+            i_row = 63;
+        }
+        i_col = roundf(ptr_theta[i]*az_step_R2D);
 
         if ( (i_row > n_ring-1) || (i_row < 0) )
         {
@@ -1201,19 +1256,19 @@ void MaplessDynamic::makeRangeImageAndPtsPerPixel(StrRhoPts *str_in, int n_pts, 
         int i_row_ncols_i_col = i_row * n_col + i_col;
         if (*(ptr_img_rho + i_row_ncols_i_col) == 0) //(str_in->img_rho.at<float>(i_row,i_col) == 0)
         {   
-            *(ptr_img_rho + i_row_ncols_i_col) = str_in->rho[i];
+            *(ptr_img_rho + i_row_ncols_i_col) = ptr_rho[i];
             *(ptr_img_index + i_row_ncols_i_col) = i;
         }
-        else if (*(ptr_img_rho + i_row_ncols_i_col) > str_in->rho[i])
+        else if (*(ptr_img_rho + i_row_ncols_i_col) > ptr_rho[i])
         {
-            *(ptr_img_rho + i_row_ncols_i_col) = str_in->rho[i];
+            *(ptr_img_rho + i_row_ncols_i_col) = ptr_rho[i];
             *(ptr_img_index + i_row_ncols_i_col) = i;
         }
         else{}
 
         str_in->pts_per_pixel_n[i_row_ncols_i_col] += 1;
         str_in->pts_per_pixel_index[i_row_ncols_i_col].push_back(i);
-        str_in->pts_per_pixel_rho[i_row_ncols_i_col].push_back(str_in->rho[i]);
+        str_in->pts_per_pixel_rho[i_row_ncols_i_col].push_back(ptr_rho[i]);
     } // end for
 
     // for(int a=0; a < str_in->pts_per_pixel_rho.size(); ++a)
@@ -1226,6 +1281,8 @@ void MaplessDynamic::makeRangeImageAndPtsPerPixel(StrRhoPts *str_in, int n_pts, 
     //     std::cout << std::endl;
     // }
     // exit(0);
+    // double dt_slam = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'makeRangeImageAndPtsPerPixel' :" << dt_slam << " [ms]");
 }
 
 void MaplessDynamic::interpRangeImage(StrRhoPts* str_in, int n_ring, int n_radial)
@@ -1242,61 +1299,70 @@ void MaplessDynamic::interpRangeImage(StrRhoPts* str_in, int n_ring, int n_radia
     for (int i = 27; i < 32; i++)
     {
         int i_ncols = i * n_col;
+        int i_minus_ncols = (i - 1) * n_col;
+        int i_plus_ncols = (i + 1) * n_col;
         for (int j = 0 + 2; j < (n_radial - 2); ++j)
-        {            
+        {
             if (*(ptr_img_rho + i_ncols + j) == 0)
             {
-                if ((*(ptr_img_rho + (i - 1) * n_col + j) != 0) && (*(ptr_img_rho + (i + 1) * n_col + j) != 0))
+                if ((*(ptr_img_rho + i_minus_ncols + j) != 0))
                 {
-                    if (fabsf32(*(ptr_img_rho + (i - 1) * n_col + j) - *(ptr_img_rho + (i + 1) * n_col + j)) < 0.1)
+                    if ((*(ptr_img_rho + i_plus_ncols + j) != 0))
                     {
-                        *(ptr_img_restore_mask + i_ncols + j) = 1;
-                        *(ptr_img_rho_new + i_ncols + j) = (*(ptr_img_rho + (i - 1) * n_col + j) + *(ptr_img_rho + (i + 1) * n_col + j)) * 0.5;
+                        if (fabsf32(*(ptr_img_rho + i_minus_ncols + j) - *(ptr_img_rho + i_plus_ncols + j)) < 0.1)
+                        {
+                            *(ptr_img_restore_mask + i_ncols + j) = 1;
+                            *(ptr_img_rho_new + i_ncols + j) = (*(ptr_img_rho + i_minus_ncols + j) + *(ptr_img_rho + i_plus_ncols + j)) * 0.5;
+                        }
+                        else
+                        {
+                            *(ptr_img_restore_mask + i_ncols + j) = 10;
+                            *(ptr_img_rho_new + i_ncols + j) = std::max(*(ptr_img_rho + i_minus_ncols + j), *(ptr_img_rho + i_plus_ncols + j));
+                        }
                     }
-                    else
+                    else if ((*(ptr_img_rho + (i + 2) * n_col + j) != 0))
                     {
-                        *(ptr_img_restore_mask + i_ncols + j) = 10;
-                        *(ptr_img_rho_new + i_ncols + j) = std::max(*(ptr_img_rho + (i - 1) * n_col + j), *(ptr_img_rho + (i + 1) * n_col + j));
+                        if (fabsf32(*(ptr_img_rho + i_minus_ncols + j) - *(ptr_img_rho + (i + 2) * n_col + j)) < 0.1)
+                        {
+                            *(ptr_img_restore_mask + i_ncols + j) = 2;
+                            *(ptr_img_restore_mask + i_plus_ncols + j) = 3;
+                            *(ptr_img_rho_new + i_ncols + j) = *(ptr_img_rho + i_minus_ncols + j) * (0.6666667) + *(ptr_img_rho + (i + 2) * n_col + j) * (0.3333333);
+                            *(ptr_img_rho_new + i_plus_ncols + j) = *(ptr_img_rho + i_minus_ncols + j) * (0.3333333) + *(ptr_img_rho + (i + 2) * n_col + j) * (0.6666667);
+                        }
+                        else
+                        {
+                            *(ptr_img_restore_mask + i_ncols + j) = 20;
+                            *(ptr_img_restore_mask + i_plus_ncols + j) = 30;
+                            *(ptr_img_rho_new + i_ncols + j) = std::max(*(ptr_img_rho + i_minus_ncols + j), *(ptr_img_rho + (i + 2) * n_col + j));
+                            *(ptr_img_rho_new + i_plus_ncols + j) = std::max(*(ptr_img_rho + i_minus_ncols + j), *(ptr_img_rho + (i + 2) * n_col + j));
+                        }
                     }
+                    else{}
                 }
-                else if ((*(ptr_img_rho + (i - 1) * n_col + j) != 0) && (*(ptr_img_rho + (i + 2) * n_col + j) != 0))
-                {
-                    if (fabsf32(*(ptr_img_rho + (i - 1) * n_col + j) - *(ptr_img_rho + (i + 2) * n_col + j)) < 0.1)
-                    {
-                        *(ptr_img_restore_mask + i_ncols + j) = 2;
-                        *(ptr_img_restore_mask + (i + 1) * n_col + j) = 3;
-                        *(ptr_img_rho_new + i_ncols + j) = *(ptr_img_rho + (i - 1) * n_col + j)*(0.6666667) + *(ptr_img_rho + (i + 2) * n_col + j)*(0.3333333);
-                        *(ptr_img_rho_new + (i+1) * n_col + j) = *(ptr_img_rho + (i - 1) * n_col + j)*(0.3333333) + *(ptr_img_rho + (i + 2) * n_col + j)*(0.6666667);
-                    }
-                    else
-                    {
-                        *(ptr_img_restore_mask + i_ncols + j) = 20;
-                        *(ptr_img_restore_mask + (i + 1) * n_col + j) = 30;
-                        *(ptr_img_rho_new + i_ncols + j) = std::max(*(ptr_img_rho + (i - 1) * n_col + j), *(ptr_img_rho + (i + 2) * n_col + j));
-                        *(ptr_img_rho_new + (i+1) * n_col + j) = std::max(*(ptr_img_rho + (i - 1) * n_col + j), *(ptr_img_rho + (i + 2) * n_col + j));
-                    }
-                }
-                else{}
             } // end if
             else{}
 
-            if ((*(ptr_img_rho + i_ncols + (j - 1)) != 0) && (*(ptr_img_rho + i_ncols + (j + 1)) != 0))
+            if (*(ptr_img_rho + i_ncols + (j - 1)) != 0)
             {
-                if (fabsf32(*(ptr_img_rho + i_ncols + (j - 1)) - *(ptr_img_rho + i_ncols + (j + 1))) < 0.05)
+                if ((*(ptr_img_rho + i_ncols + (j + 1)) != 0))
                 {
-                    *(ptr_img_restore_mask + i_ncols + j) = 4;
-                    *(ptr_img_rho_new + i_ncols + j) = (*(ptr_img_rho + i_ncols + (j - 1)) + *(ptr_img_rho + i_ncols + (j + 1))) * 0.5;
+                    if (fabsf32(*(ptr_img_rho + i_ncols + (j - 1)) - *(ptr_img_rho + i_ncols + (j + 1))) < 0.05)
+                    {
+                        *(ptr_img_restore_mask + i_ncols + j) = 4;
+                        *(ptr_img_rho_new + i_ncols + j) = (*(ptr_img_rho + i_ncols + (j - 1)) + *(ptr_img_rho + i_ncols + (j + 1))) * 0.5;
+                    }
+                    else{}
                 }
-                else{}
-            }
-            else if ((*(ptr_img_rho + i_ncols + (j - 1)) != 0) && (*(ptr_img_rho + i_ncols + (j + 2)) != 0))
-            {
-                if (fabsf32(*(ptr_img_rho + i_ncols + (j - 1)) - *(ptr_img_rho + i_ncols + (j + 2))) < 0.05)
+                else if ((*(ptr_img_rho + i_ncols + (j + 2)) != 0))
                 {
-                    *(ptr_img_restore_mask + i_ncols + j) = 5;
-                    *(ptr_img_restore_mask + i_ncols + (j + 1)) = 6;
-                    *(ptr_img_rho_new + i_ncols + j) = *(ptr_img_rho + i_ncols + (j - 1)) * (0.6666667) + *(ptr_img_rho + i_ncols + (j + 2)) * (0.3333333);
-                    *(ptr_img_rho_new + i_ncols + (j + 1)) = *(ptr_img_rho + i_ncols + (j - 1)) * (0.3333333) + *(ptr_img_rho + i_ncols + (j + 2)) * (0.6666667);
+                    if (fabsf32(*(ptr_img_rho + i_ncols + (j - 1)) - *(ptr_img_rho + i_ncols + (j + 2))) < 0.05)
+                    {
+                        *(ptr_img_restore_mask + i_ncols + j) = 5;
+                        *(ptr_img_restore_mask + i_ncols + (j + 1)) = 6;
+                        *(ptr_img_rho_new + i_ncols + j) = *(ptr_img_rho + i_ncols + (j - 1)) * (0.6666667) + *(ptr_img_rho + i_ncols + (j + 2)) * (0.3333333);
+                        *(ptr_img_rho_new + i_ncols + (j + 1)) = *(ptr_img_rho + i_ncols + (j - 1)) * (0.3333333) + *(ptr_img_rho + i_ncols + (j + 2)) * (0.6666667);
+                    }
+                    else{}
                 }
                 else{}
             }
@@ -1328,7 +1394,6 @@ void MaplessDynamic::interpPts(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts
         {           
             if (str_in->pts_per_pixel_rho[i_ncols + j].size() > 0)
             {
-                
                 for (int k = 0; k < (str_in->pts_per_pixel_rho[i_ncols + j].size()); ++k)
                 {
                     if (std::abs((str_in->pts_per_pixel_rho[i_ncols + j][k] - *(ptr_img_rho + i_ncols + j))) < 0.5)

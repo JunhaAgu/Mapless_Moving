@@ -15,7 +15,8 @@
 typedef std::vector<bool> Mask;
 typedef Eigen::Matrix4d   Pose; 
 
-#define NORM(x, y, z) (pow(((x) * (x) + (y) * (y) + (z) * (z)), 0.5))
+// #define NORM(x, y, z) (pow(((x) * (x) + (y) * (y) + (z) * (z)), 0.5))
+#define NORM(x, y, z) (sqrt(((x) * (x) + (y) * (y) + (z) * (z))))
 
 #define R2D 180.0f/M_PI
 #define D2R M_PI/180.0f
