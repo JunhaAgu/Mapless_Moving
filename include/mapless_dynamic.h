@@ -200,11 +200,11 @@ private:
     void getUserSettingParameters();
     // void func1();
     // ...
-    void genRangeImages(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts* str_in);
+    void genRangeImages(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts* str_in, bool cur_next);
     void calcuateRho(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts* str_in);
     void makeRangeImageAndPtsPerPixel(StrRhoPts* str_in, int n_pts, int n_ring,int n_radial,float az_step);
-    void interpRangeImage(StrRhoPts* str_in, int n_ring, int n_radial);
-    void interpPts(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts* str_in1, int n_ring, int n_radial);
+    void interpRangeImage(StrRhoPts* str_in, int n_ring, int n_radial, bool cur_next);
+    void interpPts(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts* str_in1, int n_ring, int n_radial, bool cur_next);
 
     void fastsegmentGround(StrRhoPts* str_in);
     void ransacLine(std::vector<float>& points_rho, std::vector<float>& points_z, /*output*/ bool mask_inlier[], int num_seg);
