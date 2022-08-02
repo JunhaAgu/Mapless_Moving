@@ -145,6 +145,23 @@ private:
     pcl::PointCloud<pcl::PointXYZ> velo_xyz_;
     pcl::PointCloud<pcl::PointXYZ>::Ptr pts_warpewd_;
 
+    std::vector<int> object_row;
+    std::vector<int> object_col;
+    std::vector<float> object_rho_roi;
+
+    std::vector<int> filled_object_row;
+    std::vector<int> filled_object_col;
+    std::vector<float> filled_object_rho_roi;
+
+    std::vector<int> rho_zero_filled_value_row;
+    std::vector<int> rho_zero_filled_value_col;
+    std::vector<float> rho_zero_filled_value_rho_roi;
+
+    std::vector<float> max_his_filled_object_rho_roi;
+
+    std::vector<int> disconti_row;
+    std::vector<int> disconti_col;
+
 private:
     //genRangeImages
     std::vector<float> v_angle_;
