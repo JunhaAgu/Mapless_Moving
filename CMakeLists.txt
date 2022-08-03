@@ -31,6 +31,10 @@ set(SRC ${SRC}
   src/ros_wrapper.cpp
   src/mapless_dynamic.cpp
   src/timer.cpp
+  src/user_param.cpp
+  src/cloud_frame.cpp
+  src/segment_ground.cpp
+  src/dR_calc.cpp
 )
 
 set(includeDirs ${includeDirs} ${CMAKE_CURRENT_BINARY_DIR} include)
