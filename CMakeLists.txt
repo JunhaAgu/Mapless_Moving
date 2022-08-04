@@ -35,6 +35,8 @@ set(SRC ${SRC}
   src/cloud_frame.cpp
   src/segment_ground.cpp
   src/dR_calc.cpp
+  src/pcl_warp.cpp
+  src/object_ext.cpp
 )
 
 set(includeDirs ${includeDirs} ${CMAKE_CURRENT_BINARY_DIR} include)

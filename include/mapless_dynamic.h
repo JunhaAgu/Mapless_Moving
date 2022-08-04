@@ -29,6 +29,8 @@
 #include "cloud_frame.h"
 #include "segment_ground.h"
 #include "dR_calc.h"
+#include "pcl_warp.h"
+#include "object_ext.h"
 
 struct TestData 
 {
@@ -91,14 +93,14 @@ struct TestData
 //     }
 // };
 
-struct StrRANSAC
-{
-    int iter;
-    float thr;
-    float a_thr;
-    float b_thr[2];
-    int min_inlier;
-};
+// struct StrRANSAC
+// {
+//     int iter;
+//     float thr;
+//     float a_thr;
+//     float b_thr[2];
+//     int min_inlier;
+// };
 
 class MaplessDynamic{
 
@@ -113,6 +115,8 @@ public:
     std::unique_ptr<CloudFrame> CloudFrame_;
     std::unique_ptr<SegmentGround> SegmentGround_;
     std::unique_ptr<dRCalc> dRCalc_;
+    std::unique_ptr<PclWarp> PclWarp_;
+    std::unique_ptr<ObjectExt> ObjectExt_;
 
 private:
     // DECLARE PRIVATE VARIABLES
@@ -129,7 +133,7 @@ private:
     float alpha_;
     float beta_;
 
-    StrRANSAC paramRANSAC_;
+    // StrRANSAC paramRANSAC_;
     
     cv::Mat accumulated_dRdt_;
     cv::Mat accumulated_dRdt_score_;
@@ -140,7 +144,7 @@ private:
 
     StrRhoPts* str_cur_warped_;
 
-    StrRhoPts* str_warpPointcloud_;
+    // StrRhoPts* str_warpPointcloud_;
 
     Pose T_next2cur_;
 
@@ -151,8 +155,8 @@ private:
     pcl::PointCloud<pcl::PointXYZ>::Ptr ptr_cur_pts_warped_;
     cv::Mat residual_;
 
-    pcl::PointCloud<pcl::PointXYZ> velo_xyz_;
-    pcl::PointCloud<pcl::PointXYZ>::Ptr pts_warpewd_;
+    // pcl::PointCloud<pcl::PointXYZ> velo_xyz_;
+    // pcl::PointCloud<pcl::PointXYZ>::Ptr pts_warpewd_;
 
     std::vector<int> object_row;
     std::vector<int> object_col;
@@ -207,15 +211,30 @@ public:
 // From this, declare your own sub-functions. 
 private:
     void getUserSettingParameters();
+
+    // void genRangeImages(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts* str_in, bool cur_next);
+    // void calcuateRho(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts* str_in);
+    // void makeRangeImageAndPtsPerPixel(StrRhoPts* str_in, int n_pts, int n_ring,int n_radial,float az_step);
+    // void interpRangeImage(StrRhoPts* str_in, int n_ring, int n_radial, bool cur_next);
+    // void interpPts(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts* str_in1, int n_ring, int n_radial, bool cur_next);
     
-    void warpPointcloud(StrRhoPts* str_cur, const Pose& T01, cv::Mat& mat_in, int cnt_data);
-    void initializeStructAndPcl();
-    void filterOutAccumdR(StrRhoPts* str_next, StrRhoPts* str_cur_warped, cv::Mat& accumulated_dRdt ,cv::Mat& accumulated_dRdt_score ,cv::Mat& residual);
-    void extractObjectCandidate(cv::Mat& accumulated_dRdt, StrRhoPts* str_next, int object_threshold);
+    // void fastsegmentGround(StrRhoPts* str_in);
+    // void ransacLine(std::vector<float>& points_rho, std::vector<float>& points_z, /*output*/ bool mask_inlier[], int num_seg);
+    
+    // void dR_warpPointcloud(StrRhoPts* str_next, StrRhoPts* str_cur, pcl::PointCloud<pcl::PointXYZ>& p0, Pose& T01, int cnt_data, StrRhoPts* str_cur_warped, cv::Mat& dRdt);
+    // void compensateCurRhoZeroWarp(StrRhoPts* str_cur, int n_ring, int n_radial, std::vector<float>& v_angle, pcl::PointCloud<pcl::PointXYZ>& velo_cur);
+    // void interpRangeImageMin(StrRhoPts* str_in, int n_ring, int n_radial);
+    // void interpPtsWarp(StrRhoPts* str_in, int n_ring, int n_radial);
+    
+    // void warpPointcloud(StrRhoPts* str_cur, const Pose& T01, cv::Mat& mat_in, int cnt_data);
+    // void initializeStructAndPcl();
 
-    void checkSegment(cv::Mat& accumulated_dRdt, StrRhoPts* str_next, cv::Mat& groundPtsIdx_next);
+    // void filterOutAccumdR(StrRhoPts* str_next, StrRhoPts* str_cur_warped, cv::Mat& accumulated_dRdt ,cv::Mat& accumulated_dRdt_score ,cv::Mat& residual);
+    // void extractObjectCandidate(cv::Mat& accumulated_dRdt, StrRhoPts* str_next, int object_threshold);
 
-    void updateScore(cv::Mat& accumulated_dRdt, cv::Mat& accumulated_dRdt_score);
+    // void checkSegment(cv::Mat& accumulated_dRdt, StrRhoPts* str_next, cv::Mat& groundPtsIdx_next);
+
+    // void updateScore(cv::Mat& accumulated_dRdt, cv::Mat& accumulated_dRdt_score);
 
     void plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulated_dRdt_score, StrRhoPts* str_next, cv::Mat& groundPtsIdx_next, int object_threshold);
     void interpAndfill_image(cv::Mat& input_img, cv::Mat& filled_bin);

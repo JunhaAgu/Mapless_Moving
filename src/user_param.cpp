@@ -30,6 +30,14 @@ void UserParam::getUserSettingParameters()
     ransac_param_.min_inlier_ = 5;
     ransac_param_.n_sample_ = 2;
 
+    sensor_spec_.channel_ = 64;
+
+    image_param_.height_    = sensor_spec_.channel_ / cloud_filter_param_.v_factor_ ;
+    image_param_.width_     = 360.0 / cloud_filter_param_.azimuth_res_ + 1;
+
+    obejct_param_.thr_object_ = 30;
+    obejct_param_.alpha_ = 0.3;
+    obejct_param_.beta_ = 0.1;
 };
 
 void UserParam::calVangle(std::string& data_type)

@@ -14,6 +14,7 @@ struct CloudFilterParam
 struct SensorSpec
 {
     std::vector<float> v_angle_;
+    int channel_;
 };
 
 struct GroundSegmentParam
@@ -31,6 +32,19 @@ struct RansacParam
     int n_sample_;
 };
 
+struct ImageParam
+{
+    int height_;
+    int width_;
+};
+
+struct ObjectParam
+{
+    int thr_object_;
+    float alpha_;
+    float beta_;
+};
+
 class UserParam
 {
     friend class MaplessDynamic;
@@ -44,6 +58,8 @@ class UserParam
         SensorSpec sensor_spec_;
         RansacParam ransac_param_;
         GroundSegmentParam ground_segment_param_;
+        ImageParam image_param_;
+        ObjectParam obejct_param_;
 
     public:
         UserParam();
