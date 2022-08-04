@@ -31,6 +31,7 @@
 #include "dR_calc.h"
 #include "pcl_warp.h"
 #include "object_ext.h"
+#include "image_fill.h"
 
 struct TestData 
 {
@@ -38,69 +39,6 @@ struct TestData
     pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_;
     sensor_msgs::PointCloud2* pcl_msg_;
 };
-
-// struct StrRhoPts
-// {
-//     pcl::PointCloud<pcl::PointXYZ>::Ptr pts;
-//     pcl::PointCloud<pcl::PointXYZ>::Ptr ptsInImage;
-
-//     std::vector<float> rho;
-//     std::vector<float> phi;
-//     std::vector<float> theta;
-
-//     cv::Mat img_rho;
-//     cv::Mat img_index;
-
-//     cv::Mat img_x;
-//     cv::Mat img_y;
-//     cv::Mat img_z;
-
-//     std::vector<int> pts_per_pixel_n;
-//     std::vector<std::vector<int>> pts_per_pixel_index;
-//     std::vector<std::vector<float>> pts_per_pixel_rho;
-//     std::vector<std::vector<int>> pts_per_pixel_index_valid;
-
-//     //interpRangeImage
-//     cv::Mat img_restore_mask;
-//     cv::Mat img_restore_warp_mask;
-
-//     void reset(){
-//         // pts        = nullptr;
-//         // ptsInImage = nullptr;
-
-//         rho.resize(0);
-//         phi.resize(0);
-//         theta.resize(0);
-
-//         // img_rho = 
-//         for(auto it : pts_per_pixel_n)           it = 0;
-//         for(auto it : pts_per_pixel_index)       it.resize(0);
-//         for(auto it : pts_per_pixel_rho)         it.resize(0);
-//         for(auto it : pts_per_pixel_index_valid) it.resize(0);
-//     };
-
-//     void state(){
-//         std::cout << "(ptr) pts size: " << pts->size() << std::endl;
-//         std::cout << "(ptr) ptsInImage size: " << ptsInImage->size() << std::endl;
-//         std::cout << "(vector) rho size: " << rho.size() << std::endl;
-//         std::cout << "(vector) phi size: " << phi.size() << std::endl;
-//         std::cout << "(vector) theta size: " << theta.size() << std::endl;
-//         std::cout << "(vector) pts_per_pixel_n size: " << pts_per_pixel_n.size() << std::endl;
-//         std::cout << "(vector(vector)) pts_per_pixel_index size: " << pts_per_pixel_index.size() << std::endl;
-//         std::cout << "(vector(vector)) pts_per_pixel_rho size: " << pts_per_pixel_rho.size() << std::endl;
-//         std::cout << "(vector) pts_per_pixel_index_valid size: " << pts_per_pixel_index_valid.size() << std::endl;
-//         std::cout << " ================================== "<< std::endl;
-//     }
-// };
-
-// struct StrRANSAC
-// {
-//     int iter;
-//     float thr;
-//     float a_thr;
-//     float b_thr[2];
-//     int min_inlier;
-// };
 
 class MaplessDynamic{
 
@@ -117,6 +55,7 @@ public:
     std::unique_ptr<dRCalc> dRCalc_;
     std::unique_ptr<PclWarp> PclWarp_;
     std::unique_ptr<ObjectExt> ObjectExt_;
+    std::unique_ptr<ImageFill> ImageFill_;
 
 private:
     // DECLARE PRIVATE VARIABLES
@@ -132,8 +71,6 @@ private:
 
     float alpha_;
     float beta_;
-
-    // StrRANSAC paramRANSAC_;
     
     cv::Mat accumulated_dRdt_;
     cv::Mat accumulated_dRdt_score_;
@@ -144,8 +81,6 @@ private:
 
     StrRhoPts* str_cur_warped_;
 
-    // StrRhoPts* str_warpPointcloud_;
-
     Pose T_next2cur_;
 
     cv::Mat groundPtsIdx_next_;
@@ -154,26 +89,6 @@ private:
     pcl::PointCloud<pcl::PointXYZ> velo_cur_;
     pcl::PointCloud<pcl::PointXYZ>::Ptr ptr_cur_pts_warped_;
     cv::Mat residual_;
-
-    // pcl::PointCloud<pcl::PointXYZ> velo_xyz_;
-    // pcl::PointCloud<pcl::PointXYZ>::Ptr pts_warpewd_;
-
-    std::vector<int> object_row;
-    std::vector<int> object_col;
-    std::vector<float> object_rho_roi;
-
-    std::vector<int> filled_object_row;
-    std::vector<int> filled_object_col;
-    std::vector<float> filled_object_rho_roi;
-
-    std::vector<int> rho_zero_filled_value_row;
-    std::vector<int> rho_zero_filled_value_col;
-    std::vector<float> rho_zero_filled_value_rho_roi;
-
-    std::vector<float> max_his_filled_object_rho_roi;
-
-    std::vector<int> disconti_row;
-    std::vector<int> disconti_col;
 
 private:
     //genRangeImages
@@ -211,33 +126,6 @@ public:
 // From this, declare your own sub-functions. 
 private:
     void getUserSettingParameters();
-
-    // void genRangeImages(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts* str_in, bool cur_next);
-    // void calcuateRho(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts* str_in);
-    // void makeRangeImageAndPtsPerPixel(StrRhoPts* str_in, int n_pts, int n_ring,int n_radial,float az_step);
-    // void interpRangeImage(StrRhoPts* str_in, int n_ring, int n_radial, bool cur_next);
-    // void interpPts(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts* str_in1, int n_ring, int n_radial, bool cur_next);
-    
-    // void fastsegmentGround(StrRhoPts* str_in);
-    // void ransacLine(std::vector<float>& points_rho, std::vector<float>& points_z, /*output*/ bool mask_inlier[], int num_seg);
-    
-    // void dR_warpPointcloud(StrRhoPts* str_next, StrRhoPts* str_cur, pcl::PointCloud<pcl::PointXYZ>& p0, Pose& T01, int cnt_data, StrRhoPts* str_cur_warped, cv::Mat& dRdt);
-    // void compensateCurRhoZeroWarp(StrRhoPts* str_cur, int n_ring, int n_radial, std::vector<float>& v_angle, pcl::PointCloud<pcl::PointXYZ>& velo_cur);
-    // void interpRangeImageMin(StrRhoPts* str_in, int n_ring, int n_radial);
-    // void interpPtsWarp(StrRhoPts* str_in, int n_ring, int n_radial);
-    
-    // void warpPointcloud(StrRhoPts* str_cur, const Pose& T01, cv::Mat& mat_in, int cnt_data);
-    // void initializeStructAndPcl();
-
-    // void filterOutAccumdR(StrRhoPts* str_next, StrRhoPts* str_cur_warped, cv::Mat& accumulated_dRdt ,cv::Mat& accumulated_dRdt_score ,cv::Mat& residual);
-    // void extractObjectCandidate(cv::Mat& accumulated_dRdt, StrRhoPts* str_next, int object_threshold);
-
-    // void checkSegment(cv::Mat& accumulated_dRdt, StrRhoPts* str_next, cv::Mat& groundPtsIdx_next);
-
-    // void updateScore(cv::Mat& accumulated_dRdt, cv::Mat& accumulated_dRdt_score);
-
-    void plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulated_dRdt_score, StrRhoPts* str_next, cv::Mat& groundPtsIdx_next, int object_threshold);
-    void interpAndfill_image(cv::Mat& input_img, cv::Mat& filled_bin);
 
     void copyStruct(StrRhoPts* str_next, StrRhoPts* str_cur, pcl::PointCloud<pcl::PointXYZ>& p1, pcl::PointCloud<pcl::PointXYZ>& p0, int cnt_data);
 
