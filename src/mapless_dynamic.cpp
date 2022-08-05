@@ -13,16 +13,19 @@ MaplessDynamic::MaplessDynamic(ros::NodeHandle& nh, bool test_flag)
 
     pub_dynamic_pts_ = nh_.advertise<sensor_msgs::PointCloud2>("/dynamic_pts",1);
     pub_static_pts_  = nh_.advertise<sensor_msgs::PointCloud2>("/static_pts",1);
-    
+
     // Class UserParam
     std::unique_ptr<UserParam> UserParam_;
     UserParam_ = std::make_unique<UserParam>();
     UserParam_->getUserSettingParameters();
 
     this->getUserSettingParameters();
-    
+
     // Class initialization
-    CloudFrame_     = std::make_unique<CloudFrame>(UserParam_);
+    CloudFrame_cur_ = std::make_unique<CloudFrame>(UserParam_);
+    CloudFrame_next_= std::make_unique<CloudFrame>(UserParam_);
+    CloudFrame_cur_warped_= std::make_unique<CloudFrame>(UserParam_);
+    CloudFrame_warpPointcloud_= std::make_unique<CloudFrame>(UserParam_);
     SegmentGround_  = std::make_unique<SegmentGround>(UserParam_);
     dRCalc_         = std::make_unique<dRCalc>(UserParam_);
     PclWarp_        = std::make_unique<PclWarp>(UserParam_);
@@ -33,108 +36,6 @@ MaplessDynamic::MaplessDynamic(ros::NodeHandle& nh, bool test_flag)
     accumulated_dRdt_       = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
     accumulated_dRdt_score_ = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
     residual_               = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-
-    str_cur_            = new StrRhoPts();
-    str_next_           = new StrRhoPts();
-    str_cur_warped_     = new StrRhoPts();
-    // str_warpPointcloud_ = new StrRhoPts();
-
-    str_cur_->rho.reserve(500000);
-    str_cur_->phi.reserve(500000);
-    str_cur_->theta.reserve(500000);
-    str_cur_->img_rho   = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-    str_cur_->img_index = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
-
-    str_cur_->img_x     = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-    str_cur_->img_y     = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-    str_cur_->img_z     = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-
-    str_cur_->pts_per_pixel_n.resize(img_height_*img_width_);
-    str_cur_->pts_per_pixel_index.resize(img_height_*img_width_);
-    str_cur_->pts_per_pixel_rho.resize(img_height_ * img_width_);
-    str_cur_->pts_per_pixel_index_valid.resize(img_height_ * img_width_);
-    for (int i=0; i<img_height_*img_width_; ++i)
-    {
-        str_cur_->pts_per_pixel_index[i].reserve(5000);
-    }
-    for (int i=0; i<img_height_*img_width_; ++i)
-    {
-        str_cur_->pts_per_pixel_rho[i].reserve(5000);
-    }
-    for (int i=0; i<img_height_*img_width_; ++i)
-    {
-        str_cur_->pts_per_pixel_index_valid[i].reserve(5000);
-    }
-    str_cur_->pts        = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
-    str_cur_->ptsInImage = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
-    str_cur_->img_restore_mask      = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
-    str_cur_->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
-
-    str_next_->rho.reserve(500000);
-    str_next_->phi.reserve(500000);
-    str_next_->theta.reserve(500000);
-    str_next_->img_rho   = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-    str_next_->img_index = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
-
-    str_next_->img_x     = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-    str_next_->img_y     = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-    str_next_->img_z     = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-
-    str_next_->pts_per_pixel_n.resize(img_height_*img_width_);
-    str_next_->pts_per_pixel_index.resize(img_height_*img_width_);
-    str_next_->pts_per_pixel_rho.resize(img_height_ * img_width_);
-    str_next_->pts_per_pixel_index_valid.resize(img_height_ * img_width_);
-    for (int i=0; i<img_height_*img_width_; ++i)
-    {
-        str_next_->pts_per_pixel_index[i].reserve(5000);
-    }
-    for (int i=0; i<img_height_*img_width_; ++i)
-    {
-        str_next_->pts_per_pixel_rho[i].reserve(5000);
-    }
-    for (int i=0; i<img_height_*img_width_; ++i)
-    {
-        str_next_->pts_per_pixel_index_valid[i].reserve(5000);
-    }
-    str_next_->pts        = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
-    str_next_->ptsInImage = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
-    str_next_->img_restore_mask      = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
-    str_next_->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
-    
-    groundPtsIdx_next_ = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
-
-    str_cur_warped_->rho.reserve(500000);
-    str_cur_warped_->phi.reserve(500000);
-    str_cur_warped_->theta.reserve(500000);
-    str_cur_warped_->img_rho   = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-    str_cur_warped_->img_index = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
-
-    str_cur_warped_->img_x = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-    str_cur_warped_->img_y = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-    str_cur_warped_->img_z = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-
-    str_cur_warped_->pts_per_pixel_n.resize(img_height_*img_width_);
-    str_cur_warped_->pts_per_pixel_index.resize(img_height_*img_width_);
-    str_cur_warped_->pts_per_pixel_rho.resize(img_height_ * img_width_);
-    str_cur_warped_->pts_per_pixel_index_valid.resize(img_height_ * img_width_);
-    for (int i=0; i<img_height_*img_width_; ++i)
-    {
-        str_cur_warped_->pts_per_pixel_index[i].reserve(5000);
-    }
-    for (int i=0; i<img_height_*img_width_; ++i)
-    {
-        str_cur_warped_->pts_per_pixel_rho[i].reserve(5000);
-    }
-    for (int i=0; i<img_height_*img_width_; ++i)
-    {
-        str_cur_warped_->pts_per_pixel_index_valid[i].reserve(5000);
-    }
-    str_cur_warped_->pts        = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
-    str_cur_warped_->ptsInImage = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
-    str_cur_warped_->img_restore_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
-    str_cur_warped_->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
-
-    ptr_cur_pts_warped_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
 
     if (test_flag_){
         this->loadTestData();
@@ -147,11 +48,6 @@ MaplessDynamic::~MaplessDynamic() {
     // destructor
     ROS_INFO_STREAM("MaplessDynamic - deleted.");
     // IMPLEMENT YOUR CODE FROM THIS LINE.
-
-    delete str_cur_;
-    delete str_next_;
-    delete str_cur_warped_;
-    // delete str_warpPointcloud_;
 
     // END YOUR CODE
 };
@@ -219,7 +115,8 @@ void MaplessDynamic::TEST(){
         p0_msg_test_ = *(data_buf_[0]->pcl_msg_);
         pcl::fromROSMsg(p0_msg_test_, p0_pcl_test_);
         
-        CloudFrame_->genRangeImages(p0_pcl_test_, str_cur_, 1);
+        // CloudFrame_->genRangeImages(p0_pcl_test_, str_cur_, 1);
+        CloudFrame_cur_ ->genRangeImages(p0_pcl_test_, 1);
 
         mask0_test_.resize(p0_msg_test_.width, true);
     }
@@ -465,9 +362,8 @@ void MaplessDynamic::solve(
     // pointcloud input, p1
     // p0 is already processed in initial step
     timer::tic();
-    CloudFrame_->genRangeImages(p1, str_next_, 1);
+    CloudFrame_next_->genRangeImages(p1, 1);
     // genRangeImages(p1, str_next_, 1);
-    // CloudFilter cloud_filter = CloudFilter(p1, str_next_ ,1);
 
     double dt_toc1 = timer::toc(); // milliseconds
     ROS_INFO_STREAM("elapsed time for 'genRangeImages' :" << dt_toc1 << " [ms]");
@@ -477,24 +373,26 @@ void MaplessDynamic::solve(
     
     // Segment ground
     timer::tic();
-    SegmentGround_->fastsegmentGround(str_next_, groundPtsIdx_next_);
+    SegmentGround_->fastsegmentGround(CloudFrame_next_);
     double dt_toc2 = timer::toc(); // milliseconds
     ROS_INFO_STREAM("elapsed time for 'segmentSGround' :" << dt_toc2 << " [ms]");
-
     //// Occlusion accumulation ////
     // Compute the occlusion dRdt
     
     timer::tic();
-    dRCalc_->dR_warpPointcloud(str_next_, str_cur_, p0, T_next2cur_, cnt_data, str_cur_warped_, residual_, velo_cur_, ptr_cur_pts_warped_, CloudFrame_);
+    dRCalc_->dR_warpPointcloud(CloudFrame_next_, CloudFrame_cur_, CloudFrame_cur_warped_, p0, T_next2cur_, cnt_data, residual_);
     double dt_toc3 = timer::toc(); // milliseconds
     ROS_INFO_STREAM("elapsed time for 'dR_warpPointcloud' :" << dt_toc3 << " [ms]");
     // str_next_->state();
+    //     cv::imshow("residual_", residual_);
+    // cv::waitKey(0);
+    // exit(0);
 
     timer::tic();
     // warp the occlusion accumulation map
-    PclWarp_->warpPointcloud(str_cur_, T_next2cur_, accumulated_dRdt_, cnt_data, CloudFrame_);
-    PclWarp_->initializeStructAndPcl();
-    PclWarp_->warpPointcloud(str_cur_, T_next2cur_, accumulated_dRdt_score_, cnt_data, CloudFrame_);
+    PclWarp_->warpPointcloud(CloudFrame_cur_, CloudFrame_warpPointcloud_, T_next2cur_, accumulated_dRdt_, cnt_data);
+    PclWarp_->initializeStructAndPcl(CloudFrame_warpPointcloud_);
+    PclWarp_->warpPointcloud(CloudFrame_cur_, CloudFrame_warpPointcloud_, T_next2cur_, accumulated_dRdt_score_, cnt_data);
     double dt_toc4 = timer::toc(); // milliseconds
     ROS_INFO_STREAM("elapsed time for 'warpPointcloud' :" << dt_toc4 << " [ms]");
     
@@ -507,9 +405,10 @@ void MaplessDynamic::solve(
     // }
     timer::tic();
     // filter out outliers
-    ObjectExt_->filterOutAccumdR(str_next_, str_cur_warped_, accumulated_dRdt_, accumulated_dRdt_score_, residual_);
+    ObjectExt_->filterOutAccumdR(CloudFrame_next_, CloudFrame_cur_warped_, accumulated_dRdt_, accumulated_dRdt_score_, residual_);
     double dt_toc5 = timer::toc(); // milliseconds
     ROS_INFO_STREAM("elapsed time for 'filterOutAccumdR' :" << dt_toc5 << " [ms]");
+
     // if (cnt_data == 2)
     // {
     //     cv::imshow("d", accumulated_dRdt_);
@@ -521,15 +420,17 @@ void MaplessDynamic::solve(
     // }
     timer::tic();
     // Extract object candidate via connected components in 2-D binary image
-    ObjectExt_->extractObjectCandidate(accumulated_dRdt_, str_next_);
+    ObjectExt_->extractObjectCandidate(accumulated_dRdt_, CloudFrame_next_);
     double dt_toc6 = timer::toc(); // milliseconds
     ROS_INFO_STREAM("elapsed time for 'extractObjectCandidate' :" <<  dt_toc6 << " [ms]");
+
+
 
     //// update object_mask
     //object_mask = accumulated_dRdt>0;
     timer::tic();
     // Fast Segment
-    ObjectExt_->checkSegment(accumulated_dRdt_, str_next_, groundPtsIdx_next_);
+    ObjectExt_->checkSegment(accumulated_dRdt_, CloudFrame_next_, SegmentGround_->groundPtsIdx_next_);
     double dt_toc7 = timer::toc(); // milliseconds
     ROS_INFO_STREAM("elapsed time for 'checkSegment' :" <<  dt_toc7 << " [ms]");
 
@@ -541,14 +442,16 @@ void MaplessDynamic::solve(
     ROS_INFO_STREAM("elapsed time for 'updateScore' :" <<  dt_toc8 << " [ms]");
 
     timer::tic();
-    ImageFill_->plugImageZeroHoles(accumulated_dRdt_, accumulated_dRdt_score_, str_next_, groundPtsIdx_next_, object_threshold_);
+    ImageFill_->plugImageZeroHoles(accumulated_dRdt_, accumulated_dRdt_score_, CloudFrame_next_, SegmentGround_->groundPtsIdx_next_, object_threshold_);
     double dt_toc9 = timer::toc(); // milliseconds
     ROS_INFO_STREAM("elapsed time for 'plugImageZeroHoles' :" <<  dt_toc9 << " [ms]");
+
+
 
     timer::tic();
     float* ptr_accumulated_dRdt_ = accumulated_dRdt_.ptr<float>(0);
     float* ptr_accumulated_dRdt_score_ = accumulated_dRdt_score_.ptr<float>(0);
-    float* ptr_next_img_rho = str_next_->img_rho.ptr<float>(0);
+    float* ptr_next_img_rho = CloudFrame_next_->str_rhopts_->img_rho.ptr<float>(0);
 
     float* ptr_dRdt = residual_.ptr<float>(0);
 
@@ -596,7 +499,7 @@ void MaplessDynamic::solve(
                 else{}
             }
         }
-        ObjectExt_->checkSegment(accumulated_dRdt_, str_next_, groundPtsIdx_next_);
+        ObjectExt_->checkSegment(accumulated_dRdt_, CloudFrame_next_, SegmentGround_->groundPtsIdx_next_);
     }
 
     // cv::imshow("accumulated_dRdt", accumulated_dRdt_);
@@ -604,9 +507,9 @@ void MaplessDynamic::solve(
     // exit(0);
     pcl::PointCloud<pcl::PointXYZ> pcl_dynamic;
     pcl::PointCloud<pcl::PointXYZ> pcl_static;
-    float* ptr_next_img_x = str_next_->img_x.ptr<float>(0);
-    float* ptr_next_img_y = str_next_->img_y.ptr<float>(0);
-    float* ptr_next_img_z = str_next_->img_z.ptr<float>(0);
+    float* ptr_next_img_x = CloudFrame_next_->str_rhopts_->img_x.ptr<float>(0);
+    float* ptr_next_img_y = CloudFrame_next_->str_rhopts_->img_y.ptr<float>(0);
+    float* ptr_next_img_z = CloudFrame_next_->str_rhopts_->img_z.ptr<float>(0);
 
     // for (int i = 0; i < img_height_; ++i)
     // {
@@ -633,23 +536,23 @@ void MaplessDynamic::solve(
         {
             if (*(ptr_accumulated_dRdt_ + i_ncols + j)!=0)
             {
-                if (str_next_->pts_per_pixel_index_valid[i_ncols + j].size() != 0)
+                if (CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j].size() != 0)
                 {
-                    for (int k = 0; k < str_next_->pts_per_pixel_index_valid[i_ncols + j].size(); ++k)
+                    for (int k = 0; k < CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j].size(); ++k)
                     {
                         pcl_dynamic.push_back(
-                            pcl::PointXYZ(p1[str_next_->pts_per_pixel_index_valid[i_ncols + j][k]]));
+                            pcl::PointXYZ(p1[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]]));
                     }
                 }
             }
             else
             {
-                if (str_next_->pts_per_pixel_index_valid[i_ncols + j].size() != 0)
+                if (CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j].size() != 0)
                 {
-                    for (int k = 0; k < str_next_->pts_per_pixel_index_valid[i_ncols + j].size(); ++k)
+                    for (int k = 0; k < CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j].size(); ++k)
                     {
                         pcl_static.push_back(
-                            pcl::PointXYZ(p1[str_next_->pts_per_pixel_index_valid[i_ncols + j][k]]));
+                            pcl::PointXYZ(p1[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]]));
                     }
                 }
             }
@@ -689,103 +592,103 @@ void MaplessDynamic::solve(
         }
     }
 
-    copyStruct(str_next_, str_cur_, p1, p0, cnt_data);
+    copyStruct(p1, p0, cnt_data);
     double dt_toc12 = timer::toc(); // milliseconds
     ROS_INFO_STREAM("elapsed time for 'copyRemove' :" <<  dt_toc12 << " [ms]");
 };
 
-void MaplessDynamic::copyStruct(StrRhoPts* str_next, StrRhoPts* str_cur, pcl::PointCloud<pcl::PointXYZ>& p1 ,pcl::PointCloud<pcl::PointXYZ>& p0, int cnt_data)
+void MaplessDynamic::copyStruct(pcl::PointCloud<pcl::PointXYZ>& p1 ,pcl::PointCloud<pcl::PointXYZ>& p0, int cnt_data)
 {
     // memcpy(str_cur, str_next, sizeof(struct StrRhoPts));
     // CHK
-    {   str_cur->pts = str_next->pts;
-        str_cur->ptsInImage = str_next->ptsInImage;
-        
-        str_cur->rho.resize(0);
-        str_cur->phi.resize(0);
-        str_cur->theta.resize(0);
-        std::copy(str_next->rho.begin(),str_next->rho.end(), str_cur->rho.begin());
-        std::copy(str_next->phi.begin(),str_next->phi.end(), str_cur->phi.begin());
-        std::copy(str_next->theta.begin(),str_next->theta.end(), str_cur->theta.begin());
+    {   CloudFrame_cur_->str_rhopts_->pts        = CloudFrame_next_->str_rhopts_->pts;
+        CloudFrame_cur_->str_rhopts_->ptsInImage = CloudFrame_next_->str_rhopts_->ptsInImage;
 
-        str_next->img_rho.copyTo(str_cur->img_rho);
-        str_next->img_index.copyTo(str_cur->img_index);
-        str_next->img_x.copyTo(str_cur->img_x);
-        str_next->img_y.copyTo(str_cur->img_y);
-        str_next->img_z.copyTo(str_cur->img_z);
+        CloudFrame_cur_->str_rhopts_->rho.resize(0);
+        CloudFrame_cur_->str_rhopts_->phi.resize(0);
+        CloudFrame_cur_->str_rhopts_->theta.resize(0);
+        std::copy(CloudFrame_next_->str_rhopts_->rho.begin(),CloudFrame_next_->str_rhopts_->rho.end(), CloudFrame_cur_->str_rhopts_->rho.begin());
+        std::copy(CloudFrame_next_->str_rhopts_->phi.begin(),CloudFrame_next_->str_rhopts_->phi.end(), CloudFrame_cur_->str_rhopts_->phi.begin());
+        std::copy(CloudFrame_next_->str_rhopts_->theta.begin(),CloudFrame_next_->str_rhopts_->theta.end(), CloudFrame_cur_->str_rhopts_->theta.begin());
 
-        std::copy(str_next->pts_per_pixel_n.begin(), str_next->pts_per_pixel_n.end(), str_cur->pts_per_pixel_n.begin());
+        CloudFrame_next_->str_rhopts_->img_rho.copyTo(CloudFrame_cur_->str_rhopts_->img_rho);
+        CloudFrame_next_->str_rhopts_->img_index.copyTo(CloudFrame_cur_->str_rhopts_->img_index);
+        CloudFrame_next_->str_rhopts_->img_x.copyTo(CloudFrame_cur_->str_rhopts_->img_x);
+        CloudFrame_next_->str_rhopts_->img_y.copyTo(CloudFrame_cur_->str_rhopts_->img_y);
+        CloudFrame_next_->str_rhopts_->img_z.copyTo(CloudFrame_cur_->str_rhopts_->img_z);
+
+        std::copy(CloudFrame_next_->str_rhopts_->pts_per_pixel_n.begin(), CloudFrame_next_->str_rhopts_->pts_per_pixel_n.end(), CloudFrame_cur_->str_rhopts_->pts_per_pixel_n.begin());
 
         for (int i=0; i<img_height_*img_width_; ++i)
         {
-            if (str_cur->pts_per_pixel_index[i].size() != 0)
+            if (CloudFrame_cur_->str_rhopts_->pts_per_pixel_index[i].size() != 0)
             {
-                str_cur->pts_per_pixel_index[i].resize(0);
-                std::copy(str_next->pts_per_pixel_index[i].begin(), str_next->pts_per_pixel_index[i].end(), str_cur->pts_per_pixel_index[i].begin());
+                CloudFrame_cur_->str_rhopts_->pts_per_pixel_index[i].resize(0);
+                std::copy(CloudFrame_next_->str_rhopts_->pts_per_pixel_index[i].begin(), CloudFrame_next_->str_rhopts_->pts_per_pixel_index[i].end(), CloudFrame_cur_->str_rhopts_->pts_per_pixel_index[i].begin());
             }
         }
 
         for (int i=0; i<img_height_*img_width_; ++i)
         {
-            if (str_cur->pts_per_pixel_rho[i].size() != 0)
+            if (CloudFrame_cur_->str_rhopts_->pts_per_pixel_rho[i].size() != 0)
             {
-                str_cur->pts_per_pixel_rho[i].resize(0);
-                std::copy(str_next->pts_per_pixel_rho[i].begin(), str_next->pts_per_pixel_rho[i].end(), str_cur->pts_per_pixel_rho[i].begin());
+                CloudFrame_cur_->str_rhopts_->pts_per_pixel_rho[i].resize(0);
+                std::copy(CloudFrame_next_->str_rhopts_->pts_per_pixel_rho[i].begin(), CloudFrame_next_->str_rhopts_->pts_per_pixel_rho[i].end(), CloudFrame_cur_->str_rhopts_->pts_per_pixel_rho[i].begin());
             }
         }
 
         for (int i=0; i<img_height_*img_width_; ++i)
         {
-            if (str_cur->pts_per_pixel_index_valid[i].size() != 0)
+            if (CloudFrame_cur_->str_rhopts_->pts_per_pixel_index_valid[i].size() != 0)
             {
-                str_cur->pts_per_pixel_index_valid[i].resize(0);
-                std::copy(str_next->pts_per_pixel_index_valid[i].begin(), str_next->pts_per_pixel_index_valid[i].end(), str_cur->pts_per_pixel_index_valid[i].begin());
+                CloudFrame_cur_->str_rhopts_->pts_per_pixel_index_valid[i].resize(0);
+                std::copy(CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i].begin(), CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i].end(), CloudFrame_cur_->str_rhopts_->pts_per_pixel_index_valid[i].begin());
             }
         }
-        str_next->img_restore_mask.copyTo(str_cur->img_restore_mask);
-        str_next->img_restore_warp_mask.copyTo(str_cur->img_restore_warp_mask);
+        CloudFrame_next_->str_rhopts_->img_restore_mask.copyTo(CloudFrame_cur_->str_rhopts_->img_restore_mask);
+        CloudFrame_next_->str_rhopts_->img_restore_warp_mask.copyTo(CloudFrame_cur_->str_rhopts_->img_restore_warp_mask);
     }
 
 
-    // str_next->reset();
+    // CloudFrame_next_->str_rhopts_->reset();
     {
-        str_next->rho.resize(0);
-        str_next->phi.resize(0);
-        str_next->theta.resize(0);
-        str_next->img_rho               = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-        str_next->img_index             = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
-        str_next->img_x                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-        str_next->img_y                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-        str_next->img_z                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-        str_next->img_restore_mask      = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
-        str_next->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+        CloudFrame_next_->str_rhopts_->rho.resize(0);
+        CloudFrame_next_->str_rhopts_->phi.resize(0);
+        CloudFrame_next_->str_rhopts_->theta.resize(0);
+        CloudFrame_next_->str_rhopts_->img_rho               = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+        CloudFrame_next_->str_rhopts_->img_index             = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+        CloudFrame_next_->str_rhopts_->img_x                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+        CloudFrame_next_->str_rhopts_->img_y                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+        CloudFrame_next_->str_rhopts_->img_z                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+        CloudFrame_next_->str_rhopts_->img_restore_mask      = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+        CloudFrame_next_->str_rhopts_->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
 
         for (int i=0; i<img_height_*img_width_; ++i)
         {
-            str_next->pts_per_pixel_n[i] = 0;
+            CloudFrame_next_->str_rhopts_->pts_per_pixel_n[i] = 0;
         }
 
         for (int i=0; i<img_height_*img_width_; ++i)
         {
-            if (str_next->pts_per_pixel_index[i].size() != 0)
+            if (CloudFrame_next_->str_rhopts_->pts_per_pixel_index[i].size() != 0)
             {
-                str_next->pts_per_pixel_index[i].resize(0);
+                CloudFrame_next_->str_rhopts_->pts_per_pixel_index[i].resize(0);
             }
         }
 
         for (int i=0; i<img_height_*img_width_; ++i)
         {
-            if (str_next->pts_per_pixel_rho[i].size() != 0)
+            if (CloudFrame_next_->str_rhopts_->pts_per_pixel_rho[i].size() != 0)
             {
-                str_next->pts_per_pixel_rho[i].resize(0);
+                CloudFrame_next_->str_rhopts_->pts_per_pixel_rho[i].resize(0);
             }
         }
 
         for (int i=0; i<img_height_*img_width_; ++i)
         {
-            if (str_next->pts_per_pixel_index_valid[i].size() != 0)
+            if (CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i].size() != 0)
             {
-                str_next->pts_per_pixel_index_valid[i].resize(0);
+                CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i].resize(0);
             }
         }
     }
@@ -818,101 +721,101 @@ void MaplessDynamic::copyStruct(StrRhoPts* str_next, StrRhoPts* str_cur, pcl::Po
 
     // str_cur_warped_->reset();
     {
-        str_cur_warped_->rho.resize(0);
-        str_cur_warped_->phi.resize(0);
-        str_cur_warped_->theta.resize(0);
-        str_cur_warped_->img_rho               = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-        str_cur_warped_->img_index             = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
-        str_cur_warped_->img_x                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-        str_cur_warped_->img_y                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-        str_cur_warped_->img_z                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-        str_cur_warped_->img_restore_mask      = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
-        str_cur_warped_->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+        CloudFrame_cur_warped_->str_rhopts_->rho.resize(0);
+        CloudFrame_cur_warped_->str_rhopts_->phi.resize(0);
+        CloudFrame_cur_warped_->str_rhopts_->theta.resize(0);
+        CloudFrame_cur_warped_->str_rhopts_->img_rho               = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+        CloudFrame_cur_warped_->str_rhopts_->img_index             = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+        CloudFrame_cur_warped_->str_rhopts_->img_x                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+        CloudFrame_cur_warped_->str_rhopts_->img_y                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+        CloudFrame_cur_warped_->str_rhopts_->img_z                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+        CloudFrame_cur_warped_->str_rhopts_->img_restore_mask      = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+        CloudFrame_cur_warped_->str_rhopts_->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
 
         for (int i=0; i<img_height_*img_width_; ++i)
         {
-            str_cur_warped_->pts_per_pixel_n[i] = 0;
+            CloudFrame_cur_warped_->str_rhopts_->pts_per_pixel_n[i] = 0;
         }
 
         for (int i=0; i<img_height_*img_width_; ++i)
         {
-            if (str_cur_warped_->pts_per_pixel_index[i].size() != 0)
+            if (CloudFrame_cur_warped_->str_rhopts_->pts_per_pixel_index[i].size() != 0)
             {
-                str_cur_warped_->pts_per_pixel_index[i].resize(0);
+                CloudFrame_cur_warped_->str_rhopts_->pts_per_pixel_index[i].resize(0);
             }
         }
 
         for (int i=0; i<img_height_*img_width_; ++i)
         {
-            if (str_cur_warped_->pts_per_pixel_rho[i].size() != 0)
+            if (CloudFrame_cur_warped_->str_rhopts_->pts_per_pixel_rho[i].size() != 0)
             {
-                str_cur_warped_->pts_per_pixel_rho[i].resize(0);
+                CloudFrame_cur_warped_->str_rhopts_->pts_per_pixel_rho[i].resize(0);
             }
         }
 
         for (int i=0; i<img_height_*img_width_; ++i)
         {
-            if (str_cur_warped_->pts_per_pixel_index_valid[i].size() != 0)
+            if (CloudFrame_cur_warped_->str_rhopts_->pts_per_pixel_index_valid[i].size() != 0)
             {
-                str_cur_warped_->pts_per_pixel_index_valid[i].resize(0);
+                CloudFrame_cur_warped_->str_rhopts_->pts_per_pixel_index_valid[i].resize(0);
             }
         }
     }
 
     // str_warpPointcloud_->reset();
     {
-        PclWarp_->str_warpPointcloud_->rho.resize(0);
-        PclWarp_->str_warpPointcloud_->phi.resize(0);
-        PclWarp_->str_warpPointcloud_->theta.resize(0);
-        PclWarp_->str_warpPointcloud_->img_rho               = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-        PclWarp_->str_warpPointcloud_->img_index             = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
-        PclWarp_->str_warpPointcloud_->img_x                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-        PclWarp_->str_warpPointcloud_->img_y                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-        PclWarp_->str_warpPointcloud_->img_z                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-        PclWarp_->str_warpPointcloud_->img_restore_mask      = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
-        PclWarp_->str_warpPointcloud_->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+        CloudFrame_warpPointcloud_->str_rhopts_->rho.resize(0);
+        CloudFrame_warpPointcloud_->str_rhopts_->phi.resize(0);
+        CloudFrame_warpPointcloud_->str_rhopts_->theta.resize(0);
+        CloudFrame_warpPointcloud_->str_rhopts_->img_rho               = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+        CloudFrame_warpPointcloud_->str_rhopts_->img_index             = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+        CloudFrame_warpPointcloud_->str_rhopts_->img_x                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+        CloudFrame_warpPointcloud_->str_rhopts_->img_y                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+        CloudFrame_warpPointcloud_->str_rhopts_->img_z                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+        CloudFrame_warpPointcloud_->str_rhopts_->img_restore_mask      = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+        CloudFrame_warpPointcloud_->str_rhopts_->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
 
         for (int i=0; i<img_height_*img_width_; ++i)
         {
-            PclWarp_->str_warpPointcloud_->pts_per_pixel_n[i] = 0;
+            CloudFrame_warpPointcloud_->str_rhopts_->pts_per_pixel_n[i] = 0;
         }
 
         for (int i=0; i<img_height_*img_width_; ++i)
         {
-            if (PclWarp_->str_warpPointcloud_->pts_per_pixel_index[i].size() != 0)
+            if (CloudFrame_warpPointcloud_->str_rhopts_->pts_per_pixel_index[i].size() != 0)
             {
-                PclWarp_->str_warpPointcloud_->pts_per_pixel_index[i].resize(0);
+                CloudFrame_warpPointcloud_->str_rhopts_->pts_per_pixel_index[i].resize(0);
             }
         }
 
         for (int i=0; i<img_height_*img_width_; ++i)
         {
-            if (PclWarp_->str_warpPointcloud_->pts_per_pixel_rho[i].size() != 0)
+            if (CloudFrame_warpPointcloud_->str_rhopts_->pts_per_pixel_rho[i].size() != 0)
             {
-                PclWarp_->str_warpPointcloud_->pts_per_pixel_rho[i].resize(0);
+                CloudFrame_warpPointcloud_->str_rhopts_->pts_per_pixel_rho[i].resize(0);
             }
         }
 
         for (int i=0; i<img_height_*img_width_; ++i)
         {
-            if (PclWarp_->str_warpPointcloud_->pts_per_pixel_index_valid[i].size() != 0)
+            if (CloudFrame_warpPointcloud_->str_rhopts_->pts_per_pixel_index_valid[i].size() != 0)
             {
-                PclWarp_->str_warpPointcloud_->pts_per_pixel_index_valid[i].resize(0);
+                CloudFrame_warpPointcloud_->str_rhopts_->pts_per_pixel_index_valid[i].resize(0);
             }
         }
     }
   
-    groundPtsIdx_next_ = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
+    SegmentGround_->groundPtsIdx_next_ = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
 
-    velo_cur_.resize(0);
-    ptr_cur_pts_warped_->resize(0);
+    dRCalc_->velo_cur_.resize(0);
+    dRCalc_->cur_pts_warped_.resize(0);
     
     residual_ = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
 
     PclWarp_->velo_xyz_.resize(0);
     PclWarp_->pts_warpewd_->resize(0);
 
-    // std::cout << ptr_cur_pts_warped_->width << std::endl;
+    // std::cout << cur_pts_warped_->width << std::endl;
     // std::cout << pts_warpewd_->width << std::endl;
     // exit(0);
 }

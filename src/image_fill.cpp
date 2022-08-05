@@ -5,22 +5,22 @@ ImageFill::ImageFill(const std::unique_ptr<UserParam>& user_param)
     img_height_ = user_param->image_param_.height_;
     img_width_ = user_param->image_param_.width_;
 
-    object_row_.reserve(100000);
-    object_col_.reserve(100000);
-    object_rho_roi_.reserve(100000);
+    object_row_.reserve(1000000);
+    object_col_.reserve(1000000);
+    object_rho_roi_.reserve(1000000);
 
-    filled_object_row_.reserve(100000);
-    filled_object_col_.reserve(100000);
-    filled_object_rho_roi_.reserve(100000);
+    filled_object_row_.reserve(1000000);
+    filled_object_col_.reserve(1000000);
+    filled_object_rho_roi_.reserve(1000000);
 
-    rho_zero_filled_value_row_.reserve(100000);
-    rho_zero_filled_value_col_.reserve(100000);
-    rho_zero_filled_value_rho_roi_.reserve(100000);
+    rho_zero_filled_value_row_.reserve(1000000);
+    rho_zero_filled_value_col_.reserve(1000000);
+    rho_zero_filled_value_rho_roi_.reserve(1000000);
 
-    max_his_filled_object_rho_roi_.reserve(100000);
+    max_his_filled_object_rho_roi_.reserve(1000000);
 
-    disconti_row_.reserve(100000);
-    disconti_col_.reserve(100000);
+    disconti_row_.reserve(1000000);
+    disconti_col_.reserve(1000000);
 };
 
 ImageFill::~ImageFill()
@@ -28,7 +28,7 @@ ImageFill::~ImageFill()
 
 };
 
-void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulated_dRdt_score, StrRhoPts* str_next, cv::Mat& groundPtsIdx_next, int object_threshold)
+void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulated_dRdt_score, std::unique_ptr<CloudFrame>& CloudFrame_next, cv::Mat& groundPtsIdx_next, int object_threshold)
 {
     int n_row = accumulated_dRdt.rows;
     int n_col = accumulated_dRdt.cols;
@@ -39,7 +39,7 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
     uchar* ptr_dRdt_bin         = dRdt_bin.ptr<uchar>(0);
     uchar* ptr_dRdt_score_bin   = dRdt_score_bin.ptr<uchar>(0);
 
-    float* ptr_img_rho = str_next->img_rho.ptr<float>(0);
+    float* ptr_img_rho = CloudFrame_next->str_rhopts_->img_rho.ptr<float>(0);
 
     for (int i=0; i<n_row; ++i)
     {
@@ -64,7 +64,7 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
             }
         }
     }
- 
+
 
     // imfill 
     //invert dRdt_bin
@@ -187,9 +187,9 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
     cv::Mat object_area_inv = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
     uchar *ptr_object_area_inv = object_area_inv.ptr<uchar>(0);
     
-    cv::MatND histogram;
     for (int object_idx = 0; object_idx < n_label; ++object_idx)
     {
+    
         if (object_idx==0) //0: background
         {
             continue;
@@ -299,6 +299,11 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
                 }
             }
 
+            if (filled_object_rho_roi_.size()<2)
+            {
+                continue;
+            }
+
             if (filled_object_row_.size()<1)
             {
                 for (int i = 0; i < object_row_.size(); ++i)
@@ -315,15 +320,19 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
             const int* channel_numbers = {0};
             const float* his_ranges= his_range;
             int number_bins = 50;
-            cv::calcHist(&filled_object_rho_mat, 1, channel_numbers, cv::Mat(), histogram, 1, &number_bins, &his_ranges);
 
+            std::cout << "=============before" <<std:: endl;
+            std::cout << filled_object_rho_roi_.size() <<std::endl;
+            std::cout << "min: " << his_range_min << ", max: " << his_range_max <<std::endl;
+            cv::calcHist(&filled_object_rho_mat, 1, channel_numbers, cv::Mat(), histogram_, 1, &number_bins, &his_ranges);
+            std::cout << "=============end============" <<std::endl;
             int max_n = 0;
             int max_idx = 100;
             for (int p = 0; p < number_bins; ++p)
             {
-                if (max_n < histogram.at<float>(p))
+                if (max_n < histogram_.at<float>(p))
                 {
-                    max_n = histogram.at<float>(p);
+                    max_n = histogram_.at<float>(p);
                     max_idx = p;
                 }
             }

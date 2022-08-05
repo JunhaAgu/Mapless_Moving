@@ -33,7 +33,7 @@ void UserParam::getUserSettingParameters()
     sensor_spec_.channel_ = 64;
 
     image_param_.height_    = sensor_spec_.channel_ / cloud_filter_param_.v_factor_ ;
-    image_param_.width_     = 360.0 / cloud_filter_param_.azimuth_res_ + 1;
+    image_param_.width_     = 360.0 / (cloud_filter_param_.azimuth_res_ * cloud_filter_param_.h_factor_) + 1;
 
     obejct_param_.thr_object_ = 30;
     obejct_param_.alpha_ = 0.3;

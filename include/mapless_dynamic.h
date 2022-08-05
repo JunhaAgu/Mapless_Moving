@@ -50,7 +50,10 @@ public:
     // * NOT RECOMMAND TO MAKE PUBLIC VARIABLES
 
 public:
-    std::unique_ptr<CloudFrame> CloudFrame_;
+    std::unique_ptr<CloudFrame> CloudFrame_cur_;
+    std::unique_ptr<CloudFrame> CloudFrame_next_;
+    std::unique_ptr<CloudFrame> CloudFrame_cur_warped_;
+    std::unique_ptr<CloudFrame> CloudFrame_warpPointcloud_;
     std::unique_ptr<SegmentGround> SegmentGround_;
     std::unique_ptr<dRCalc> dRCalc_;
     std::unique_ptr<PclWarp> PclWarp_;
@@ -76,18 +79,11 @@ private:
     cv::Mat accumulated_dRdt_score_;
     cv::Mat background_mask_;
 
-    StrRhoPts* str_cur_;
-    StrRhoPts* str_next_;
-
-    StrRhoPts* str_cur_warped_;
-
     Pose T_next2cur_;
-
-    cv::Mat groundPtsIdx_next_;
     
     //dR_warpPointcloud
-    pcl::PointCloud<pcl::PointXYZ> velo_cur_;
-    pcl::PointCloud<pcl::PointXYZ>::Ptr ptr_cur_pts_warped_;
+    // pcl::PointCloud<pcl::PointXYZ> velo_cur_;
+    // pcl::PointCloud<pcl::PointXYZ>::Ptr ptr_cur_pts_warped_;
     cv::Mat residual_;
 
 private:
@@ -127,7 +123,7 @@ public:
 private:
     void getUserSettingParameters();
 
-    void copyStruct(StrRhoPts* str_next, StrRhoPts* str_cur, pcl::PointCloud<pcl::PointXYZ>& p1, pcl::PointCloud<pcl::PointXYZ>& p0, int cnt_data);
+    void copyStruct(pcl::PointCloud<pcl::PointXYZ>& p1, pcl::PointCloud<pcl::PointXYZ>& p0, int cnt_data);
 
     void countZerofloat(cv::Mat& input_mat);
     void countZeroint(cv::Mat& input_mat);

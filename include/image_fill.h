@@ -6,8 +6,16 @@
 #include "cloud_frame.h"
 #include <vector>
 
+#include <opencv2/core.hpp>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/opencv.hpp>
+
+#include <algorithm>
+
 class MaplessDynamic;
 class UserParam;
+class CloudFrame;
 
 class ImageFill
 {
@@ -33,11 +41,13 @@ public:
     std::vector<int> disconti_row_;
     std::vector<int> disconti_col_;
 
+    cv::MatND histogram_;
+
 public:
     ImageFill(const std::unique_ptr<UserParam> &user_param);
     ~ImageFill();
 
-    void plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulated_dRdt_score, StrRhoPts* str_next, cv::Mat& groundPtsIdx_next, int object_threshold);
+    void plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulated_dRdt_score, std::unique_ptr<CloudFrame>& CloudFrame_next, cv::Mat& groundPtsIdx_next, int object_threshold);
 
     void interpAndfill_image(cv::Mat& input_img, cv::Mat& filled_bin);
 };

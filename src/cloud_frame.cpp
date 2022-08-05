@@ -2,6 +2,7 @@
 
 CloudFrame::CloudFrame(const std::unique_ptr<UserParam>& user_param)
 {
+    // user param
     azimuth_res_ = user_param->cloud_filter_param_.azimuth_res_ * (float)user_param->cloud_filter_param_.h_factor_;
     az_step_ = 1.0f/azimuth_res_;
     n_radial_ = 360 * az_step_ + 1;
@@ -11,7 +12,43 @@ CloudFrame::CloudFrame(const std::unique_ptr<UserParam>& user_param)
     {
         v_angle_.push_back(user_param->sensor_spec_.v_angle_[i]);
     }
-    // n_pts_ = pcl_in.size();
+
+    img_height_ = user_param->image_param_.height_;
+    img_width_ = user_param->image_param_.width_;
+
+    //
+    str_rhopts_ = std::make_shared<StrRhoPts>();
+
+    str_rhopts_->rho.reserve(5000000);
+    str_rhopts_->phi.reserve(5000000);
+    str_rhopts_->theta.reserve(5000000);
+    str_rhopts_->img_rho   = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    str_rhopts_->img_index = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+
+    str_rhopts_->img_x     = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    str_rhopts_->img_y     = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    str_rhopts_->img_z     = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+
+    str_rhopts_->pts_per_pixel_n.resize(img_height_*img_width_);
+    str_rhopts_->pts_per_pixel_index.resize(img_height_*img_width_);
+    str_rhopts_->pts_per_pixel_rho.resize(img_height_ * img_width_);
+    str_rhopts_->pts_per_pixel_index_valid.resize(img_height_ * img_width_);
+    for (int i=0; i<img_height_*img_width_; ++i)
+    {
+        str_rhopts_->pts_per_pixel_index[i].reserve(5000);
+    }
+    for (int i=0; i<img_height_*img_width_; ++i)
+    {
+        str_rhopts_->pts_per_pixel_rho[i].reserve(5000);
+    }
+    for (int i=0; i<img_height_*img_width_; ++i)
+    {
+        str_rhopts_->pts_per_pixel_index_valid[i].reserve(5000);
+    }
+    str_rhopts_->pts        = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
+    str_rhopts_->ptsInImage = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
+    str_rhopts_->img_restore_mask      = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+    str_rhopts_->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
 };
 
 CloudFrame::~CloudFrame()
@@ -19,20 +56,20 @@ CloudFrame::~CloudFrame()
     // destructor
 };
 
-void CloudFrame::genRangeImages(pcl::PointCloud<pcl::PointXYZ> &pcl_in, StrRhoPts *str_in, bool cur_next)
+void CloudFrame::genRangeImages(pcl::PointCloud<pcl::PointXYZ> &pcl_in, bool cur_next)
 {
     n_pts_ = pcl_in.size();
 
-    calcuateRho(pcl_in, str_in);
+    calcuateRho(pcl_in);
 
-    makeRangeImageAndPtsPerPixel(str_in, n_pts_, n_ring_, n_radial_, az_step_);
+    makeRangeImageAndPtsPerPixel(n_pts_, n_ring_, n_radial_, az_step_);
 
-    interpRangeImage(str_in, n_ring_, n_radial_, cur_next);
+    interpRangeImage(n_ring_, n_radial_, cur_next);
 
-    interpPts(pcl_in, str_in, n_ring_, n_radial_, cur_next);
+    interpPts(pcl_in, n_ring_, n_radial_, cur_next);
 }
 
-void CloudFrame::calcuateRho(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts* str_in)
+void CloudFrame::calcuateRho(pcl::PointCloud<pcl::PointXYZ>& pcl_in)
 {
     // timer::tic();
 
@@ -44,9 +81,9 @@ void CloudFrame::calcuateRho(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts* 
     float cospsi = 0.0;
     float sinpsi = 0.0;
 
-    float* ptr_rho = str_in->rho.data();
-    float* ptr_phi = str_in->phi.data();
-    float* ptr_theta = str_in->theta.data();
+    float* ptr_rho = str_rhopts_->rho.data();
+    float* ptr_phi = str_rhopts_->phi.data();
+    float* ptr_theta = str_rhopts_->theta.data();
 
     pcl::PointXYZ origin;
     origin.x = 0.0f;
@@ -58,8 +95,8 @@ void CloudFrame::calcuateRho(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts* 
 
     for (int i = 0; i < n_pts; ++i)
     {
-        str_in->rho.push_back(NORM(pcl_in.points[i].x, pcl_in.points[i].y, pcl_in.points[i].z));
-        str_in->phi.push_back(asin(pcl_in.points[i].z / ptr_rho[i]));
+        str_rhopts_->rho.push_back(NORM(pcl_in.points[i].x, pcl_in.points[i].y, pcl_in.points[i].z));
+        str_rhopts_->phi.push_back(asin(pcl_in.points[i].z / ptr_rho[i]));
         invrhocos = (float)1.0 / (ptr_rho[i] * cos(ptr_phi[i]));
 
         cospsi = pcl_in.points[i].x * invrhocos;
@@ -79,22 +116,22 @@ void CloudFrame::calcuateRho(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts* 
         {
             if (sinpsi >= 0) // 1 quadrant
             {
-                str_in->theta.push_back(acos(cospsi) + offset_theta);
+                str_rhopts_->theta.push_back(acos(cospsi) + offset_theta);
             }
             else // 4 quadrant
             {
-                str_in->theta.push_back(twopi_plus_offset_theta - acos(cospsi));
+                str_rhopts_->theta.push_back(twopi_plus_offset_theta - acos(cospsi));
             }
         }
         else
         {
             if (sinpsi >= 0) // 2 quadrant
             {
-                str_in->theta.push_back(M_PI_plus_offset_theta - acos(-cospsi));
+                str_rhopts_->theta.push_back(M_PI_plus_offset_theta - acos(-cospsi));
             }
             else // 3 quadrant
             {
-                str_in->theta.push_back(M_PI_plus_offset_theta + acos(-cospsi));
+                str_rhopts_->theta.push_back(M_PI_plus_offset_theta + acos(-cospsi));
             }
         }
 
@@ -102,25 +139,25 @@ void CloudFrame::calcuateRho(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts* 
         {
             ptr_theta[i] = ptr_theta[i] - twopi;
         }
-        // std::cout << str_in->rho[i] << " " << str_in->phi[i] << " " << str_in->theta[i]<< std::endl;
+        // std::cout << str_rhopts_->rho[i] << " " << str_rhopts_->phi[i] << " " << str_rhopts_->theta[i]<< std::endl;
     }
     // double dt_slam = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'calcuateRho' :" << dt_slam << " [ms]");
 }
 
-void CloudFrame::makeRangeImageAndPtsPerPixel(StrRhoPts *str_in, int n_pts, int n_ring, int n_radial, float az_step)
+void CloudFrame::makeRangeImageAndPtsPerPixel(int n_pts, int n_ring, int n_radial, float az_step)
 {
     // timer::tic();
     int i_row = 0;
     int i_col = 0;
-    float* ptr_img_rho = str_in->img_rho.ptr<float>(0);
-    int* ptr_img_index = str_in->img_index.ptr<int>(0);
-    int n_row = str_in->img_rho.rows;
-    int n_col = str_in->img_rho.cols;
+    float* ptr_img_rho = str_rhopts_->img_rho.ptr<float>(0);
+    int* ptr_img_index = str_rhopts_->img_index.ptr<int>(0);
+    int n_row = str_rhopts_->img_rho.rows;
+    int n_col = str_rhopts_->img_rho.cols;
 
-    float* ptr_rho = str_in->rho.data();
-    float* ptr_phi = str_in->phi.data();
-    float* ptr_theta = str_in->theta.data();
+    float* ptr_rho = str_rhopts_->rho.data();
+    float* ptr_phi = str_rhopts_->phi.data();
+    float* ptr_theta = str_rhopts_->theta.data();
     float* ptr_v_angle = v_angle_.data();
 
     float az_step_R2D = az_step*R2D;
@@ -128,7 +165,7 @@ void CloudFrame::makeRangeImageAndPtsPerPixel(StrRhoPts *str_in, int n_pts, int 
     for (int i = 0; i < n_pts; ++i)
     {   
         float phi_R2D = (ptr_phi[i] * R2D);
-        // std::cout << str_in->rho[i] << " " << str_in->phi[i] << " " << str_in->theta[i]<< std::endl;
+        // std::cout << str_rhopts_->rho[i] << " " << str_rhopts_->phi[i] << " " << str_rhopts_->theta[i]<< std::endl;
         // for (int kk = 0; kk < n_ring; ++kk)
         // {
         //     if (ptr_v_angle[kk] < phi_R2D)
@@ -171,7 +208,7 @@ void CloudFrame::makeRangeImageAndPtsPerPixel(StrRhoPts *str_in, int n_pts, int 
         }
         
         int i_row_ncols_i_col = i_row * n_col + i_col;
-        if (*(ptr_img_rho + i_row_ncols_i_col) == 0) //(str_in->img_rho.at<float>(i_row,i_col) == 0)
+        if (*(ptr_img_rho + i_row_ncols_i_col) == 0) //(str_rhopts_->img_rho.at<float>(i_row,i_col) == 0)
         {   
             *(ptr_img_rho + i_row_ncols_i_col) = ptr_rho[i];
             *(ptr_img_index + i_row_ncols_i_col) = i;
@@ -183,17 +220,17 @@ void CloudFrame::makeRangeImageAndPtsPerPixel(StrRhoPts *str_in, int n_pts, int 
         }
         else{}
 
-        str_in->pts_per_pixel_n[i_row_ncols_i_col] += 1;
-        str_in->pts_per_pixel_index[i_row_ncols_i_col].push_back(i);
-        str_in->pts_per_pixel_rho[i_row_ncols_i_col].push_back(ptr_rho[i]);
+        str_rhopts_->pts_per_pixel_n[i_row_ncols_i_col] += 1;
+        str_rhopts_->pts_per_pixel_index[i_row_ncols_i_col].push_back(i);
+        str_rhopts_->pts_per_pixel_rho[i_row_ncols_i_col].push_back(ptr_rho[i]);
     } // end for
 
-    // for(int a=0; a < str_in->pts_per_pixel_rho.size(); ++a)
+    // for(int a=0; a < str_rhopts_->pts_per_pixel_rho.size(); ++a)
     // {
-    //     // std::cout << str_in->pts_per_pixel_n[a] << std::endl;
-    //     for (int b =0; b< str_in->pts_per_pixel_rho[a].size(); ++b)
+    //     // std::cout << str_rhopts_->pts_per_pixel_n[a] << std::endl;
+    //     for (int b =0; b< str_rhopts_->pts_per_pixel_rho[a].size(); ++b)
     //     {
-    //         std::cout << str_in->pts_per_pixel_rho[a][b] << " " ;
+    //         std::cout << str_rhopts_->pts_per_pixel_rho[a][b] << " " ;
     //     }
     //     std::cout << std::endl;
     // }
@@ -202,16 +239,16 @@ void CloudFrame::makeRangeImageAndPtsPerPixel(StrRhoPts *str_in, int n_pts, int 
     // ROS_INFO_STREAM("elapsed time for 'makeRangeImageAndPtsPerPixel' :" << dt_slam << " [ms]");
 }
 
-void CloudFrame::interpRangeImage(StrRhoPts* str_in, int n_ring, int n_radial, bool cur_next)
+void CloudFrame::interpRangeImage(int n_ring, int n_radial, bool cur_next)
 {
-    cv::Mat img_rho_new = str_in->img_rho.clone();
+    cv::Mat img_rho_new = str_rhopts_->img_rho.clone();
     float* ptr_img_rho_new = img_rho_new.ptr<float>(0);
 
-    float* ptr_img_rho = str_in->img_rho.ptr<float>(0);
-    int* ptr_img_index = str_in->img_index.ptr<int>(0);
-    int* ptr_img_restore_mask = str_in->img_restore_mask.ptr<int>(0);
-    int n_col = str_in->img_rho.cols;
-    int n_row = str_in->img_rho.rows;
+    float* ptr_img_rho = str_rhopts_->img_rho.ptr<float>(0);
+    int* ptr_img_index = str_rhopts_->img_index.ptr<int>(0);
+    int* ptr_img_restore_mask = str_rhopts_->img_restore_mask.ptr<int>(0);
+    int n_col = str_rhopts_->img_rho.cols;
+    int n_row = str_rhopts_->img_rho.rows;
 
     for (int i = 27; i < 32; i++)
     {
@@ -304,20 +341,20 @@ void CloudFrame::interpRangeImage(StrRhoPts* str_in, int n_ring, int n_radial, b
 
     } // end row
 
-    img_rho_new.copyTo(str_in->img_rho);
+    img_rho_new.copyTo(str_rhopts_->img_rho);
 }
 
-void CloudFrame::interpPts(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts* str_in, int n_ring, int n_radial, bool cur_next)
+void CloudFrame::interpPts(pcl::PointCloud<pcl::PointXYZ>& pcl_in, int n_ring, int n_radial, bool cur_next)
 {
-    int n_col = str_in->img_rho.cols;
-    int n_row = str_in->img_rho.rows;
+    int n_col = str_rhopts_->img_rho.cols;
+    int n_row = str_rhopts_->img_rho.rows;
     
-    float* ptr_img_rho = str_in->img_rho.ptr<float>(0);
-    int* ptr_img_index = str_in->img_index.ptr<int>(0);
-    float* ptr_img_x = str_in->img_x.ptr<float>(0);
-    float* ptr_img_y = str_in->img_y.ptr<float>(0);
-    float* ptr_img_z = str_in->img_z.ptr<float>(0);
-    int* ptr_img_restore_mask = str_in->img_restore_mask.ptr<int>(0);
+    float* ptr_img_rho = str_rhopts_->img_rho.ptr<float>(0);
+    int* ptr_img_index = str_rhopts_->img_index.ptr<int>(0);
+    float* ptr_img_x = str_rhopts_->img_x.ptr<float>(0);
+    float* ptr_img_y = str_rhopts_->img_y.ptr<float>(0);
+    float* ptr_img_z = str_rhopts_->img_z.ptr<float>(0);
+    int* ptr_img_restore_mask = str_rhopts_->img_restore_mask.ptr<int>(0);
 
     for (int i = 0; i < n_ring; ++i)
     {
@@ -325,13 +362,13 @@ void CloudFrame::interpPts(pcl::PointCloud<pcl::PointXYZ>& pcl_in, StrRhoPts* st
         for (int j = 0; j < n_radial; ++j)
         {
             int i_ncols_j = i_ncols + j;
-            if (str_in->pts_per_pixel_rho[i_ncols_j].size() > 0)
+            if (str_rhopts_->pts_per_pixel_rho[i_ncols_j].size() > 0)
             {
-                for (int k = 0; k < (str_in->pts_per_pixel_rho[i_ncols_j].size()); ++k)
+                for (int k = 0; k < (str_rhopts_->pts_per_pixel_rho[i_ncols_j].size()); ++k)
                 {
-                    if (std::abs((str_in->pts_per_pixel_rho[i_ncols_j][k] - *(ptr_img_rho + i_ncols_j))) < 0.5)
+                    if (std::abs((str_rhopts_->pts_per_pixel_rho[i_ncols_j][k] - *(ptr_img_rho + i_ncols_j))) < 0.5)
                     {
-                        str_in->pts_per_pixel_index_valid[i_ncols_j].push_back(str_in->pts_per_pixel_index[i_ncols_j][k]);
+                        str_rhopts_->pts_per_pixel_index_valid[i_ncols_j].push_back(str_rhopts_->pts_per_pixel_index[i_ncols_j][k]);
                     }
                     else{}
                 }

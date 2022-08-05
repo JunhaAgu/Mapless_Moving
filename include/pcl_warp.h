@@ -15,7 +15,6 @@ private:
     int img_width_;
 
 public:
-    StrRhoPts *str_warpPointcloud_;
     pcl::PointCloud<pcl::PointXYZ> velo_xyz_;
     pcl::PointCloud<pcl::PointXYZ>::Ptr pts_warpewd_;
 
@@ -23,9 +22,9 @@ public:
     PclWarp(const std::unique_ptr<UserParam> &user_param);
     ~PclWarp();
 
-    void warpPointcloud(StrRhoPts *str_cur, const Pose &T01, cv::Mat &mat_in, int cnt_data, std::unique_ptr<CloudFrame> &CloudFrame);
+    void warpPointcloud(std::unique_ptr<CloudFrame>& CloudFrame_in, std::unique_ptr<CloudFrame>& CloudFrame_warpPointcloud, const Pose &T01, cv::Mat &mat_in, int cnt_data);
 
-    void initializeStructAndPcl();
+    void initializeStructAndPcl(std::unique_ptr<CloudFrame>& CloudFrame_warpPointcloud);
 };
 
 #endif

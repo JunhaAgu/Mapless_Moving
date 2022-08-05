@@ -11,6 +11,11 @@ SegmentGround::SegmentGround(const std::unique_ptr<UserParam>& user_param)
     b_thr_[1] = user_param->ransac_param_.b_thr_[1];
     mini_inlier_ = user_param->ransac_param_.min_inlier_;
     n_sample_ = user_param->ransac_param_.n_sample_;
+
+    img_height_ = user_param->image_param_.height_;
+    img_width_  = user_param->image_param_.width_;
+
+    groundPtsIdx_next_ = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
 };
 
 SegmentGround::~SegmentGround()
@@ -18,13 +23,13 @@ SegmentGround::~SegmentGround()
 
 };
 
-void SegmentGround::fastsegmentGround(StrRhoPts* str_in, cv::Mat& groundPtsIdx_next)
+void SegmentGround::fastsegmentGround(std::unique_ptr<CloudFrame>& CloudFrame_in)
 {
-    int n_row = str_in->img_rho.rows;
-    int n_col = str_in->img_rho.cols;
-    float* ptr_img_z = str_in->img_z.ptr<float>(0);
-    float* ptr_img_rho = str_in->img_rho.ptr<float>(0);
-    uchar* ptr_groundPtsIdx_next = groundPtsIdx_next.ptr<uchar>(0);
+    int n_row = CloudFrame_in->str_rhopts_->img_rho.rows;
+    int n_col = CloudFrame_in->str_rhopts_->img_rho.cols;
+    float* ptr_img_z = CloudFrame_in->str_rhopts_->img_z.ptr<float>(0);
+    float* ptr_img_rho = CloudFrame_in->str_rhopts_->img_rho.ptr<float>(0);
+    uchar* ptr_groundPtsIdx_next = groundPtsIdx_next_.ptr<uchar>(0);
 
     int n_col_sample = std::round(n_col/downsample_size_);
 

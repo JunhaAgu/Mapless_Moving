@@ -6,6 +6,8 @@ dRCalc::dRCalc(const std::unique_ptr<UserParam>& user_param)
     {
         v_angle_.push_back(user_param->sensor_spec_.v_angle_[i]);
     }
+
+    // ptr_cur_pts_warped_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
 };
 
 dRCalc::~dRCalc()
@@ -13,16 +15,16 @@ dRCalc::~dRCalc()
 
 };
 
-void dRCalc::dR_warpPointcloud(StrRhoPts* str_next, StrRhoPts* str_cur, pcl::PointCloud<pcl::PointXYZ>& p0, Pose& T01, int cnt_data, StrRhoPts* str_cur_warped, cv::Mat& dRdt,
-                                 pcl::PointCloud<pcl::PointXYZ>& velo_cur, pcl::PointCloud<pcl::PointXYZ>::Ptr ptr_cur_pts_warped, std::unique_ptr<CloudFrame>& CloudFrame)
+void dRCalc::dR_warpPointcloud(std::unique_ptr<CloudFrame>& CloudFrame_next, std::unique_ptr<CloudFrame>& CloudFrame_cur, std::unique_ptr<CloudFrame>& CloudFrame_cur_warped,
+                                pcl::PointCloud<pcl::PointXYZ>& p0, Pose& T01, int cnt_data, cv::Mat& dRdt)
 {
-    int n_row = str_next->img_rho.rows;
-    int n_col = str_next->img_rho.cols;
+    int n_row = CloudFrame_next->str_rhopts_->img_rho.rows;
+    int n_col = CloudFrame_next->str_rhopts_->img_rho.cols; 
     int n_ring = n_row;
     int n_radial = n_col;
-    float* ptr_cur_img_x = str_cur->img_x.ptr<float>(0);
-    float* ptr_cur_img_y = str_cur->img_y.ptr<float>(0);
-    float* ptr_cur_img_z = str_cur->img_z.ptr<float>(0);
+    float* ptr_cur_img_x = CloudFrame_cur->str_rhopts_->img_x.ptr<float>(0);
+    float* ptr_cur_img_y = CloudFrame_cur->str_rhopts_->img_y.ptr<float>(0);
+    float* ptr_cur_img_z = CloudFrame_cur->str_rhopts_->img_z.ptr<float>(0);
     // int cnt = 0;
 
     // timer::tic();
@@ -35,7 +37,7 @@ void dRCalc::dR_warpPointcloud(StrRhoPts* str_next, StrRhoPts* str_cur, pcl::Poi
             int i_ncols_j = i_ncols + j;
             if ((*(ptr_cur_img_x + i_ncols_j) > 10.0) || (*(ptr_cur_img_x + i_ncols_j) < -10.0) || (*(ptr_cur_img_y + i_ncols_j) > 10.0) || (*(ptr_cur_img_y + i_ncols_j) < -10.0))
             {
-                velo_cur.push_back(pcl::PointXYZ(*(ptr_cur_img_x + i_ncols_j), *(ptr_cur_img_y + i_ncols_j), *(ptr_cur_img_z + i_ncols_j)));
+                velo_cur_.push_back(pcl::PointXYZ(*(ptr_cur_img_x + i_ncols_j), *(ptr_cur_img_y + i_ncols_j), *(ptr_cur_img_z + i_ncols_j)));
             }
         }
     }
@@ -48,7 +50,7 @@ void dRCalc::dR_warpPointcloud(StrRhoPts* str_next, StrRhoPts* str_cur, pcl::Poi
     {
         if( (p0[i].x < 10) && (p0[i].x > -10.0) && (p0[i].y < 10.0) && (p0[i].y > -10.0) )
         {
-            velo_cur.push_back(p0[i]);
+            velo_cur_.push_back(p0[i]);
         }
     }
     // double dt_2 = timer::toc(); // milliseconds
@@ -56,56 +58,44 @@ void dRCalc::dR_warpPointcloud(StrRhoPts* str_next, StrRhoPts* str_cur, pcl::Poi
 
     // compensate zero in current rho image for warping
     // timer::tic();
-    compensateCurRhoZeroWarp(str_cur, n_ring, n_radial, v_angle_, velo_cur);
+    compensateCurRhoZeroWarp(CloudFrame_cur, n_ring, n_radial, v_angle_, velo_cur_);
     // double dt_3 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'compensateCurRhoZeroWarp' :" << dt_3 << " [ms]");
     // exit(0);
     // timer::tic();
-    pcl::transformPointCloud(velo_cur, *ptr_cur_pts_warped, T01);
+    pcl::transformPointCloud(velo_cur_, cur_pts_warped_, T01);
     //     double dt_4 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'transformPointCloud' :" << dt_4 << " [ms]");
     
-// if (cnt_data == 3)
-    // {
-        // std::cout << velo_cur.size()<<std::endl;
-        // sensor_msgs::PointCloud2 converted_msg_d;
-        // pcl::toROSMsg(velo_cur, converted_msg_d);
-        // converted_msg_d.header.frame_id = "map";
-        // pub_dynamic_pts_.publish(converted_msg_d);
-
-        // sensor_msgs::PointCloud2 converted_msg_s;
-        // pcl::toROSMsg(*ptr_cur_pts_warped, converted_msg_s);
-        // converted_msg_s.header.frame_id = "map";
-        // pub_static_pts_.publish(converted_msg_s);
-        // exit(0);
-    // }
     // timer::tic();
     // current warped image
-    CloudFrame->genRangeImages(*ptr_cur_pts_warped, str_cur_warped, 0);
+
+    CloudFrame_cur_warped->genRangeImages(cur_pts_warped_, 0);
     //         double dt_5 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'genRangeImages' :" << dt_5 << " [ms]");
     // countZerofloat(str_cur_warped->img_rho);
     // fill range image using interpolation
     // timer::tic();
-    interpRangeImageMin(str_cur_warped, n_ring, n_radial);
+ 
+    interpRangeImageMin(CloudFrame_cur_warped, n_ring, n_radial);
     // double dt_6 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'interpRangeImageMin' :" << dt_6 << " [ms]");
     // countZerofloat(str_cur_warped->img_rho);
     // fill pts corresponding to filled range image (no affect the original pts)
     // timer::tic();
-    interpPtsWarp(str_cur_warped, n_ring, n_radial);
+    interpPtsWarp(CloudFrame_cur_warped, n_ring, n_radial);
     // double dt_7 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'interpPtsWarp' :" << dt_7 << " [ms]");
-
+    
     // calculate occlusions
     // timer::tic();
-    cv::subtract(str_cur_warped->img_rho, str_next->img_rho, dRdt); 
+    cv::subtract(CloudFrame_cur_warped->str_rhopts_->img_rho, CloudFrame_next->str_rhopts_->img_rho, dRdt); 
     // residual_ = str_cur_warped_->img_rho - str_next_->img_rho;
     // double dt_8 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'subtract' :" << dt_8 << " [ms]");
 }
 
-void dRCalc::compensateCurRhoZeroWarp(StrRhoPts* str_cur, int n_ring, int n_radial, std::vector<float>& v_angle, pcl::PointCloud<pcl::PointXYZ>& velo_cur)
+void dRCalc::compensateCurRhoZeroWarp(std::unique_ptr<CloudFrame>& CloudFrame_cur, int n_ring, int n_radial, std::vector<float>& v_angle, pcl::PointCloud<pcl::PointXYZ>& velo_cur)
 {
     int n_row = n_ring;
     int n_col = n_radial;
@@ -113,7 +103,7 @@ void dRCalc::compensateCurRhoZeroWarp(StrRhoPts* str_cur, int n_ring, int n_radi
     float right_dir_rho = 0;
     float up_dir_rho    = 0;
     float down_dir_rho  = 0;
-    float* ptr_cur_img_rho = str_cur->img_rho.ptr<float>(0);
+    float* ptr_cur_img_rho = CloudFrame_cur->str_rhopts_->img_rho.ptr<float>(0);
 
     int cnt_left    = 1;
     int cnt_right   = 1;
@@ -297,15 +287,15 @@ void dRCalc::compensateCurRhoZeroWarp(StrRhoPts* str_cur, int n_ring, int n_radi
     
 }
 
-void dRCalc::interpRangeImageMin(StrRhoPts* str_in, int n_ring, int n_radial)
+void dRCalc::interpRangeImageMin(std::unique_ptr<CloudFrame>& CloudFrame_in, int n_ring, int n_radial)
 {
-    cv::Mat img_rho_new = str_in->img_rho.clone();
-    float *ptr_img_rho = str_in->img_rho.ptr<float>(0);
-    int *ptr_img_index = str_in->img_index.ptr<int>(0);
+    cv::Mat img_rho_new = CloudFrame_in->str_rhopts_->img_rho.clone();
+    float *ptr_img_rho = CloudFrame_in->str_rhopts_->img_rho.ptr<float>(0);
+    int *ptr_img_index = CloudFrame_in->str_rhopts_->img_index.ptr<int>(0);
     float *ptr_img_rho_new = img_rho_new.ptr<float>(0);
-    int *ptr_img_restore_warp_mask = str_in->img_restore_warp_mask.ptr<int>(0);
-    int n_col = str_in->img_rho.cols;
-    int n_row = str_in->img_rho.rows;
+    int *ptr_img_restore_warp_mask = CloudFrame_in->str_rhopts_->img_restore_warp_mask.ptr<int>(0);
+    int n_col = CloudFrame_in->str_rhopts_->img_rho.cols;
+    int n_row = CloudFrame_in->str_rhopts_->img_rho.rows;
 
     for (int i = 0 + 2; i < (n_ring - 2); ++i)
     {
@@ -371,19 +361,19 @@ void dRCalc::interpRangeImageMin(StrRhoPts* str_in, int n_ring, int n_radial)
 
     } // end row
 
-    img_rho_new.copyTo(str_in->img_rho);
+    img_rho_new.copyTo(CloudFrame_in->str_rhopts_->img_rho);
 }
 
-void dRCalc::interpPtsWarp(StrRhoPts* str_in, int n_ring, int n_radial)
+void dRCalc::interpPtsWarp(std::unique_ptr<CloudFrame>& CloudFrame_in, int n_ring, int n_radial)
 {
     int n_row = n_ring;
     int n_col = n_radial;
-    int* ptr_img_index = str_in->img_index.ptr<int>(0);
-    float* ptr_img_rho = str_in->img_rho.ptr<float>(0);
-    float* ptr_img_x = str_in->img_x.ptr<float>(0);
-    float* ptr_img_y = str_in->img_y.ptr<float>(0);
-    float* ptr_img_z = str_in->img_z.ptr<float>(0);
-    int* ptr_img_restore_warp_mask = str_in->img_restore_warp_mask.ptr<int>(0);
+    int* ptr_img_index = CloudFrame_in->str_rhopts_->img_index.ptr<int>(0);
+    float* ptr_img_rho = CloudFrame_in->str_rhopts_->img_rho.ptr<float>(0);
+    float* ptr_img_x = CloudFrame_in->str_rhopts_->img_x.ptr<float>(0);
+    float* ptr_img_y = CloudFrame_in->str_rhopts_->img_y.ptr<float>(0);
+    float* ptr_img_z = CloudFrame_in->str_rhopts_->img_z.ptr<float>(0);
+    int* ptr_img_restore_warp_mask = CloudFrame_in->str_rhopts_->img_restore_warp_mask.ptr<int>(0);
 
     for (int i = 0 + 2; i < n_row - 2; ++i)
     {

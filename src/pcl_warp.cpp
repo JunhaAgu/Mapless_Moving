@@ -5,38 +5,38 @@ PclWarp::PclWarp(const std::unique_ptr<UserParam>& user_param)
     img_height_ = user_param->image_param_.height_;
     img_width_ = user_param->image_param_.width_;
 
-    str_warpPointcloud_ = new StrRhoPts();
+    // str_warpPointcloud_ = new StrRhoPts();
 
-    str_warpPointcloud_->rho.reserve(500000);
-    str_warpPointcloud_->phi.reserve(500000);
-    str_warpPointcloud_->theta.reserve(500000);
-    str_warpPointcloud_->img_rho   = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-    str_warpPointcloud_->img_index = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+    // str_warpPointcloud_->rho.reserve(500000);
+    // str_warpPointcloud_->phi.reserve(500000);
+    // str_warpPointcloud_->theta.reserve(500000);
+    // str_warpPointcloud_->img_rho   = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    // str_warpPointcloud_->img_index = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
 
-    str_warpPointcloud_->img_x = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-    str_warpPointcloud_->img_y = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-    str_warpPointcloud_->img_z = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    // str_warpPointcloud_->img_x = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    // str_warpPointcloud_->img_y = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    // str_warpPointcloud_->img_z = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
 
-    str_warpPointcloud_->pts_per_pixel_n.resize(img_height_ * img_width_);
-    str_warpPointcloud_->pts_per_pixel_index.resize(img_height_ * img_width_);
-    str_warpPointcloud_->pts_per_pixel_rho.resize(img_height_ * img_width_);
-    str_warpPointcloud_->pts_per_pixel_index_valid.resize(img_height_ * img_width_);
-    for (int i=0; i<img_height_*img_width_; ++i)
-    {
-        str_warpPointcloud_->pts_per_pixel_index[i].reserve(5000);
-    }
-    for (int i=0; i<img_height_*img_width_; ++i)
-    {
-        str_warpPointcloud_->pts_per_pixel_rho[i].reserve(5000);
-    }
-    for (int i=0; i<img_height_*img_width_; ++i)
-    {
-        str_warpPointcloud_->pts_per_pixel_index_valid[i].reserve(5000);
-    }
-    str_warpPointcloud_->pts        = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
-    str_warpPointcloud_->ptsInImage = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
-    str_warpPointcloud_->img_restore_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
-    str_warpPointcloud_->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+    // str_warpPointcloud_->pts_per_pixel_n.resize(img_height_ * img_width_);
+    // str_warpPointcloud_->pts_per_pixel_index.resize(img_height_ * img_width_);
+    // str_warpPointcloud_->pts_per_pixel_rho.resize(img_height_ * img_width_);
+    // str_warpPointcloud_->pts_per_pixel_index_valid.resize(img_height_ * img_width_);
+    // for (int i=0; i<img_height_*img_width_; ++i)
+    // {
+    //     str_warpPointcloud_->pts_per_pixel_index[i].reserve(5000);
+    // }
+    // for (int i=0; i<img_height_*img_width_; ++i)
+    // {
+    //     str_warpPointcloud_->pts_per_pixel_rho[i].reserve(5000);
+    // }
+    // for (int i=0; i<img_height_*img_width_; ++i)
+    // {
+    //     str_warpPointcloud_->pts_per_pixel_index_valid[i].reserve(5000);
+    // }
+    // str_warpPointcloud_->pts        = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
+    // str_warpPointcloud_->ptsInImage = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
+    // str_warpPointcloud_->img_restore_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+    // str_warpPointcloud_->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
 
     velo_xyz_.reserve(500000);
 
@@ -49,18 +49,18 @@ PclWarp::~PclWarp()
 
 };
 
-void PclWarp::warpPointcloud(StrRhoPts *str_cur, const Pose &T01, /*output*/ cv::Mat &mat_in, int cnt_data, std::unique_ptr<CloudFrame>& CloudFrame)
+void PclWarp::warpPointcloud(std::unique_ptr<CloudFrame>& CloudFrame_in, std::unique_ptr<CloudFrame>& CloudFrame_warpPointcloud, const Pose &T01, /*output*/ cv::Mat &mat_in, int cnt_data)
 {
-    int n_row = str_cur->img_rho.rows;
-    int n_col = str_cur->img_rho.cols;
+    int n_row = CloudFrame_in->str_rhopts_->img_rho.rows;
+    int n_col = CloudFrame_in->str_rhopts_->img_rho.cols;
     float *ptr_mat_in = mat_in.ptr<float>(0);
-    float *ptr_img_x = str_cur->img_x.ptr<float>(0);
-    float *ptr_img_y = str_cur->img_y.ptr<float>(0);
-    float *ptr_img_z = str_cur->img_z.ptr<float>(0);
-    float *ptr_img_rho = str_cur->img_rho.ptr<float>(0);
+    float *ptr_img_x = CloudFrame_in->str_rhopts_->img_x.ptr<float>(0);
+    float *ptr_img_y = CloudFrame_in->str_rhopts_->img_y.ptr<float>(0);
+    float *ptr_img_z = CloudFrame_in->str_rhopts_->img_z.ptr<float>(0);
+    float *ptr_img_rho = CloudFrame_in->str_rhopts_->img_rho.ptr<float>(0);
     
     cv::Mat mat_out = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-    int *ptr_warp_img_index = str_warpPointcloud_->img_index.ptr<int>(0);
+    int *ptr_warp_img_index = CloudFrame_warpPointcloud->str_rhopts_->img_index.ptr<int>(0);
     float *ptr_mat_out = mat_out.ptr<float>(0);
 
     std::vector<float> I_vec1;
@@ -89,7 +89,7 @@ void PclWarp::warpPointcloud(StrRhoPts *str_cur, const Pose &T01, /*output*/ cv:
 
     pcl::transformPointCloud(velo_xyz_, *pts_warpewd_, T01);
 
-    CloudFrame->genRangeImages(*pts_warpewd_, str_warpPointcloud_, 0);
+    CloudFrame_warpPointcloud->genRangeImages(*pts_warpewd_, 0);
     // countZerofloat(str_warpPointcloud_->img_index);
 
     // int cnt_debug = 0;
@@ -117,46 +117,46 @@ void PclWarp::warpPointcloud(StrRhoPts *str_cur, const Pose &T01, /*output*/ cv:
     mat_out.copyTo(mat_in);
 }
 
-void PclWarp::initializeStructAndPcl()
+void PclWarp::initializeStructAndPcl(std::unique_ptr<CloudFrame>& CloudFrame_warpPointcloud)
 {
     {
-        str_warpPointcloud_->rho.resize(0);
-        str_warpPointcloud_->phi.resize(0);
-        str_warpPointcloud_->theta.resize(0);
-        str_warpPointcloud_->img_rho               = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-        str_warpPointcloud_->img_index             = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
-        str_warpPointcloud_->img_x                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-        str_warpPointcloud_->img_y                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-        str_warpPointcloud_->img_z                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-        str_warpPointcloud_->img_restore_mask      = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
-        str_warpPointcloud_->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+        CloudFrame_warpPointcloud->str_rhopts_->rho.resize(0);
+        CloudFrame_warpPointcloud->str_rhopts_->phi.resize(0);
+        CloudFrame_warpPointcloud->str_rhopts_->theta.resize(0);
+        CloudFrame_warpPointcloud->str_rhopts_->img_rho               = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+        CloudFrame_warpPointcloud->str_rhopts_->img_index             = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+        CloudFrame_warpPointcloud->str_rhopts_->img_x                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+        CloudFrame_warpPointcloud->str_rhopts_->img_y                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+        CloudFrame_warpPointcloud->str_rhopts_->img_z                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+        CloudFrame_warpPointcloud->str_rhopts_->img_restore_mask      = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+        CloudFrame_warpPointcloud->str_rhopts_->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
 
         for (int i=0; i<img_height_*img_width_; ++i)
         {
-            str_warpPointcloud_->pts_per_pixel_n[i] = 0;
+            CloudFrame_warpPointcloud->str_rhopts_->pts_per_pixel_n[i] = 0;
         }
 
         for (int i=0; i<img_height_*img_width_; ++i)
         {
-            if (str_warpPointcloud_->pts_per_pixel_index[i].size() != 0)
+            if (CloudFrame_warpPointcloud->str_rhopts_->pts_per_pixel_index[i].size() != 0)
             {
-                str_warpPointcloud_->pts_per_pixel_index[i].resize(0);
+                CloudFrame_warpPointcloud->str_rhopts_->pts_per_pixel_index[i].resize(0);
             }
         }
 
         for (int i=0; i<img_height_*img_width_; ++i)
         {
-            if (str_warpPointcloud_->pts_per_pixel_rho[i].size() != 0)
+            if (CloudFrame_warpPointcloud->str_rhopts_->pts_per_pixel_rho[i].size() != 0)
             {
-                str_warpPointcloud_->pts_per_pixel_rho[i].resize(0);
+                CloudFrame_warpPointcloud->str_rhopts_->pts_per_pixel_rho[i].resize(0);
             }
         }
 
         for (int i=0; i<img_height_*img_width_; ++i)
         {
-            if (str_warpPointcloud_->pts_per_pixel_index_valid[i].size() != 0)
+            if (CloudFrame_warpPointcloud->str_rhopts_->pts_per_pixel_index_valid[i].size() != 0)
             {
-                str_warpPointcloud_->pts_per_pixel_index_valid[i].resize(0);
+                CloudFrame_warpPointcloud->str_rhopts_->pts_per_pixel_index_valid[i].resize(0);
             }
         }
     }
