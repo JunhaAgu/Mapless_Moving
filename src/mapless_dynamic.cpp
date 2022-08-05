@@ -21,21 +21,25 @@ MaplessDynamic::MaplessDynamic(ros::NodeHandle& nh, bool test_flag)
 
     this->getUserSettingParameters();
 
-    // Class initialization
-    CloudFrame_cur_ = std::make_unique<CloudFrame>(UserParam_);
-    CloudFrame_next_= std::make_unique<CloudFrame>(UserParam_);
-    CloudFrame_cur_warped_= std::make_unique<CloudFrame>(UserParam_);
-    CloudFrame_warpPointcloud_= std::make_unique<CloudFrame>(UserParam_);
-    SegmentGround_  = std::make_unique<SegmentGround>(UserParam_);
-    dRCalc_         = std::make_unique<dRCalc>(UserParam_);
-    PclWarp_        = std::make_unique<PclWarp>(UserParam_);
-    ObjectExt_      = std::make_unique<ObjectExt>(UserParam_);
-    ImageFill_      = std::make_unique<ImageFill>(UserParam_);
+    p0_pcl_test_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
+    p1_pcl_test_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
+    
+
+    // Construct Class
+    CloudFrame_cur_             = std::make_unique<CloudFrame>(UserParam_);
+    CloudFrame_next_            = std::make_unique<CloudFrame>(UserParam_);
+    CloudFrame_cur_warped_      = std::make_unique<CloudFrame>(UserParam_);
+    CloudFrame_warpPointcloud_  = std::make_unique<CloudFrame>(UserParam_);
+    SegmentGround_              = std::make_unique<SegmentGround>(UserParam_);
+    dRCalc_                     = std::make_unique<dRCalc>(UserParam_);
+    PclWarp_                    = std::make_unique<PclWarp>(UserParam_);
+    ObjectExt_                  = std::make_unique<ObjectExt>(UserParam_);
+    ImageFill_                  = std::make_unique<ImageFill>(UserParam_);
 
     // allocation for solver
     accumulated_dRdt_       = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
     accumulated_dRdt_score_ = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-    residual_               = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    dRdt_               = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
 
     if (test_flag_){
         this->loadTestData();
@@ -72,7 +76,7 @@ void MaplessDynamic::TEST(){
     if( is_initialized_test_ ){ // If initialized, 
         // 0. Get the current LiDAR data
         p1_msg_test_ = *(data_buf_[cnt_data]->pcl_msg_);
-        pcl::fromROSMsg(p1_msg_test_, p1_pcl_test_);
+        pcl::fromROSMsg(p1_msg_test_, *p1_pcl_test_);
 
         // if (cnt_data == 3)
         // {
@@ -113,7 +117,7 @@ void MaplessDynamic::TEST(){
         
         // Initialize the first data.
         p0_msg_test_ = *(data_buf_[0]->pcl_msg_);
-        pcl::fromROSMsg(p0_msg_test_, p0_pcl_test_);
+        pcl::fromROSMsg(p0_msg_test_, *p0_pcl_test_);
         
         // CloudFrame_->genRangeImages(p0_pcl_test_, str_cur_, 1);
         CloudFrame_cur_ ->genRangeImages(p0_pcl_test_, 1);
@@ -330,7 +334,7 @@ void MaplessDynamic::loadTestData(){
 
 void MaplessDynamic::solve(
     /* inputs */ //const sensor_msgs::PointCloud2& p1
-    pcl::PointCloud<pcl::PointXYZ>& p0, pcl::PointCloud<pcl::PointXYZ>& p1, const Pose& T01, 
+    pcl::PointCloud<pcl::PointXYZ>::Ptr p0, pcl::PointCloud<pcl::PointXYZ>::Ptr p1, const Pose& T01, 
     /* outputs */ 
     Mask& mask1, int cnt_data)
 {
@@ -380,7 +384,7 @@ void MaplessDynamic::solve(
     // Compute the occlusion dRdt
     
     timer::tic();
-    dRCalc_->dR_warpPointcloud(CloudFrame_next_, CloudFrame_cur_, CloudFrame_cur_warped_, p0, T_next2cur_, cnt_data, residual_);
+    dRCalc_->dR_warpPointcloud(CloudFrame_next_, CloudFrame_cur_, CloudFrame_cur_warped_, p0, T_next2cur_, cnt_data, dRdt_);
     double dt_toc3 = timer::toc(); // milliseconds
     ROS_INFO_STREAM("elapsed time for 'dR_warpPointcloud' :" << dt_toc3 << " [ms]");
     // str_next_->state();
@@ -405,7 +409,7 @@ void MaplessDynamic::solve(
     // }
     timer::tic();
     // filter out outliers
-    ObjectExt_->filterOutAccumdR(CloudFrame_next_, CloudFrame_cur_warped_, accumulated_dRdt_, accumulated_dRdt_score_, residual_);
+    ObjectExt_->filterOutAccumdR(CloudFrame_next_, CloudFrame_cur_warped_, accumulated_dRdt_, accumulated_dRdt_score_, dRdt_);
     double dt_toc5 = timer::toc(); // milliseconds
     ROS_INFO_STREAM("elapsed time for 'filterOutAccumdR' :" << dt_toc5 << " [ms]");
 
@@ -453,7 +457,7 @@ void MaplessDynamic::solve(
     float* ptr_accumulated_dRdt_score_ = accumulated_dRdt_score_.ptr<float>(0);
     float* ptr_next_img_rho = CloudFrame_next_->str_rhopts_->img_rho.ptr<float>(0);
 
-    float* ptr_dRdt = residual_.ptr<float>(0);
+    float* ptr_dRdt = dRdt_.ptr<float>(0);
 
     for (int i = 0; i < img_height_; ++i)
     {
@@ -541,7 +545,7 @@ void MaplessDynamic::solve(
                     for (int k = 0; k < CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j].size(); ++k)
                     {
                         pcl_dynamic.push_back(
-                            pcl::PointXYZ(p1[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]]));
+                            pcl::PointXYZ((*p1)[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]]));
                     }
                 }
             }
@@ -552,7 +556,7 @@ void MaplessDynamic::solve(
                     for (int k = 0; k < CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j].size(); ++k)
                     {
                         pcl_static.push_back(
-                            pcl::PointXYZ(p1[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]]));
+                            pcl::PointXYZ((*p1)[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]]));
                     }
                 }
             }
@@ -597,7 +601,7 @@ void MaplessDynamic::solve(
     ROS_INFO_STREAM("elapsed time for 'copyRemove' :" <<  dt_toc12 << " [ms]");
 };
 
-void MaplessDynamic::copyStruct(pcl::PointCloud<pcl::PointXYZ>& p1 ,pcl::PointCloud<pcl::PointXYZ>& p0, int cnt_data)
+void MaplessDynamic::copyStruct(pcl::PointCloud<pcl::PointXYZ>::Ptr p1 ,pcl::PointCloud<pcl::PointXYZ>::Ptr p0, int cnt_data)
 {
     // memcpy(str_cur, str_next, sizeof(struct StrRhoPts));
     // CHK
@@ -705,9 +709,9 @@ void MaplessDynamic::copyStruct(pcl::PointCloud<pcl::PointXYZ>& p1 ,pcl::PointCl
     //     exit(0);
     // }
 
-    p0_pcl_test_.resize(0);
-    pcl::copyPointCloud(p1, p0_pcl_test_);
-    p1.resize(0);
+    p0_pcl_test_->resize(0);
+    pcl::copyPointCloud(*p1, *p0_pcl_test_);
+    p1->resize(0);
 
     // if (cnt_data == 2)
     // {
@@ -807,10 +811,10 @@ void MaplessDynamic::copyStruct(pcl::PointCloud<pcl::PointXYZ>& p1 ,pcl::PointCl
   
     SegmentGround_->groundPtsIdx_next_ = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
 
-    dRCalc_->velo_cur_.resize(0);
-    dRCalc_->cur_pts_warped_.resize(0);
+    dRCalc_->velo_cur_->resize(0);
+    dRCalc_->cur_pts_warped_->resize(0);
     
-    residual_ = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    dRdt_ = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
 
     PclWarp_->velo_xyz_.resize(0);
     PclWarp_->pts_warpewd_->resize(0);
@@ -822,16 +826,6 @@ void MaplessDynamic::copyStruct(pcl::PointCloud<pcl::PointXYZ>& p1 ,pcl::PointCl
 
 void MaplessDynamic::getUserSettingParameters(){
     // IMPLEMENT YOUR CODE FROM THIS LINE.
-    
-    img_height_ = 64 / 1;
-    img_width_ = 4500 / 5 + 1;
-    // object_threshold_ = 30;
-
-    // alpha_ = 0.3;
-    // beta_ = 0.1;
-
-    // initialize
-    score_cnt_ = 0;
 
     // for test
     test_data_type_ = "KITTI";

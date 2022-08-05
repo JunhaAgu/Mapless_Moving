@@ -16,7 +16,7 @@ dRCalc::~dRCalc()
 };
 
 void dRCalc::dR_warpPointcloud(std::unique_ptr<CloudFrame>& CloudFrame_next, std::unique_ptr<CloudFrame>& CloudFrame_cur, std::unique_ptr<CloudFrame>& CloudFrame_cur_warped,
-                                pcl::PointCloud<pcl::PointXYZ>& p0, Pose& T01, int cnt_data, cv::Mat& dRdt)
+                                pcl::PointCloud<pcl::PointXYZ>::Ptr p0, Pose& T01, int cnt_data, cv::Mat& dRdt)
 {
     int n_row = CloudFrame_next->str_rhopts_->img_rho.rows;
     int n_col = CloudFrame_next->str_rhopts_->img_rho.cols; 
@@ -37,7 +37,7 @@ void dRCalc::dR_warpPointcloud(std::unique_ptr<CloudFrame>& CloudFrame_next, std
             int i_ncols_j = i_ncols + j;
             if ((*(ptr_cur_img_x + i_ncols_j) > 10.0) || (*(ptr_cur_img_x + i_ncols_j) < -10.0) || (*(ptr_cur_img_y + i_ncols_j) > 10.0) || (*(ptr_cur_img_y + i_ncols_j) < -10.0))
             {
-                velo_cur_.push_back(pcl::PointXYZ(*(ptr_cur_img_x + i_ncols_j), *(ptr_cur_img_y + i_ncols_j), *(ptr_cur_img_z + i_ncols_j)));
+                velo_cur_->push_back(pcl::PointXYZ(*(ptr_cur_img_x + i_ncols_j), *(ptr_cur_img_y + i_ncols_j), *(ptr_cur_img_z + i_ncols_j)));
             }
         }
     }
@@ -46,11 +46,11 @@ void dRCalc::dR_warpPointcloud(std::unique_ptr<CloudFrame>& CloudFrame_next, std
 
     // timer::tic();
     // Far pts are warped by the original pts
-    for (int i = 0; i < p0.size(); ++i)
+    for (int i = 0; i < p0->size(); ++i)
     {
-        if( (p0[i].x < 10) && (p0[i].x > -10.0) && (p0[i].y < 10.0) && (p0[i].y > -10.0) )
+        if( ((*p0)[i].x < 10) && ((*p0)[i].x > -10.0) && ((*p0)[i].y < 10.0) && ((*p0)[i].y > -10.0) )
         {
-            velo_cur_.push_back(p0[i]);
+            velo_cur_->push_back((*p0)[i]);
         }
     }
     // double dt_2 = timer::toc(); // milliseconds
@@ -58,12 +58,12 @@ void dRCalc::dR_warpPointcloud(std::unique_ptr<CloudFrame>& CloudFrame_next, std
 
     // compensate zero in current rho image for warping
     // timer::tic();
-    compensateCurRhoZeroWarp(CloudFrame_cur, n_ring, n_radial, v_angle_, velo_cur_);
+    compensateCurRhoZeroWarp(CloudFrame_cur, n_ring, n_radial, v_angle_);
     // double dt_3 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'compensateCurRhoZeroWarp' :" << dt_3 << " [ms]");
     // exit(0);
     // timer::tic();
-    pcl::transformPointCloud(velo_cur_, cur_pts_warped_, T01);
+    pcl::transformPointCloud(*velo_cur_, *cur_pts_warped_, T01);
     //     double dt_4 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'transformPointCloud' :" << dt_4 << " [ms]");
     
@@ -95,7 +95,7 @@ void dRCalc::dR_warpPointcloud(std::unique_ptr<CloudFrame>& CloudFrame_next, std
     // ROS_INFO_STREAM("elapsed time for 'subtract' :" << dt_8 << " [ms]");
 }
 
-void dRCalc::compensateCurRhoZeroWarp(std::unique_ptr<CloudFrame>& CloudFrame_cur, int n_ring, int n_radial, std::vector<float>& v_angle, pcl::PointCloud<pcl::PointXYZ>& velo_cur)
+void dRCalc::compensateCurRhoZeroWarp(std::unique_ptr<CloudFrame>& CloudFrame_cur, int n_ring, int n_radial, std::vector<float>& v_angle)
 {
     int n_row = n_ring;
     int n_col = n_radial;
@@ -273,7 +273,7 @@ void dRCalc::compensateCurRhoZeroWarp(std::unique_ptr<CloudFrame>& CloudFrame_cu
                         {
                             for (int p = 0; p < 5; ++p)
                             {
-                                velo_cur.push_back(pcl::PointXYZ(-min_rho_4_dir * cosf(new_phi + (float)(m - 2) * 0.2 * D2R) * cosf(new_theta + (float)(p - 2) * 0.08 * D2R),
+                                velo_cur_->push_back(pcl::PointXYZ(-min_rho_4_dir * cosf(new_phi + (float)(m - 2) * 0.2 * D2R) * cosf(new_theta + (float)(p - 2) * 0.08 * D2R),
                                                                  -min_rho_4_dir * cosf(new_phi + (float)(m - 2) * 0.2 * D2R) * sinf(new_theta + (float)(p - 2) * 0.08 * D2R),
                                                                  min_rho_4_dir * sinf(new_phi + (float)(m - 2) * 0.2 * D2R)));
                             }

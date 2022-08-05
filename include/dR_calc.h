@@ -16,17 +16,17 @@ class dRCalc
         std::vector<float> v_angle_;
 
     public:
-        pcl::PointCloud<pcl::PointXYZ> velo_cur_;
-        pcl::PointCloud<pcl::PointXYZ> cur_pts_warped_;
+        pcl::PointCloud<pcl::PointXYZ>::Ptr velo_cur_;
+        pcl::PointCloud<pcl::PointXYZ>::Ptr cur_pts_warped_;
 
     public:
         dRCalc(const std::unique_ptr<UserParam> &user_param);
         ~dRCalc();
 
         void dR_warpPointcloud(std::unique_ptr<CloudFrame>& CloudFrame_next, std::unique_ptr<CloudFrame>& CloudFrame_cur, std::unique_ptr<CloudFrame>& CloudFrame_cur_warped,
-                                pcl::PointCloud<pcl::PointXYZ> &p0, Pose &T01, int cnt_data, cv::Mat &dRdt);
+                                pcl::PointCloud<pcl::PointXYZ>::Ptr p0, Pose &T01, int cnt_data, cv::Mat &dRdt);
         
-        void compensateCurRhoZeroWarp(std::unique_ptr<CloudFrame>& CloudFrame_cur, int n_ring, int n_radial, std::vector<float> &v_angle, pcl::PointCloud<pcl::PointXYZ> &velo_cur);
+        void compensateCurRhoZeroWarp(std::unique_ptr<CloudFrame>& CloudFrame_cur, int n_ring, int n_radial, std::vector<float> &v_angle);
         
         void interpRangeImageMin(std::unique_ptr<CloudFrame>& CloudFrame_in, int n_ring, int n_radial);
         

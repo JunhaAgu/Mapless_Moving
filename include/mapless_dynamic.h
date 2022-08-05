@@ -70,7 +70,6 @@ private:
     int img_height_;
     int img_width_;
     int object_threshold_;
-    int score_cnt_;
 
     float alpha_;
     float beta_;
@@ -84,7 +83,7 @@ private:
     //dR_warpPointcloud
     // pcl::PointCloud<pcl::PointXYZ> velo_cur_;
     // pcl::PointCloud<pcl::PointXYZ>::Ptr ptr_cur_pts_warped_;
-    cv::Mat residual_;
+    cv::Mat dRdt_;
 
 private:
     //genRangeImages
@@ -101,9 +100,9 @@ private:
     bool is_initialized_test_;
     Mask                     mask0_test_;
     sensor_msgs::PointCloud2 p0_msg_test_;
-    pcl::PointCloud<pcl::PointXYZ> p0_pcl_test_;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr p0_pcl_test_;
     sensor_msgs::PointCloud2 p1_msg_test_;
-    pcl::PointCloud<pcl::PointXYZ> p1_pcl_test_;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr p1_pcl_test_;
 
     std::vector<std::string> file_lists_;
 
@@ -115,7 +114,7 @@ public:
 
     void solve(        
         /* inputs */ 
-        pcl::PointCloud<pcl::PointXYZ>& p0, pcl::PointCloud<pcl::PointXYZ>& p1, const Pose& T01, 
+        pcl::PointCloud<pcl::PointXYZ>::Ptr p0, pcl::PointCloud<pcl::PointXYZ>::Ptr p1, const Pose& T01, 
         /* outputs */
         Mask& mask1, int cnt);
 
@@ -123,7 +122,7 @@ public:
 private:
     void getUserSettingParameters();
 
-    void copyStruct(pcl::PointCloud<pcl::PointXYZ>& p1, pcl::PointCloud<pcl::PointXYZ>& p0, int cnt_data);
+    void copyStruct(pcl::PointCloud<pcl::PointXYZ>::Ptr p1, pcl::PointCloud<pcl::PointXYZ>::Ptr p0, int cnt_data);
 
     void countZerofloat(cv::Mat& input_mat);
     void countZeroint(cv::Mat& input_mat);

@@ -89,7 +89,7 @@ void PclWarp::warpPointcloud(std::unique_ptr<CloudFrame>& CloudFrame_in, std::un
 
     pcl::transformPointCloud(velo_xyz_, *pts_warpewd_, T01);
 
-    CloudFrame_warpPointcloud->genRangeImages(*pts_warpewd_, 0);
+    CloudFrame_warpPointcloud->genRangeImages(pts_warpewd_, 0);
     // countZerofloat(str_warpPointcloud_->img_index);
 
     // int cnt_debug = 0;
