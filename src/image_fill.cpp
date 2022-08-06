@@ -132,8 +132,9 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
     // Label objects
     cv::Mat connect_input = (rho_zero_value | input_img_mask);
     cv::Mat object_label = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+    cv::Mat stats, centroids;
 
-    int n_label = cv::connectedComponents(connect_input, object_label, 8);
+    int n_label = cv::connectedComponentsWithStats(connect_input, object_label, stats, centroids, 8);
     int* ptr_object_label = object_label.ptr<int>(0);
 
     int* ptr_object_row = object_row_.data();
@@ -185,10 +186,15 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
         object_area_filled      = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
         filled_object_rho_mat   = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
 
-        for (int i=0; i<n_row; ++i)
+        int left = stats.at<int>(object_idx, cv::CC_STAT_LEFT);
+        int top = stats.at<int>(object_idx, cv::CC_STAT_TOP);
+        int width = stats.at<int>(object_idx, cv::CC_STAT_WIDTH);
+        int height = stats.at<int>(object_idx, cv::CC_STAT_HEIGHT);
+
+        for (int i = top; i < top+height; ++i)
         {
             int i_ncols = i * n_col;
-            for (int j=0; j<n_col; ++j)
+            for (int j = left; j < left+width; ++j)
             {
                 if (*(ptr_object_label + i_ncols + j) == object_idx)
                 {

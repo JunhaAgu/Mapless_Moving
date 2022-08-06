@@ -109,7 +109,6 @@ void ObjectExt::extractObjectCandidate(cv::Mat& accumulated_dRdt, std::unique_pt
         return;
     }
 
-timer::tic();
     for (int object_idx = 0; object_idx < n_label; ++object_idx)
     {
         
