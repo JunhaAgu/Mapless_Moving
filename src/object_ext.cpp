@@ -76,6 +76,7 @@ void ObjectExt::filterOutAccumdR(std::unique_ptr<CloudFrame>& CloudFrame_next, s
 
 void ObjectExt::extractObjectCandidate(cv::Mat& accumulated_dRdt, std::unique_ptr<CloudFrame>& CloudFrame_next)
 {
+    
     int n_col = accumulated_dRdt.cols;
     int n_row = accumulated_dRdt.rows;
     cv::Mat object_mask = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
@@ -99,7 +100,8 @@ void ObjectExt::extractObjectCandidate(cv::Mat& accumulated_dRdt, std::unique_pt
             }
         }
     }
-    int n_label = cv::connectedComponents(object_mask, object_label, 8);
+    cv::Mat stats, centroids;
+    int n_label = cv::connectedComponentsWithStats(object_mask, object_label, stats, centroids, 8);
     int* ptr_object_label = object_label.ptr<int>(0);
 
     if (n_label == 0)
@@ -107,14 +109,14 @@ void ObjectExt::extractObjectCandidate(cv::Mat& accumulated_dRdt, std::unique_pt
         return;
     }
 
-    
+timer::tic();
     for (int object_idx = 0; object_idx < n_label; ++object_idx)
     {
+        
         if (object_idx==0) //background
         {
             continue;
         }
-
         object_row_.resize(0);
         object_col_.resize(0);
         object_rho_roi_.resize(0);
@@ -127,10 +129,15 @@ void ObjectExt::extractObjectCandidate(cv::Mat& accumulated_dRdt, std::unique_pt
         cv::Mat object_rho_mat = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
         float *ptr_object_rho_mat = object_rho_mat.ptr<float>(0);
 
-        for (int i = 0; i < n_row; ++i)
+		int left = stats.at<int>(object_idx, cv::CC_STAT_LEFT);
+        int top = stats.at<int>(object_idx, cv::CC_STAT_TOP);
+        int width = stats.at<int>(object_idx, cv::CC_STAT_WIDTH);
+        int height = stats.at<int>(object_idx, cv::CC_STAT_HEIGHT);
+
+        for (int i = top; i < top+height; ++i)
         {
             int i_ncols = i * n_col;
-            for (int j = 0; j < n_col; ++j)
+            for (int j = left; j < left+width; ++j)
             {
                 if (*(ptr_object_label + i_ncols + j) == object_idx)
                 {
@@ -147,12 +154,14 @@ void ObjectExt::extractObjectCandidate(cv::Mat& accumulated_dRdt, std::unique_pt
             for (int i = 0; i < object_row_.size(); ++i)
             {
                 *(ptr_accumulated_dRdt + object_row_[i] * n_col + object_col_[i]) = 0.0;
-                continue;
             }
+            continue;
         }
         else
         {   
-            std::cout << object_row_.size() <<std::endl;
+            
+
+            // std::cout << object_row_.size() <<std::endl;
             float his_range_max = *max_element(object_rho_roi_.begin(), object_rho_roi_.end());
             float his_range_min = *min_element(object_rho_roi_.begin(), object_rho_roi_.end());
             float his_range[] = {his_range_min, his_range_max};
@@ -221,8 +230,8 @@ void ObjectExt::extractObjectCandidate(cv::Mat& accumulated_dRdt, std::unique_pt
                 for (int i = 0; i < object_row_.size(); ++i)
                 {
                     *(ptr_accumulated_dRdt + object_row_[i] * n_col + object_col_[i]) = 0;
-                    continue;
                 }
+                continue;
             }
             else
             {
@@ -276,10 +285,12 @@ void ObjectExt::extractObjectCandidate(cv::Mat& accumulated_dRdt, std::unique_pt
         }
                     // cv::imshow("accumulated_dRdt", accumulated_dRdt);
             // cv::waitKey(0);
+
     } // end for object_idx
     // cv::imshow("accumulated_dRdt", accumulated_dRdt);
     // cv::waitKey(0);
     // exit(0);
+
 
 }
 

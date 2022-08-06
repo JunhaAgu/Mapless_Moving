@@ -7,7 +7,8 @@ dRCalc::dRCalc(const std::unique_ptr<UserParam>& user_param)
         v_angle_.push_back(user_param->sensor_spec_.v_angle_[i]);
     }
 
-    // ptr_cur_pts_warped_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
+    velo_cur_       = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
+    cur_pts_warped_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
 };
 
 dRCalc::~dRCalc()
@@ -27,6 +28,7 @@ void dRCalc::dR_warpPointcloud(std::unique_ptr<CloudFrame>& CloudFrame_next, std
     float* ptr_cur_img_z = CloudFrame_cur->str_rhopts_->img_z.ptr<float>(0);
     // int cnt = 0;
 
+    
     // timer::tic();
     // representative pts
     for (int i = 0; i < n_row; ++i)
@@ -43,7 +45,7 @@ void dRCalc::dR_warpPointcloud(std::unique_ptr<CloudFrame>& CloudFrame_next, std
     }
     // double dt_1 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'representative pts' :" << dt_1 << " [ms]");
-
+    
     // timer::tic();
     // Far pts are warped by the original pts
     for (int i = 0; i < p0->size(); ++i)

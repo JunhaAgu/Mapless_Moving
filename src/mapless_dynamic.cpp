@@ -37,9 +37,11 @@ MaplessDynamic::MaplessDynamic(ros::NodeHandle& nh, bool test_flag)
     ImageFill_                  = std::make_unique<ImageFill>(UserParam_);
 
     // allocation for solver
+    img_height_ = UserParam_->image_param_.height_;
+    img_width_  = UserParam_->image_param_.width_;
     accumulated_dRdt_       = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
     accumulated_dRdt_score_ = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-    dRdt_               = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    dRdt_                   = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
 
     if (test_flag_){
         this->loadTestData();
@@ -367,8 +369,6 @@ void MaplessDynamic::solve(
     // p0 is already processed in initial step
     timer::tic();
     CloudFrame_next_->genRangeImages(p1, 1);
-    // genRangeImages(p1, str_next_, 1);
-
     double dt_toc1 = timer::toc(); // milliseconds
     ROS_INFO_STREAM("elapsed time for 'genRangeImages' :" << dt_toc1 << " [ms]");
 
@@ -446,7 +446,7 @@ void MaplessDynamic::solve(
     ROS_INFO_STREAM("elapsed time for 'updateScore' :" <<  dt_toc8 << " [ms]");
 
     timer::tic();
-    ImageFill_->plugImageZeroHoles(accumulated_dRdt_, accumulated_dRdt_score_, CloudFrame_next_, SegmentGround_->groundPtsIdx_next_, object_threshold_);
+    ImageFill_->plugImageZeroHoles(accumulated_dRdt_, accumulated_dRdt_score_, CloudFrame_next_);
     double dt_toc9 = timer::toc(); // milliseconds
     ROS_INFO_STREAM("elapsed time for 'plugImageZeroHoles' :" <<  dt_toc9 << " [ms]");
 
@@ -599,6 +599,10 @@ void MaplessDynamic::solve(
     copyStruct(p1, p0, cnt_data);
     double dt_toc12 = timer::toc(); // milliseconds
     ROS_INFO_STREAM("elapsed time for 'copyRemove' :" <<  dt_toc12 << " [ms]");
+    
+    double dt_toc_total = dt_toc1 + dt_toc2 + dt_toc3 + dt_toc4 + dt_toc5 + dt_toc6 + dt_toc7 + dt_toc8 + dt_toc9 + dt_toc10 + dt_toc11 + dt_toc12 ;
+    ROS_INFO_STREAM("elapsed time for 'total' :" <<  dt_toc_total << " [ms]");
+    ROS_INFO_STREAM("=======================================================");
 };
 
 void MaplessDynamic::copyStruct(pcl::PointCloud<pcl::PointXYZ>::Ptr p1 ,pcl::PointCloud<pcl::PointXYZ>::Ptr p0, int cnt_data)
@@ -816,7 +820,7 @@ void MaplessDynamic::copyStruct(pcl::PointCloud<pcl::PointXYZ>::Ptr p1 ,pcl::Poi
     
     dRdt_ = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
 
-    PclWarp_->velo_xyz_.resize(0);
+    PclWarp_->velo_xyz_->resize(0);
     PclWarp_->pts_warpewd_->resize(0);
 
     // std::cout << cur_pts_warped_->width << std::endl;

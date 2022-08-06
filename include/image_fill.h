@@ -22,6 +22,7 @@ class ImageFill
 private:
     int img_height_;
     int img_width_;
+    int object_threshold_;
 
 public:
     std::vector<int> object_row_;
@@ -47,7 +48,7 @@ public:
     ImageFill(const std::unique_ptr<UserParam> &user_param);
     ~ImageFill();
 
-    void plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulated_dRdt_score, std::unique_ptr<CloudFrame>& CloudFrame_next, cv::Mat& groundPtsIdx_next, int object_threshold);
+    void plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulated_dRdt_score, std::unique_ptr<CloudFrame>& CloudFrame_next);
 
     void interpAndfill_image(cv::Mat& input_img, cv::Mat& filled_bin);
 };

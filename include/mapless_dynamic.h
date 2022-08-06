@@ -69,7 +69,6 @@ private:
     bool test_flag_;
     int img_height_;
     int img_width_;
-    int object_threshold_;
 
     float alpha_;
     float beta_;

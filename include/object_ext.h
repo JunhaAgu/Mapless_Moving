@@ -4,6 +4,8 @@
 #include "defines.h"
 #include "user_param.h"
 #include "cloud_frame.h"
+#include "timer.h"
+#include <opencv2/opencv.hpp>
 
 class MaplessDynamic;
 class UserParam;
@@ -18,6 +20,7 @@ private:
     float alpha_;
     float beta_;
 public:
+
     std::vector<int> object_row_;
     std::vector<int> object_col_;
     std::vector<float> object_rho_roi_;
@@ -26,7 +29,6 @@ public:
 
     std::vector<int> disconti_row_;
     std::vector<int> disconti_col_;
-
 
     std::vector<int> diff_object_area_bw_disconti_row_;
     std::vector<int> diff_object_area_bw_disconti_col_;

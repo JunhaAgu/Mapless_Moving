@@ -15,7 +15,7 @@ private:
     int img_width_;
 
 public:
-    pcl::PointCloud<pcl::PointXYZ> velo_xyz_;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr velo_xyz_;
     pcl::PointCloud<pcl::PointXYZ>::Ptr pts_warpewd_;
 
 public:

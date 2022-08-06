@@ -4,6 +4,7 @@ ImageFill::ImageFill(const std::unique_ptr<UserParam>& user_param)
 {
     img_height_ = user_param->image_param_.height_;
     img_width_ = user_param->image_param_.width_;
+    object_threshold_ = user_param->obejct_param_.thr_object_;
 
     object_row_.reserve(1000000);
     object_col_.reserve(1000000);
@@ -28,7 +29,7 @@ ImageFill::~ImageFill()
 
 };
 
-void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulated_dRdt_score, std::unique_ptr<CloudFrame>& CloudFrame_next, cv::Mat& groundPtsIdx_next, int object_threshold)
+void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulated_dRdt_score, std::unique_ptr<CloudFrame>& CloudFrame_next)
 {
     int n_row = accumulated_dRdt.rows;
     int n_col = accumulated_dRdt.cols;
@@ -135,12 +136,6 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
     int n_label = cv::connectedComponents(connect_input, object_label, 8);
     int* ptr_object_label = object_label.ptr<int>(0);
 
-    // std::vector<int> object_row_;
-    // std::vector<int> object_col_;
-    // std::vector<float> object_rho_roi_;
-    // object_row_.reserve(100000);
-    // object_col_.reserve(100000);
-    // object_rho_roi_.reserve(100000);
     int* ptr_object_row = object_row_.data();
     int* ptr_object_col = object_col_.data();
     float* ptr_object_rho_roi = object_rho_roi_.data();
@@ -148,34 +143,13 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
     cv::Mat zero_candidate = cv::Mat::zeros(img_height_,img_width_, CV_8UC1);
     uchar *ptr_zero_candidate = zero_candidate.ptr<uchar>(0);
 
-    // std::vector<int> filled_object_row_;
-    // std::vector<int> filled_object_col_;
-    // std::vector<float> filled_object_rho_roi_;
-    // filled_object_row_.reserve(100000);
-    // filled_object_col_.reserve(100000);
-    // filled_object_rho_roi_.reserve(100000);
     int* ptr_filled_object_row = filled_object_row_.data();
     int* ptr_filled_object_col = filled_object_col_.data();
     float* ptr_filled_object_rho_roi = filled_object_rho_roi_.data();
 
-
-    // std::vector<float> max_his_filled_object_rho_roi_;
-    max_his_filled_object_rho_roi_.reserve(100000);
-
-    // std::vector<int> rho_zero_filled_value_row_;
-    // std::vector<int> rho_zero_filled_value_col_;
-    // std::vector<float> rho_zero_filled_value_rho_roi_;
-    // rho_zero_filled_value_row_.reserve(100000);
-    // rho_zero_filled_value_col_.reserve(100000);
-    // rho_zero_filled_value_rho_roi_.reserve(100000);
     int* ptr_rho_zero_filled_value_row = rho_zero_filled_value_row_.data();
     int* ptr_rho_zero_filled_value_col = rho_zero_filled_value_col_.data();
     float* ptr_rho_zero_filled_value_rho_roi = rho_zero_filled_value_rho_roi_.data();
-
-    // std::vector<int> disconti_row_;
-    // std::vector<int> disconti_col_;
-    // disconti_row_.reserve(100000);
-    // disconti_col_.reserve(100000);
 
     cv::Mat object_area = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
     uchar *ptr_object_area = object_area.ptr<uchar>(0);
@@ -226,7 +200,7 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
             }
         }
 
-        if (object_row_.size() < object_threshold)
+        if (object_row_.size() < object_threshold_)
         {
             for (int i = 0; i < object_row_.size(); ++i)
             {
@@ -321,11 +295,7 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
             const float* his_ranges= his_range;
             int number_bins = 50;
 
-            std::cout << "=============before" <<std:: endl;
-            std::cout << filled_object_rho_roi_.size() <<std::endl;
-            std::cout << "min: " << his_range_min << ", max: " << his_range_max <<std::endl;
             cv::calcHist(&filled_object_rho_mat, 1, channel_numbers, cv::Mat(), histogram_, 1, &number_bins, &his_ranges);
-            std::cout << "=============end============" <<std::endl;
             int max_n = 0;
             int max_idx = 100;
             for (int p = 0; p < number_bins; ++p)
