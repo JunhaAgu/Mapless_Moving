@@ -70,6 +70,24 @@ void CloudFrame::genRangeImages(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in, bool
     makeRangeImageAndPtsPerPixel();
     // double dt_PPP = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'makeRangeImageAndPtsPerPixel' :" << dt_PPP << " [ms]");
+    if (cur_next==0)
+    {
+    float* ptr_input_mat = this->str_rhopts_->img_rho.ptr<float>(0);
+    int cnt = 0;
+    for (int i = 0; i < 64; ++i)
+    {
+        int i_ncols = i * 901;
+        for (int j = 0; j < 901; ++j)
+        {
+            if (*(ptr_input_mat + i_ncols + j) != 0)
+            {
+                cnt += 1;
+            }
+        }
+    }
+    std::cout<<"# of non zero: "<<cnt <<std::endl;
+    exit(0);
+    }
 
     // timer::tic();
     interpRangeImage(cur_next);

@@ -79,9 +79,6 @@ private:
 
     Pose T_next2cur_;
     
-    //dR_warpPointcloud
-    // pcl::PointCloud<pcl::PointXYZ> velo_cur_;
-    // pcl::PointCloud<pcl::PointXYZ>::Ptr ptr_cur_pts_warped_;
     cv::Mat dRdt_;
 
 private:
