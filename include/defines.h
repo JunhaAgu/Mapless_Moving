@@ -20,7 +20,7 @@
 typedef std::vector<bool> Mask;
 typedef Eigen::Matrix4d   Pose; 
 
-// #define NORM(x, y, z) (pow(((x) * (x) + (y) * (y) + (z) * (z)), 0.5))
+// distance from origin
 #define NORM(x, y, z) (sqrt(((x) * (x) + (y) * (y) + (z) * (z))))
 
 #define R2D 180.0f/M_PI

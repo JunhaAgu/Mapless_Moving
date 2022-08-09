@@ -2,8 +2,12 @@
 
 SegmentGround::SegmentGround(const std::unique_ptr<UserParam>& user_param)
 {
+    img_height_ = user_param->image_param_.height_;
+    img_width_ = user_param->image_param_.width_;
+
     downsample_size_ = user_param->ground_segment_param_.downsample_size;
 
+    // for RANSAC
     iter_ = user_param->ransac_param_.iter_;
     thr_ = user_param->ransac_param_.thr_;
     a_thr_ = user_param->ransac_param_.a_thr_; // abs
@@ -11,9 +15,6 @@ SegmentGround::SegmentGround(const std::unique_ptr<UserParam>& user_param)
     b_thr_[1] = user_param->ransac_param_.b_thr_[1];
     mini_inlier_ = user_param->ransac_param_.min_inlier_;
     n_sample_ = user_param->ransac_param_.n_sample_;
-
-    img_height_ = user_param->image_param_.height_;
-    img_width_  = user_param->image_param_.width_;
 
     groundPtsIdx_next_ = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
 };

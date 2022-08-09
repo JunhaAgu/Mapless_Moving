@@ -5,6 +5,7 @@
 #include "user_param.h"
 #include <vector>
 #include "cloud_frame.h"
+#include "timer.h"
 
 class MaplessDynamic;
 class UserParam;

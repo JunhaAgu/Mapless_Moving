@@ -3,6 +3,7 @@
 
 #include "defines.h"
 #include "user_param.h"
+#include "timer.h"
 
 class MaplessDynamic;
 class UserParam;
@@ -33,11 +34,11 @@ class CloudFrame
 
         void calcuateRho(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in);
 
-        void makeRangeImageAndPtsPerPixel(int n_pts, int n_ring, int n_radial, float az_step);
+        void makeRangeImageAndPtsPerPixel();
         
-        void interpRangeImage(int n_ring, int n_radial, bool cur_next);
+        void interpRangeImage(bool cur_next);
 
-        void interpPts(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in, int n_ring, int n_radial, bool cur_next);
+        void interpPts(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in, bool cur_next);
 };
 
 

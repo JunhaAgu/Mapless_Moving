@@ -121,7 +121,6 @@ void MaplessDynamic::TEST(){
         p0_msg_test_ = *(data_buf_[0]->pcl_msg_);
         pcl::fromROSMsg(p0_msg_test_, *p0_pcl_test_);
         
-        // CloudFrame_->genRangeImages(p0_pcl_test_, str_cur_, 1);
         CloudFrame_cur_ ->genRangeImages(p0_pcl_test_, 1);
 
         mask0_test_.resize(p0_msg_test_.width, true);

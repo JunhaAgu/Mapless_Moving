@@ -73,8 +73,8 @@ void dRCalc::dR_warpPointcloud(std::unique_ptr<CloudFrame>& CloudFrame_next, std
     // current warped image
 
     CloudFrame_cur_warped->genRangeImages(cur_pts_warped_, 0);
-    //         double dt_5 = timer::toc(); // milliseconds
-    // ROS_INFO_STREAM("elapsed time for 'genRangeImages' :" << dt_5 << " [ms]");
+    //         double dt_m = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'mm' :" << dt_m << " [ms]");
     // countZerofloat(str_cur_warped->img_rho);
     // fill range image using interpolation
     // timer::tic();
