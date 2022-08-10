@@ -5,23 +5,25 @@ ObjectExt::ObjectExt(const std::unique_ptr<UserParam>& user_param)
     img_height_ = user_param->image_param_.height_;
     img_width_ = user_param->image_param_.width_;
 
-    thr_object_ = 30;
-    alpha_ = 0.3;
-    beta_ = 0.1;
+    thr_object_ = user_param->object_param_.thr_object_;
+    alpha_ = user_param->object_param_.alpha_;
+    beta_ = user_param->object_param_.beta_;
+    coef_accum_w_[0] = user_param->object_param_.coef_accum_w_[0];
+    coef_accum_w_[1] = user_param->object_param_.coef_accum_w_[1];
 
-    object_row_.reserve(100000);
-    object_col_.reserve(100000);
-    object_rho_roi_.reserve(100000);
+    object_row_.reserve(500000);
+    object_col_.reserve(500000);
+    object_rho_roi_.reserve(500000);
 
-    max_his_object_rho_roi_.reserve(100000);
+    max_his_object_rho_roi_.reserve(500000);
 
-    disconti_row_.reserve(100000);
-    disconti_col_.reserve(100000);
+    disconti_row_.reserve(500000);
+    disconti_col_.reserve(500000);
 
-    diff_object_area_bw_disconti_row_.reserve(100000);
-    diff_object_area_bw_disconti_col_.reserve(100000);
+    diff_object_area_bw_disconti_row_.reserve(500000);
+    diff_object_area_bw_disconti_col_.reserve(500000);
 
-    diff_z_.reserve(100000);
+    diff_z_.reserve(500000);
 };
 
 ObjectExt::~ObjectExt()
@@ -29,15 +31,15 @@ ObjectExt::~ObjectExt()
 
 };
 
-void ObjectExt::filterOutAccumdR(std::unique_ptr<CloudFrame>& CloudFrame_next, std::unique_ptr<CloudFrame>& CloudFrame_cur_warped, cv::Mat& accumulated_dRdt, cv::Mat& accumulated_dRdt_score, cv::Mat& residual)
+void ObjectExt::filterOutAccumdR(std::unique_ptr<CloudFrame>& CloudFrame_next, std::unique_ptr<CloudFrame>& CloudFrame_cur_warped, cv::Mat& accumulated_dRdt, cv::Mat& accumulated_dRdt_score, cv::Mat& dRdt)
 {
     int n_row = CloudFrame_next->str_rhopts_->img_rho.rows;
     int n_col = CloudFrame_next->str_rhopts_->img_rho.cols;
-    float coef_accum_w[2] = {0.5, 0.9};
-    float* ptr_accumulated_dRdt = accumulated_dRdt.ptr<float>(0);
-    float* ptr_next_img_rho = CloudFrame_next->str_rhopts_->img_rho.ptr<float>(0);
-    float* ptr_cur_warped_img_rho = CloudFrame_cur_warped->str_rhopts_->img_rho.ptr<float>(0);
-    float* ptr_residual = residual.ptr<float>(0);
+
+    float* ptr_next_img_rho         = CloudFrame_next->str_rhopts_->img_rho.ptr<float>(0);
+    float* ptr_cur_warped_img_rho   = CloudFrame_cur_warped->str_rhopts_->img_rho.ptr<float>(0);
+    float* ptr_accumulated_dRdt     = accumulated_dRdt.ptr<float>(0);
+    float* ptr_dRdt                 = dRdt.ptr<float>(0);
 
     // Accumulate the occlusion
     for (int i = 0; i<n_row; ++i)
@@ -47,11 +49,11 @@ void ObjectExt::filterOutAccumdR(std::unique_ptr<CloudFrame>& CloudFrame_next, s
         {
             if (*(ptr_next_img_rho + i_ncols + j) < 10.0)
             {
-                *(ptr_accumulated_dRdt + i_ncols + j) = coef_accum_w[0] * (*(ptr_accumulated_dRdt + i_ncols + j)) + *(ptr_residual + i_ncols + j);
+                *(ptr_accumulated_dRdt + i_ncols + j) = coef_accum_w_[0] * (*(ptr_accumulated_dRdt + i_ncols + j)) + *(ptr_dRdt + i_ncols + j);
             }
             else // >10
             {
-                *(ptr_accumulated_dRdt + i_ncols + j) = coef_accum_w[1] * (*(ptr_accumulated_dRdt + i_ncols + j)) + *(ptr_residual + i_ncols + j);
+                *(ptr_accumulated_dRdt + i_ncols + j) = coef_accum_w_[1] * (*(ptr_accumulated_dRdt + i_ncols + j)) + *(ptr_dRdt + i_ncols + j);
             }            
         }
     }
@@ -64,9 +66,9 @@ void ObjectExt::filterOutAccumdR(std::unique_ptr<CloudFrame>& CloudFrame_next, s
         {
             if ( (*(ptr_next_img_rho + i_ncols + j) > 40) 
             || (*(ptr_accumulated_dRdt + i_ncols + j) < alpha_ * (*(ptr_next_img_rho + i_ncols + j)))
-            ||  (*(ptr_next_img_rho + i_ncols + j) == 0) 
+            || (*(ptr_next_img_rho + i_ncols + j) == 0) 
             || (*(ptr_cur_warped_img_rho + i_ncols + j) == 0)
-            || (*(ptr_residual + i_ncols + j) < (- beta_ * (*(ptr_next_img_rho + i_ncols + j)))) )
+            || (*(ptr_dRdt + i_ncols + j) < (- beta_ * (*(ptr_next_img_rho + i_ncols + j)))) )
             {
                 *(ptr_accumulated_dRdt + i_ncols + j) = 0;
             }

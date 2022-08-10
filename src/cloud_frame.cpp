@@ -101,6 +101,15 @@ void CloudFrame::genRangeImages(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in, bool
     // ROS_INFO_STREAM("elapsed time for 'interpPts' :" << dt_interpPts << " [ms]");
 }
 
+void CloudFrame::genRangeImages_noComp(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in, bool cur_next)
+{
+    n_pts_ = pcl_in->size();
+
+    calcuateRho(pcl_in, cur_next);   
+
+    makeRangeImageAndPtsPerPixel(cur_next);
+}
+
 void CloudFrame::calcuateRho(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in, bool cur_next)
 {
     // timer::tic();

@@ -43,6 +43,7 @@ struct ObjectParam
     int thr_object_;
     float alpha_;
     float beta_;
+    float coef_accum_w_[2];
 };
 
 class UserParam
@@ -59,7 +60,7 @@ class UserParam
         RansacParam ransac_param_;
         GroundSegmentParam ground_segment_param_;
         ImageParam image_param_;
-        ObjectParam obejct_param_;
+        ObjectParam object_param_;
 
     public:
         UserParam();

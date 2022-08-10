@@ -19,6 +19,7 @@ private:
     int thr_object_;
     float alpha_;
     float beta_;
+    float coef_accum_w_[2];
 public:
 
     std::vector<int> object_row_;

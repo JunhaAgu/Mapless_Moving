@@ -409,6 +409,11 @@ void MaplessDynamic::solve(
     timer::tic();
     // filter out outliers
     ObjectExt_->filterOutAccumdR(CloudFrame_next_, CloudFrame_cur_warped_, accumulated_dRdt_, accumulated_dRdt_score_, dRdt_);
+    if (cnt_data==2)
+    {
+        countZerofloat(accumulated_dRdt_);
+        exit(0);
+    }
     double dt_toc5 = timer::toc(); // milliseconds
     ROS_INFO_STREAM("elapsed time for 'filterOutAccumdR' :" << dt_toc5 << " [ms]");
 

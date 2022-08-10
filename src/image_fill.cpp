@@ -4,7 +4,7 @@ ImageFill::ImageFill(const std::unique_ptr<UserParam>& user_param)
 {
     img_height_ = user_param->image_param_.height_;
     img_width_ = user_param->image_param_.width_;
-    object_threshold_ = user_param->obejct_param_.thr_object_;
+    object_threshold_ = user_param->object_param_.thr_object_;
 
     object_row_.reserve(1000000);
     object_col_.reserve(1000000);

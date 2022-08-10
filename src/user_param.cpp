@@ -35,9 +35,11 @@ void UserParam::getUserSettingParameters()
     image_param_.height_    = sensor_spec_.channel_ / cloud_filter_param_.v_factor_ ;
     image_param_.width_     = 360.0 / (cloud_filter_param_.azimuth_res_ * cloud_filter_param_.h_factor_) + 1;
 
-    obejct_param_.thr_object_ = 30;
-    obejct_param_.alpha_ = 0.3;
-    obejct_param_.beta_ = 0.1;
+    object_param_.thr_object_ = 30;
+    object_param_.alpha_ = 0.3;
+    object_param_.beta_ = 0.1;
+    object_param_.coef_accum_w_[0] = 0.5;
+    object_param_.coef_accum_w_[1] = 0.9;
 };
 
 void UserParam::calVangle(std::string& data_type)
