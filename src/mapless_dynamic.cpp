@@ -121,7 +121,7 @@ void MaplessDynamic::TEST(){
         p0_msg_test_ = *(data_buf_[0]->pcl_msg_);
         pcl::fromROSMsg(p0_msg_test_, *p0_pcl_test_);
         
-        CloudFrame_cur_ ->genRangeImages(p0_pcl_test_, 1);
+        CloudFrame_cur_ ->genRangeImages(p0_pcl_test_, true);
 
         mask0_test_.resize(p0_msg_test_.width, true);
     }
@@ -367,7 +367,7 @@ void MaplessDynamic::solve(
     // pointcloud input, p1
     // p0 is already processed in initial step
     timer::tic();
-    CloudFrame_next_->genRangeImages(p1, 1);
+    CloudFrame_next_->genRangeImages(p1, true);
     double dt_toc1 = timer::toc(); // milliseconds
     ROS_INFO_STREAM("elapsed time for 'genRangeImages' :" << dt_toc1 << " [ms]");
 

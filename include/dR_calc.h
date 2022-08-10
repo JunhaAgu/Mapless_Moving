@@ -33,7 +33,7 @@ class dRCalc
         
         void interpRangeImageMin(std::unique_ptr<CloudFrame>& CloudFrame_in);
         
-        void interpPtsWarp(std::unique_ptr<CloudFrame>& CloudFrame_in, int n_ring, int n_radial);
+        void interpPtsWarp(std::unique_ptr<CloudFrame>& CloudFrame_in);
 };
 
 

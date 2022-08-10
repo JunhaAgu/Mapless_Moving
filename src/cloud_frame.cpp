@@ -62,32 +62,33 @@ void CloudFrame::genRangeImages(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in, bool
     n_pts_ = pcl_in->size();
 
     // timer::tic();
-    calcuateRho(pcl_in);
+    calcuateRho(pcl_in, cur_next);    
     // double dt_calRho = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'calcuateRho' :" << dt_calRho << " [ms]");
 
     // timer::tic();
-    makeRangeImageAndPtsPerPixel();
+    makeRangeImageAndPtsPerPixel(cur_next);
     // double dt_PPP = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'makeRangeImageAndPtsPerPixel' :" << dt_PPP << " [ms]");
-    if (cur_next==0)
-    {
-    float* ptr_input_mat = this->str_rhopts_->img_rho.ptr<float>(0);
-    int cnt = 0;
-    for (int i = 0; i < 64; ++i)
-    {
-        int i_ncols = i * 901;
-        for (int j = 0; j < 901; ++j)
-        {
-            if (*(ptr_input_mat + i_ncols + j) != 0)
-            {
-                cnt += 1;
-            }
-        }
-    }
-    std::cout<<"# of non zero: "<<cnt <<std::endl;
-    exit(0);
-    }
+    
+    // if (cur_next==0)
+    // {
+    // float* ptr_input_mat = this->str_rhopts_->img_rho.ptr<float>(0);
+    // int cnt = 0;
+    // for (int i = 0; i < 64; ++i)
+    // {
+    //     int i_ncols = i * 901;
+    //     for (int j = 0; j < 901; ++j)
+    //     {
+    //         if (*(ptr_input_mat + i_ncols + j) != 0)
+    //         {
+    //             cnt += 1;
+    //         }
+    //     }
+    // }
+    // std::cout<<"# of non zero: "<<cnt <<std::endl;
+    // exit(0);
+    // }
 
     // timer::tic();
     interpRangeImage(cur_next);
@@ -100,7 +101,7 @@ void CloudFrame::genRangeImages(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in, bool
     // ROS_INFO_STREAM("elapsed time for 'interpPts' :" << dt_interpPts << " [ms]");
 }
 
-void CloudFrame::calcuateRho(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in)
+void CloudFrame::calcuateRho(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in, bool cur_next)
 {
     // timer::tic();
 
@@ -119,6 +120,9 @@ void CloudFrame::calcuateRho(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in)
     float M_PI_plus_offset_theta = M_PI + offset_theta;
     float twopi_plus_offset_theta = twopi + offset_theta;
 
+    // std::string line;
+    // std::ofstream file("/home/junhakim/rhophitheta.txt");
+
     for (int i = 0; i < n_pts; ++i)
     {
         str_rhopts_->rho.push_back(NORM(pcl_in->points[i].x, pcl_in->points[i].y, pcl_in->points[i].z));
@@ -128,10 +132,13 @@ void CloudFrame::calcuateRho(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in)
         cospsi = pcl_in->points[i].x * invrhocos;
         if (cospsi > 1)
         {
+            // std::cout << "(cospsi > 1): " << cospsi <<std::endl;
             cospsi = (float)1.0;
+            
         }
         else if (cospsi < -1)
         {
+            // std::cout << "(cospsi < -1): " << cospsi <<std::endl;
             cospsi = -(float)1.0;
         }
         else{}
@@ -166,14 +173,32 @@ void CloudFrame::calcuateRho(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in)
             ptr_theta[i] = ptr_theta[i] - twopi;
         }
         // std::cout << str_rhopts_->rho[i] << " " << str_rhopts_->phi[i] << " " << str_rhopts_->theta[i]<< std::endl;
+
+        // if (cur_next==1)
+        // {
+        //     if (file.is_open())
+        //     {
+        //         file << ptr_rho[i] << " " << ptr_phi[i] << " " << ptr_theta[i] <<"\n";
+        //     }
+        //     else
+        //     {
+        //         std::cout << "error" << std::endl;
+        //     }
+        // }
     }
     // std::cout<<str_rhopts_->rho.size() << std::endl;
     // exit(0);
     // double dt_slam = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'calcuateRho' :" << dt_slam << " [ms]");
+
+    // if (cur_next == 1)
+    // {
+    //     file.close();
+    //     exit(0);
+    // }
 }
 
-void CloudFrame::makeRangeImageAndPtsPerPixel()
+void CloudFrame::makeRangeImageAndPtsPerPixel(bool cur_next)
 {
     // timer::tic();
     int i_row = 0;
@@ -182,7 +207,7 @@ void CloudFrame::makeRangeImageAndPtsPerPixel()
     float* ptr_img_rho = str_rhopts_->img_rho.ptr<float>(0);
     int* ptr_img_index = str_rhopts_->img_index.ptr<int>(0);
 
-    int* ptr_pts_per_pixel_n        = str_rhopts_->pts_per_pixel_n.data();
+    int* ptr_pts_per_pixel_n = str_rhopts_->pts_per_pixel_n.data();
 
     int n_row = str_rhopts_->img_rho.rows;
     int n_col = str_rhopts_->img_rho.cols;
@@ -195,6 +220,9 @@ void CloudFrame::makeRangeImageAndPtsPerPixel()
     float az_step_R2D = az_step_*R2D;
 
     float phi_R2D = 0.0f;
+
+    std::string line;
+    std::ofstream file("/home/junhakim/debug_rowcol.txt");
     
     for (int i = 0; i < n_pts_; ++i)
     {
@@ -220,6 +248,7 @@ void CloudFrame::makeRangeImageAndPtsPerPixel()
         {
             i_row = 63;
         }
+        
         // phi_R2D = (ptr_phi[i] * R2D);
 
         // for (int kk = 0; kk < n_ring_; ++kk)
@@ -237,6 +266,18 @@ void CloudFrame::makeRangeImageAndPtsPerPixel()
         {
             continue;
         }
+
+        // if (cur_next==1)
+        // {
+        //     if (file.is_open())
+        //     {
+        //         file << i_row << " " << i_col << "\n";
+        //     }
+        //     else
+        //     {
+        //         std::cout << "error" << std::endl;
+        //     }
+        // }
         
         int i_row_ncols_i_col = i_row * n_col + i_col;
         if (*(ptr_img_rho + i_row_ncols_i_col) == 0) //(str_rhopts_->img_rho.at<float>(i_row,i_col) == 0)
@@ -255,20 +296,17 @@ void CloudFrame::makeRangeImageAndPtsPerPixel()
         str_rhopts_->pts_per_pixel_index[i_row_ncols_i_col].push_back(i);
         str_rhopts_->pts_per_pixel_rho[i_row_ncols_i_col].push_back(ptr_rho[i]);
     } // end for
+                
+                // if (cur_next == 1)
+                // {   
+                //     file.close();
+                //     exit(0);
+                // }
 
-    // int cnt = 0;
-    // for (int i = 0; i < n_row; ++i)
-    // {
-    //     int i_ncols = i * n_col;
-    //     for (int j = 0; j < n_col; ++j)
-    //     {
-    //         if (*(ptr_img_rho + i_ncols + j) != 0)
-    //         {
-    //             cnt += 1;
-    //         }
-    //     }
-    // }
-    // std::cout<<"# of non zero: "<<cnt <<std::endl;
+    // cv::FileStorage fs_w("/home/junhakim/asdf.yaml", cv::FileStorage::WRITE);
+    // fs_w << "matImage" << str_rhopts_->img_rho;
+    // fs_w.release();
+    // exit(0);
 
     // cnt = 0;
     // for (int i = 0; i < n_row; ++i)
@@ -580,5 +618,15 @@ void CloudFrame::interpPts(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in, bool cur_
                     break;
             }
         } // end for j    
-    } // end for i        
+    } // end for i       
+    // cv::FileStorage fs_w("/home/junhakim/img_x.yaml", cv::FileStorage::WRITE);
+    // fs_w << "matImage" << str_rhopts_->img_x;
+    // fs_w.release();
+    // cv::FileStorage fs_s("/home/junhakim/img_y.yaml", cv::FileStorage::WRITE);
+    // fs_s << "matImage" << str_rhopts_->img_y;
+    // fs_s.release();
+    // cv::FileStorage fs_q("/home/junhakim/img_z.yaml", cv::FileStorage::WRITE);
+    // fs_q << "matImage" << str_rhopts_->img_z;
+    // fs_q.release();
+    // exit(0); 
 }

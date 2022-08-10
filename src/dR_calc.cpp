@@ -46,7 +46,7 @@ void dRCalc::dR_warpPointcloud(std::unique_ptr<CloudFrame>& CloudFrame_next, std
     // Far pts are warped by the original pts
     for (int i = 0; i < p0->size(); ++i)
     {
-        if( ((*p0)[i].x < 10) && ((*p0)[i].x > -10.0) && ((*p0)[i].y < 10.0) && ((*p0)[i].y > -10.0) )
+        if( ((*p0)[i].x <= 10) && ((*p0)[i].x >= -10.0) && ((*p0)[i].y <= 10.0) && ((*p0)[i].y >= -10.0) )
         {
             velo_cur_->push_back((*p0)[i]);
         }
@@ -58,16 +58,21 @@ void dRCalc::dR_warpPointcloud(std::unique_ptr<CloudFrame>& CloudFrame_next, std
     pcl::transformPointCloud(*velo_cur_, *cur_pts_warped_, T01);
     
     // current warped image
-    CloudFrame_cur_warped->genRangeImages(cur_pts_warped_, 0);
+    CloudFrame_cur_warped->genRangeImages(cur_pts_warped_, false);
 
     // fill range image using interpolation
     interpRangeImageMin(CloudFrame_cur_warped);
 
     // fill pts corresponding to filled range image (no affect the original pts)
-    interpPtsWarp(CloudFrame_cur_warped, n_ring_, n_radial_);
+    interpPtsWarp(CloudFrame_cur_warped);
     
     // calculate occlusions
     cv::subtract(CloudFrame_cur_warped->str_rhopts_->img_rho, CloudFrame_next->str_rhopts_->img_rho, dRdt); 
+
+    // cv::FileStorage fs_w("/home/junhakim/dRdt.yaml", cv::FileStorage::WRITE);
+    // fs_w << "matImage" << dRdt;
+    // fs_w.release();
+    // exit(0);
 }
 
 void dRCalc::compensateCurRhoZeroWarp(std::unique_ptr<CloudFrame>& CloudFrame_cur)
@@ -113,6 +118,11 @@ void dRCalc::compensateCurRhoZeroWarp(std::unique_ptr<CloudFrame>& CloudFrame_cu
 
     std::vector<float> vec_inv;
     vec_inv.reserve(4);
+
+    // cv::FileStorage fs_w("/home/junhakim/img_rho.yaml", cv::FileStorage::WRITE);
+    // fs_w << "matImage" << CloudFrame_cur->str_rhopts_->img_rho;
+    // fs_w.release();
+    // exit(0);
 
     for (int i = 0 + 1; i < n_ring_ - 1; ++i)
     {
@@ -232,9 +242,9 @@ void dRCalc::compensateCurRhoZeroWarp(std::unique_ptr<CloudFrame>& CloudFrame_cu
 
                         vec_inv_sum = vec_inv[0] + vec_inv[1] + vec_inv[2] + vec_inv[3];
 
-                        min_rho_4_dir = four_dir[0]*vec_inv[0] + four_dir[1]*vec_inv[1] + four_dir[2]*vec_inv[2] + four_dir[3]*vec_inv[3];
+                        min_rho_4_dir = (four_dir[0]*vec_inv[0] + four_dir[1]*vec_inv[1] + four_dir[2]*vec_inv[2] + four_dir[3]*vec_inv[3]) / vec_inv_sum;
                     }
-
+            // std::cout << min_rho_4_dir << "----" << vec_inv[0] << " " << vec_inv[1] << " " << vec_inv[2] << " " << vec_inv[3] << std::endl;
                     if (min_rho_4_dir > 0.0)
                     {
                         new_phi = v_angle_[i] * D2R;
@@ -332,15 +342,14 @@ void dRCalc::interpRangeImageMin(std::unique_ptr<CloudFrame>& CloudFrame_in)
     img_rho_new.copyTo(CloudFrame_in->str_rhopts_->img_rho);
 }
 
-void dRCalc::interpPtsWarp(std::unique_ptr<CloudFrame>& CloudFrame_in, int n_ring, int n_radial)
+void dRCalc::interpPtsWarp(std::unique_ptr<CloudFrame>& CloudFrame_in)
 {
-    int n_row = n_ring;
-    int n_col = n_radial;
-    int* ptr_img_index = CloudFrame_in->str_rhopts_->img_index.ptr<int>(0);
-    float* ptr_img_rho = CloudFrame_in->str_rhopts_->img_rho.ptr<float>(0);
-    float* ptr_img_x = CloudFrame_in->str_rhopts_->img_x.ptr<float>(0);
-    float* ptr_img_y = CloudFrame_in->str_rhopts_->img_y.ptr<float>(0);
-    float* ptr_img_z = CloudFrame_in->str_rhopts_->img_z.ptr<float>(0);
+    int n_row = n_ring_;
+    int n_col = n_radial_;
+    float* ptr_img_rho  = CloudFrame_in->str_rhopts_->img_rho.ptr<float>(0);
+    float* ptr_img_x    = CloudFrame_in->str_rhopts_->img_x.ptr<float>(0);
+    float* ptr_img_y    = CloudFrame_in->str_rhopts_->img_y.ptr<float>(0);
+    float* ptr_img_z    = CloudFrame_in->str_rhopts_->img_z.ptr<float>(0);
     int* ptr_img_restore_warp_mask = CloudFrame_in->str_rhopts_->img_restore_warp_mask.ptr<int>(0);
 
     for (int i = 0 + 2; i < n_row - 2; ++i)

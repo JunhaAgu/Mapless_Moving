@@ -32,9 +32,9 @@ class CloudFrame
 
         void genRangeImages(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in, bool cur_next);
 
-        void calcuateRho(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in);
+        void calcuateRho(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in, bool cur_next);
 
-        void makeRangeImageAndPtsPerPixel();
+        void makeRangeImageAndPtsPerPixel(bool cur_next);
         
         void interpRangeImage(bool cur_next);
 
