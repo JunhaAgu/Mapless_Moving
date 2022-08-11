@@ -46,6 +46,12 @@ struct ObjectParam
     float coef_accum_w_[2];
 };
 
+struct SegmentParam
+{
+    float weight_factor_;
+    float seg_deg_;
+};
+
 class UserParam
 {
     friend class MaplessDynamic;
@@ -61,6 +67,7 @@ class UserParam
         GroundSegmentParam ground_segment_param_;
         ImageParam image_param_;
         ObjectParam object_param_;
+        SegmentParam segment_param_;
 
     public:
         UserParam();

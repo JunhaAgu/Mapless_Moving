@@ -40,6 +40,9 @@ void UserParam::getUserSettingParameters()
     object_param_.beta_ = 0.1;
     object_param_.coef_accum_w_[0] = 0.5;
     object_param_.coef_accum_w_[1] = 0.9;
+    
+    segment_param_.weight_factor_ = 0.95;
+    segment_param_.seg_deg_ = 10; //degree
 };
 
 void UserParam::calVangle(std::string& data_type)

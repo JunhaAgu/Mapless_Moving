@@ -11,6 +11,13 @@ ObjectExt::ObjectExt(const std::unique_ptr<UserParam>& user_param)
     coef_accum_w_[0] = user_param->object_param_.coef_accum_w_[0];
     coef_accum_w_[1] = user_param->object_param_.coef_accum_w_[1];
 
+    weight_factor_ = user_param->segment_param_.weight_factor_;
+    seg_deg_ = user_param->segment_param_.seg_deg_;
+
+    idx_row_.reserve(500000);
+    idx_col_.reserve(500000);
+    check_.reserve(500000);
+
     object_row_.reserve(500000);
     object_col_.reserve(500000);
     object_rho_roi_.reserve(500000);
@@ -20,8 +27,8 @@ ObjectExt::ObjectExt(const std::unique_ptr<UserParam>& user_param)
     disconti_row_.reserve(500000);
     disconti_col_.reserve(500000);
 
-    diff_object_area_bw_disconti_row_.reserve(500000);
-    diff_object_area_bw_disconti_col_.reserve(500000);
+    diff_object_area_conti_row_.reserve(500000);
+    diff_object_area_conti_col_.reserve(500000);
 
     diff_z_.reserve(500000);
 };
@@ -78,17 +85,18 @@ void ObjectExt::filterOutAccumdR(std::unique_ptr<CloudFrame>& CloudFrame_next, s
 
 void ObjectExt::extractObjectCandidate(cv::Mat& accumulated_dRdt, std::unique_ptr<CloudFrame>& CloudFrame_next)
 {
-    
     int n_col = accumulated_dRdt.cols;
     int n_row = accumulated_dRdt.rows;
+
     cv::Mat object_mask = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
     uchar* ptr_object_mask = object_mask.ptr<uchar>(0);
+    
     float* ptr_accumulated_dRdt = accumulated_dRdt.ptr<float>(0);
-    int cnt = 0;
-    float* ptr_next_img_z = CloudFrame_next->str_rhopts_->img_z.ptr<float>(0);
-    float* ptr_next_img_rho = CloudFrame_next->str_rhopts_->img_rho.ptr<float>(0);
+    float* ptr_img_z    = CloudFrame_next->str_rhopts_->img_z.ptr<float>(0);
+    float* ptr_img_rho  = CloudFrame_next->str_rhopts_->img_rho.ptr<float>(0);
 
     cv::Mat object_label = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+    int *ptr_object_label = object_label.ptr<int>(0);
 
     for (int i=0; i<n_row; ++i)
     {
@@ -98,13 +106,13 @@ void ObjectExt::extractObjectCandidate(cv::Mat& accumulated_dRdt, std::unique_pt
             if (*(ptr_accumulated_dRdt + i_ncols + j) > 0)
             {
                 *(ptr_object_mask + i_ncols + j) = 255;
-                cnt += 1;
             }
         }
     }
+
+    // Label objects in 2D image
     cv::Mat stats, centroids;
     int n_label = cv::connectedComponentsWithStats(object_mask, object_label, stats, centroids, 8);
-    int* ptr_object_label = object_label.ptr<int>(0);
 
     if (n_label == 0)
     {
@@ -124,28 +132,28 @@ void ObjectExt::extractObjectCandidate(cv::Mat& accumulated_dRdt, std::unique_pt
         max_his_object_rho_roi_.resize(0);
         disconti_row_.resize(0);
         disconti_col_.resize(0);
-        diff_object_area_bw_disconti_row_.resize(0);
-        diff_object_area_bw_disconti_col_.resize(0);
+        diff_object_area_conti_row_.resize(0);
+        diff_object_area_conti_col_.resize(0);
         diff_z_.resize(0);
         cv::Mat object_rho_mat = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
         float *ptr_object_rho_mat = object_rho_mat.ptr<float>(0);
 
-		int left = stats.at<int>(object_idx, cv::CC_STAT_LEFT);
-        int top = stats.at<int>(object_idx, cv::CC_STAT_TOP);
-        int width = stats.at<int>(object_idx, cv::CC_STAT_WIDTH);
-        int height = stats.at<int>(object_idx, cv::CC_STAT_HEIGHT);
+		int obj_left    = stats.at<int>(object_idx, cv::CC_STAT_LEFT);
+        int obj_top     = stats.at<int>(object_idx, cv::CC_STAT_TOP);
+        int obj_width   = stats.at<int>(object_idx, cv::CC_STAT_WIDTH);
+        int obj_height  = stats.at<int>(object_idx, cv::CC_STAT_HEIGHT);
 
-        for (int i = top; i < top+height; ++i)
+        for (int i = obj_top; i < obj_top + obj_height; ++i)
         {
             int i_ncols = i * n_col;
-            for (int j = left; j < left+width; ++j)
+            for (int j = obj_left; j < obj_left + obj_width; ++j)
             {
                 if (*(ptr_object_label + i_ncols + j) == object_idx)
                 {
                     object_row_.push_back(i);
                     object_col_.push_back(j);
-                    object_rho_roi_.push_back(*(ptr_next_img_rho + i_ncols + j));
-                    *(ptr_object_rho_mat + i_ncols + j) = *(ptr_next_img_rho + i_ncols + j);
+                    object_rho_roi_.push_back(*(ptr_img_rho + i_ncols + j));
+                    *(ptr_object_rho_mat + i_ncols + j) = *(ptr_img_rho + i_ncols + j); //for calcHist
                 }
             }
         }
@@ -160,9 +168,6 @@ void ObjectExt::extractObjectCandidate(cv::Mat& accumulated_dRdt, std::unique_pt
         }
         else
         {   
-            
-
-            // std::cout << object_row_.size() <<std::endl;
             float his_range_max = *max_element(object_rho_roi_.begin(), object_rho_roi_.end());
             float his_range_min = *min_element(object_rho_roi_.begin(), object_rho_roi_.end());
             float his_range[] = {his_range_min, his_range_max};
@@ -189,29 +194,29 @@ void ObjectExt::extractObjectCandidate(cv::Mat& accumulated_dRdt, std::unique_pt
             float bin_range_max = his_range_min + (float)(max_idx+1)*his_interval;
             float range_min = 0.0;
             float range_max = 0.0;
-            float max_his_average = 0.0;
+            // float max_his_average = 0.0;
 
-            for (int p = 0; p<object_rho_roi_.size(); ++p)
-            {
-                if (object_rho_roi_[p]>bin_range_min && object_rho_roi_[p]<bin_range_max)
-                {
-                    max_his_object_rho_roi_.push_back(object_rho_roi_[p]);
-                }
-            }
-            for (int i=0; i<max_his_object_rho_roi_.size(); ++i)
-            {
-                max_his_average += max_his_object_rho_roi_[i];
-            }
-            max_his_average = max_his_average/(float)max_his_object_rho_roi_.size();
+            // for (int p = 0; p<object_rho_roi_.size(); ++p)
+            // {
+            //     if (object_rho_roi_[p]>bin_range_min && object_rho_roi_[p]<bin_range_max)
+            //     {
+            //         max_his_object_rho_roi_.push_back(object_rho_roi_[p]);
+            //     }
+            // }
+            // for (int i=0; i<max_his_object_rho_roi_.size(); ++i)
+            // {
+            //     max_his_average += max_his_object_rho_roi_[i];
+            // }
+            // max_his_average = max_his_average/(float)max_his_object_rho_roi_.size();
 
-            if ((max_his_average - 1.0) < 0.0)
+            if ((bin_range_min - 1.0) < 0.0)
             {
-                range_min = max_his_average;
+                range_min = bin_range_min;
             }
             else{
-                range_min = max_his_average - 0.8;
+                range_min = bin_range_min - 0.8;
             }
-            range_max = max_his_average + 1.0;
+            range_max = bin_range_max + 1.0;
 
             for (int i = 0; i < object_row_.size(); ++i)
             {
@@ -222,8 +227,8 @@ void ObjectExt::extractObjectCandidate(cv::Mat& accumulated_dRdt, std::unique_pt
                 }
                 else
                 {
-                    diff_object_area_bw_disconti_row_.push_back(object_row_[i]);
-                    diff_object_area_bw_disconti_col_.push_back(object_col_[i]);
+                    diff_object_area_conti_row_.push_back(object_row_[i]);
+                    diff_object_area_conti_col_.push_back(object_col_[i]);
                 }
             }
             if((object_row_.size()-disconti_row_.size()) < thr_object_ )
@@ -242,11 +247,11 @@ void ObjectExt::extractObjectCandidate(cv::Mat& accumulated_dRdt, std::unique_pt
                 }
             }
 
-            for(int i=0; i<diff_object_area_bw_disconti_row_.size(); ++i)
+            for(int i=0; i<diff_object_area_conti_row_.size(); ++i)
             {
-                if (*(ptr_next_img_z+diff_object_area_bw_disconti_row_[i]*n_col+diff_object_area_bw_disconti_col_[i])!=0)
+                if (*(ptr_img_z+diff_object_area_conti_row_[i]*n_col+diff_object_area_conti_col_[i])!=0)
                 {
-                    diff_z_.push_back(*(ptr_next_img_z + diff_object_area_bw_disconti_row_[i] * n_col + diff_object_area_bw_disconti_col_[i]));
+                    diff_z_.push_back(*(ptr_img_z + diff_object_area_conti_row_[i] * n_col + diff_object_area_conti_col_[i]));
                 }
             }
 
@@ -262,27 +267,20 @@ void ObjectExt::extractObjectCandidate(cv::Mat& accumulated_dRdt, std::unique_pt
             {
                 std_diff_z += (diff_z_[i]-mean_diff_z) * (diff_z_[i]-mean_diff_z);
             }
-            std_diff_z = (1.0/((float)diff_z_.size()-1.0)*std_diff_z);
-            if (std_diff_z < 0.07*0.07)
+            std_diff_z = sqrt(1.0/((float)diff_z_.size()-1.0)*std_diff_z);
+            if (std_diff_z < 0.07)
             {
                 for (int i = 0; i < object_row_.size(); ++i)
                 {
                     *(ptr_accumulated_dRdt + object_row_[i] * n_col + object_col_[i]) = 0;
                 }
-                // for (int i = 0; i < diff_object_area_bw_disconti_row_.size(); ++i)
-                // {
-                //     *(ptr_accumulated_dRdt + diff_object_area_bw_disconti_row_[i] * n_col + diff_object_area_bw_disconti_col_[i]) = 0;
-                // }
             }
-
             // std::cout<<"   ====================    " <<std::endl;
             // std::cout<<histogram_<<std::endl;
             // std::cout<<max_idx<<std::endl;
             // std::cout<<bin_range_min<<" " << bin_range_max << std::endl;
             // std::cout<<max_his_average<< std::endl;
             // std::cout<<(float)max_his_object_rho_roi_.size() << std::endl;
-
-
         }
                     // cv::imshow("accumulated_dRdt", accumulated_dRdt);
             // cv::waitKey(0);
@@ -291,34 +289,16 @@ void ObjectExt::extractObjectCandidate(cv::Mat& accumulated_dRdt, std::unique_pt
     // cv::imshow("accumulated_dRdt", accumulated_dRdt);
     // cv::waitKey(0);
     // exit(0);
-
-
 }
 
 void ObjectExt::checkSegment(cv::Mat& accumulated_dRdt, std::unique_ptr<CloudFrame>& CloudFrame_next, cv::Mat& groundPtsIdx_next)
 {
-    float weight_factor = 0.95;
     int n_col = CloudFrame_next->str_rhopts_->img_rho.cols;
     int n_row = CloudFrame_next->str_rhopts_->img_rho.rows;
-    std::vector<int> idx_row;
-    std::vector<int> idx_col;
-    std::vector<int> check;
-    idx_row.reserve(100000);
-    idx_col.reserve(100000);
-    check.reserve(100000);
     float* ptr_accumulated_dRdt = accumulated_dRdt.ptr<float>(0);
     float* ptr_img_rho = CloudFrame_next->str_rhopts_->img_rho.ptr<float>(0);
     uchar* ptr_groundPtsIdx_next = groundPtsIdx_next.ptr<uchar>(0);
     bool isempty = true;
-
-    float phi = (float)360.0/(float)n_col;
-    int cnt = 0;
-    int row = 0;
-    int col = 0;
-    float R = 0.0;
-
-    float d1 = 0.0;
-    float d2 = 0.0;
 
     cv::Mat roi_up = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
     uchar* ptr_roi_up = roi_up.ptr<uchar>(0);
@@ -330,11 +310,9 @@ void ObjectExt::checkSegment(cv::Mat& accumulated_dRdt, std::unique_ptr<CloudFra
         {
             if (*(ptr_accumulated_dRdt + i_ncols + j) != 0)
             {
-                // std::cout << accumulated_dRdt.at<float>(i,j) << std::endl;
-                // std::cout<<i<<" " <<j<<std::endl;
-                idx_row.push_back(i);
-                idx_col.push_back(j);
-                check.push_back(0);
+                idx_row_.push_back(i);
+                idx_col_.push_back(j);
+                check_.push_back(0);
                 isempty = false;
                 *(ptr_roi_up + i_ncols + j) = 1;
             }
@@ -346,12 +324,21 @@ void ObjectExt::checkSegment(cv::Mat& accumulated_dRdt, std::unique_ptr<CloudFra
         return;
     }
 
+    float azimuth_res = (float)360.0/(float)n_col;
+    int cnt = 0;
+    int row = 0;
+    int col = 0;
+    float R = 0.0;
+
+    float d1 = 0.0;
+    float d2 = 0.0;
+
     while(1)
     {
-        if(check[cnt]==0)
+        if(check_[cnt]==0)
         {
-            row = idx_row[cnt];
-            col = idx_col[cnt];
+            row = idx_row_[cnt];
+            col = idx_col_[cnt];
             R = *(ptr_img_rho + row * n_col + col);
             int i = 0;
             int j = 0;
@@ -359,36 +346,31 @@ void ObjectExt::checkSegment(cv::Mat& accumulated_dRdt, std::unique_ptr<CloudFra
             int jj = 0;
             for (int idx_cw = 1; idx_cw < 5; ++idx_cw)
             {
-                if (idx_cw == 1)
+                switch (idx_cw)
                 {
+                case 1:
                     i = row - 1;
                     j = col;
-                }
-                else if (idx_cw == 2)
-                {
+                    break;
+                case 2:
                     i = row;
                     j = col + 1;
-                }
-                else if (idx_cw == 3)
-                {
+                    break;
+                case 3:
                     i = row + 1;
                     j = col;
-                }
-                else if (idx_cw == 4)
-                {
+                    break;
+                case 4:
                     i = row;
                     j = col - 1;
+                    break;
                 }
 
-                if ( (i<0) || (i> n_row-1))
+                if ( (i<0) || (i> n_row-1) || (j<0) || (j> n_col-1))
                 {
                     continue;
                 }
 
-                if ( (j<0) || (j> n_col-1))
-                {
-                    continue;
-                }
                 int i_ncols_j = i * n_col + j;
                 if ((*(ptr_roi_up + i_ncols_j) == 0) && (*(ptr_img_rho + i_ncols_j) > 0))
                 {
@@ -399,13 +381,13 @@ void ObjectExt::checkSegment(cv::Mat& accumulated_dRdt, std::unique_ptr<CloudFra
 
                     d1 = std::max(R, *(ptr_img_rho + i_ncols_j));
                     d2 = std::min(R, *(ptr_img_rho + i_ncols_j));
-                    if (atan2f(d2 * sinf(phi * D2R), (d1 - d2 * cosf(phi * D2R))) > 10.0 * D2R)
+                    if (atan2(d2 * sinf(azimuth_res * D2R), (d1 - d2 * cosf(azimuth_res * D2R))) > seg_deg_ * D2R)
                     {
-                        idx_row.push_back(i);
-                        idx_col.push_back(j);
-                        check.push_back(0);
+                        idx_row_.push_back(i);
+                        idx_col_.push_back(j);
+                        check_.push_back(0);
                         *(ptr_roi_up + i_ncols_j) = 1;
-                        *(ptr_accumulated_dRdt + i_ncols_j) = weight_factor * *(ptr_accumulated_dRdt + row * n_col + col);
+                        *(ptr_accumulated_dRdt + i_ncols_j) = weight_factor_ * *(ptr_accumulated_dRdt + row * n_col + col);
                     }
                 }
                 else if ((*(ptr_roi_up + i_ncols_j) == 0) && (*(ptr_img_rho + i_ncols_j) == 0))
@@ -415,34 +397,31 @@ void ObjectExt::checkSegment(cv::Mat& accumulated_dRdt, std::unique_ptr<CloudFra
                         continue;
                     }
 
-                    if (idx_cw == 1)
+                    switch (idx_cw)
                     {
+                    case 1:
                         ii = row - 2;
                         jj = col;
-                    }
-                    else if (idx_cw == 2)
-                    {
+                        break;
+                    case 2:
                         ii = row;
                         jj = col + 2;
-                    }
-                    else if (idx_cw == 3)
-                    {
+                        break;
+                    case 3:
                         ii = row + 2;
                         jj = col;
-                    }
-                    else if (idx_cw == 4)
-                    {
+                        break;
+                    case 4:
                         ii = row;
                         jj = col - 2;
+                        break;
                     }
-                    if ((ii < 0) || (ii > n_row-1))
+
+                    if ((ii < 0) || (ii > n_row-1) || (jj < 0) || (jj > n_col-1))
                     {
                         continue;
                     }
-                    if ((jj < 0) || (jj > n_col-1))
-                    {
-                        continue;
-                    }
+
                     int ii_ncols_jj = ii * n_col + jj;
                     if (*(ptr_groundPtsIdx_next + ii_ncols_jj) == 255)
                     {
@@ -455,31 +434,31 @@ void ObjectExt::checkSegment(cv::Mat& accumulated_dRdt, std::unique_ptr<CloudFra
                         d1 = std::max(R, *(ptr_img_rho + ii_ncols_jj));
                         d2 = std::min(R, *(ptr_img_rho + ii_ncols_jj));
 
-                        if (atan2f(d2 * sinf(2.0 * phi * D2R), (d1 - d2 * cosf(2.0 * phi * D2R))) > 10.0 * D2R)
+                        if (atan2f(d2 * sinf(2.0 * azimuth_res * D2R), (d1 - d2 * cosf(2.0 * azimuth_res * D2R))) > seg_deg_ * D2R)
                         {
-                            idx_row.push_back(ii);
-                            idx_col.push_back(jj);
+                            idx_row_.push_back(ii);
+                            idx_col_.push_back(jj);
 
-                            check.push_back(0);
+                            check_.push_back(0);
                             *(ptr_roi_up + ii_ncols_jj) = 1;
-                            *(ptr_accumulated_dRdt + ii_ncols_jj) = weight_factor * (*(ptr_accumulated_dRdt + row * n_col + col));
-                            if (idx_cw == 1)
+                            *(ptr_accumulated_dRdt + ii_ncols_jj) = weight_factor_ * (*(ptr_accumulated_dRdt + row * n_col + col));
+                            switch (idx_cw)
                             {
-                                *(ptr_accumulated_dRdt + (ii + 1) * n_col + jj) = weight_factor * (*(ptr_accumulated_dRdt + row * n_col + col));
+                            case 1:
+                                *(ptr_accumulated_dRdt + (ii + 1) * n_col + jj) = weight_factor_ * (*(ptr_accumulated_dRdt + row * n_col + col));
+                                break;
+                            case 2:
+                                *(ptr_accumulated_dRdt + ii * n_col + (jj - 1)) = weight_factor_ * (*(ptr_accumulated_dRdt + row * n_col + col));
+                                break;
+                            case 3:
+                                *(ptr_accumulated_dRdt + (ii - 1) * n_col + jj) = weight_factor_ * (*(ptr_accumulated_dRdt + row * n_col + col));
+                                break;
+                            case 4:
+                                *(ptr_accumulated_dRdt + ii * n_col + (jj + 1)) = weight_factor_ * (*(ptr_accumulated_dRdt + row * n_col + col));
+                                break;
+                            default:
+                                break;
                             }
-                            else if (idx_cw == 2)
-                            {
-                                *(ptr_accumulated_dRdt + ii * n_col + (jj - 1)) = weight_factor * (*(ptr_accumulated_dRdt + row * n_col + col));
-                            }
-                            else if (idx_cw == 3)
-                            {
-                                *(ptr_accumulated_dRdt + (ii - 1) * n_col + jj) = weight_factor * (*(ptr_accumulated_dRdt + row * n_col + col));
-                            }
-                            else if (idx_cw == 4)
-                            {
-                                *(ptr_accumulated_dRdt + ii * n_col + (jj + 1)) = weight_factor * (*(ptr_accumulated_dRdt + row * n_col + col));
-                            }
-                            else{}
                         }
                     }
                 }
@@ -491,16 +470,15 @@ void ObjectExt::checkSegment(cv::Mat& accumulated_dRdt, std::unique_ptr<CloudFra
             }
             else{}
 
-            check[cnt] = 1;
-        }
+            check_[cnt] = 1;
+        } // end for if(check_[cnt]==0)
 
         cnt += 1;
-        if (cnt == check.size())
+        if (cnt == check_.size())
         {
             break;
         }
-            // std::cout << "checkSegment cnt: "<< cnt << std::endl;
-    }
+    } // end for while
 
     // cv::imshow("accumulated_dRdt", accumulated_dRdt);
     // cv::waitKey(0);

@@ -409,11 +409,6 @@ void MaplessDynamic::solve(
     timer::tic();
     // filter out outliers
     ObjectExt_->filterOutAccumdR(CloudFrame_next_, CloudFrame_cur_warped_, accumulated_dRdt_, accumulated_dRdt_score_, dRdt_);
-    if (cnt_data==2)
-    {
-        countZerofloat(accumulated_dRdt_);
-        exit(0);
-    }
     double dt_toc5 = timer::toc(); // milliseconds
     ROS_INFO_STREAM("elapsed time for 'filterOutAccumdR' :" << dt_toc5 << " [ms]");
 
@@ -431,8 +426,6 @@ void MaplessDynamic::solve(
     ObjectExt_->extractObjectCandidate(accumulated_dRdt_, CloudFrame_next_);
     double dt_toc6 = timer::toc(); // milliseconds
     ROS_INFO_STREAM("elapsed time for 'extractObjectCandidate' :" <<  dt_toc6 << " [ms]");
-
-
 
     //// update object_mask
     //object_mask = accumulated_dRdt>0;
@@ -818,7 +811,11 @@ void MaplessDynamic::copyStruct(pcl::PointCloud<pcl::PointXYZ>::Ptr p1 ,pcl::Poi
     }
   
     SegmentGround_->groundPtsIdx_next_ = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
-
+    
+    ObjectExt_->idx_col_.resize(0);
+    ObjectExt_->idx_row_.resize(0);
+    ObjectExt_->check_.resize(0);
+    
     dRCalc_->velo_cur_->resize(0);
     dRCalc_->cur_pts_warped_->resize(0);
     

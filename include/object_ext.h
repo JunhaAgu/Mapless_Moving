@@ -20,7 +20,14 @@ private:
     float alpha_;
     float beta_;
     float coef_accum_w_[2];
+
+    float weight_factor_;
+    float seg_deg_;
 public:
+
+    std::vector<int> idx_row_;
+    std::vector<int> idx_col_;
+    std::vector<int> check_;
 
     std::vector<int> object_row_;
     std::vector<int> object_col_;
@@ -31,8 +38,8 @@ public:
     std::vector<int> disconti_row_;
     std::vector<int> disconti_col_;
 
-    std::vector<int> diff_object_area_bw_disconti_row_;
-    std::vector<int> diff_object_area_bw_disconti_col_;
+    std::vector<int> diff_object_area_conti_row_;
+    std::vector<int> diff_object_area_conti_col_;
 
     std::vector<float> diff_z_;
 
