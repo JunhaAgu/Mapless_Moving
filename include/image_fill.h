@@ -22,9 +22,12 @@ class ImageFill
 private:
     int img_height_;
     int img_width_;
-    int object_threshold_;
+    int thr_object_;
 
 public:
+    std::vector<int> row_;
+    std::vector<int> col_;
+
     std::vector<int> object_row_;
     std::vector<int> object_col_;
     std::vector<float> object_rho_roi_;
@@ -33,9 +36,9 @@ public:
     std::vector<int> filled_object_col_;
     std::vector<float> filled_object_rho_roi_;
 
-    std::vector<int> rho_zero_filled_value_row_;
-    std::vector<int> rho_zero_filled_value_col_;
-    std::vector<float> rho_zero_filled_value_rho_roi_;
+    std::vector<int> rho_zero_filled_row_;
+    std::vector<int> rho_zero_filled_col_;
+    std::vector<float> rho_zero_filled_rho_roi_;
 
     std::vector<float> max_his_filled_object_rho_roi_;
 

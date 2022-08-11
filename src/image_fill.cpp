@@ -4,7 +4,10 @@ ImageFill::ImageFill(const std::unique_ptr<UserParam>& user_param)
 {
     img_height_ = user_param->image_param_.height_;
     img_width_ = user_param->image_param_.width_;
-    object_threshold_ = user_param->object_param_.thr_object_;
+    thr_object_ = user_param->object_param_.thr_object_;
+
+    row_.reserve(100000);
+    col_.reserve(100000);
 
     object_row_.reserve(1000000);
     object_col_.reserve(1000000);
@@ -14,9 +17,9 @@ ImageFill::ImageFill(const std::unique_ptr<UserParam>& user_param)
     filled_object_col_.reserve(1000000);
     filled_object_rho_roi_.reserve(1000000);
 
-    rho_zero_filled_value_row_.reserve(1000000);
-    rho_zero_filled_value_col_.reserve(1000000);
-    rho_zero_filled_value_rho_roi_.reserve(1000000);
+    rho_zero_filled_row_.reserve(1000000);
+    rho_zero_filled_col_.reserve(1000000);
+    rho_zero_filled_rho_roi_.reserve(1000000);
 
     max_his_filled_object_rho_roi_.reserve(1000000);
 
@@ -51,21 +54,15 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
             {
                 *(ptr_dRdt_bin + i_ncols + j) = 255;
             }
-        }
-    }
+            else{}
 
-    for (int i = 0; i < n_row; ++i)
-    {
-        int i_ncols = i * n_col;
-        for (int j = 0; j < n_col; ++j)
-        {
             if (*(ptr_accumulated_dRdt_score + i_ncols + j) != 0)
             {
                 *(ptr_dRdt_score_bin + i_ncols + j) = 255;
             }
+            else{}
         }
     }
-
 
     // imfill 
     //invert dRdt_bin
@@ -77,6 +74,7 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
     {
         *(ptr_dRdt_bin_inv + n_row_minus1_n_col + j) = 255;
     }
+
     cv::floodFill(dRdt_bin_inv, cv::Point(0,0), cv::Scalar(0));
     cv::Mat dRdt_bin_filled = (dRdt_bin | dRdt_bin_inv);
     interpAndfill_image(accumulated_dRdt, dRdt_bin_filled);
@@ -99,6 +97,9 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
     cv::Mat rho_zero_value = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
     uchar* ptr_rho_zero_value = rho_zero_value.ptr<uchar>(0);
 
+    cv::Mat input_img_mask = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
+    uchar *ptr_input_img_mask = input_img_mask.ptr<uchar>(0);
+
     for (int i=1; i<n_row; ++i)
     {
         int i_ncols = i * n_col;
@@ -108,22 +109,17 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
             {
                 *(ptr_rho_zero_value + i_ncols + j) = 255;
             }
-        }
-    }
 
-    cv::Mat input_img_mask = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
-    uchar* ptr_input_img_mask = input_img_mask.ptr<uchar>(0);
-
-    for (int i=0; i<n_row; ++i)
-    {
-        int i_ncols = i * n_col;
-        for (int j=0; j<n_col; ++j)
-        {
             if (*(ptr_accumulated_dRdt + i_ncols + j) > 0)
             {
                 *(ptr_input_img_mask + i_ncols + j) = 255;
             }
         }
+    }
+
+    for (int j = 0; j < n_col; ++j)
+    {
+        *(ptr_img_rho + j) = 0;
     }
 
     cv::Mat input_img_tmp = accumulated_dRdt.clone();
@@ -137,34 +133,39 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
     int n_label = cv::connectedComponentsWithStats(connect_input, object_label, stats, centroids, 8);
     int* ptr_object_label = object_label.ptr<int>(0);
 
-    int* ptr_object_row = object_row_.data();
-    int* ptr_object_col = object_col_.data();
-    float* ptr_object_rho_roi = object_rho_roi_.data();
+    int* ptr_object_row         = object_row_.data();
+    int* ptr_object_col         = object_col_.data();
+    float* ptr_object_rho_roi   = object_rho_roi_.data();
 
-    cv::Mat zero_candidate = cv::Mat::zeros(img_height_,img_width_, CV_8UC1);
-    uchar *ptr_zero_candidate = zero_candidate.ptr<uchar>(0);
+    cv::Mat zero_candidate      = cv::Mat::zeros(img_height_,img_width_, CV_8UC1);
+    uchar *ptr_zero_candidate   = zero_candidate.ptr<uchar>(0);
 
-    int* ptr_filled_object_row = filled_object_row_.data();
-    int* ptr_filled_object_col = filled_object_col_.data();
-    float* ptr_filled_object_rho_roi = filled_object_rho_roi_.data();
+    int* ptr_filled_object_row          = filled_object_row_.data();
+    int* ptr_filled_object_col          = filled_object_col_.data();
+    float* ptr_filled_object_rho_roi    = filled_object_rho_roi_.data();
 
-    int* ptr_rho_zero_filled_value_row = rho_zero_filled_value_row_.data();
-    int* ptr_rho_zero_filled_value_col = rho_zero_filled_value_col_.data();
-    float* ptr_rho_zero_filled_value_rho_roi = rho_zero_filled_value_rho_roi_.data();
+    int* ptr_rho_zero_filled_row          = rho_zero_filled_row_.data();
+    int* ptr_rho_zero_filled_col          = rho_zero_filled_col_.data();
+    float* ptr_rho_zero_filled_rho_roi    = rho_zero_filled_rho_roi_.data();
 
-    cv::Mat object_area = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
-    uchar *ptr_object_area = object_area.ptr<uchar>(0);
-    cv::Mat object_area_filled = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
-    uchar *ptr_object_area_filled = object_area_filled.ptr<uchar>(0);
-    cv::Mat filled_object_rho_mat = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-    float *ptr_filled_object_rho_mat = filled_object_rho_mat.ptr<float>(0);
+    cv::Mat object_area             = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
+    cv::Mat object_area_filled      = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
+    cv::Mat filled_object_rho_mat   = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
 
-    cv::Mat object_area_inv = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
-    uchar *ptr_object_area_inv = object_area_inv.ptr<uchar>(0);
-    
+    uchar *ptr_object_area              = object_area.ptr<uchar>(0);
+    uchar *ptr_object_area_filled       = object_area_filled.ptr<uchar>(0);
+    float *ptr_filled_object_rho_mat    = filled_object_rho_mat.ptr<float>(0);
+
+    cv::Mat object_area_inv     = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
+    uchar *ptr_object_area_inv  = object_area_inv.ptr<uchar>(0);
+
+    int obj_left = 0;
+    int obj_top = 0;
+    int obj_width = 0;
+    int obj_height = 0;
+
     for (int object_idx = 0; object_idx < n_label; ++object_idx)
     {
-    
         if (object_idx==0) //0: background
         {
             continue;
@@ -177,24 +178,24 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
         filled_object_col_.resize(0);
         filled_object_rho_roi_.resize(0);
         max_his_filled_object_rho_roi_.resize(0);
-        rho_zero_filled_value_row_.resize(0);
-        rho_zero_filled_value_col_.resize(0);
-        rho_zero_filled_value_rho_roi_.resize(0);
+        rho_zero_filled_row_.resize(0);
+        rho_zero_filled_col_.resize(0);
+        rho_zero_filled_rho_roi_.resize(0);
         disconti_row_.resize(0);
         disconti_col_.resize(0);
         object_area             = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
         object_area_filled      = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
         filled_object_rho_mat   = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
 
-        int left = stats.at<int>(object_idx, cv::CC_STAT_LEFT);
-        int top = stats.at<int>(object_idx, cv::CC_STAT_TOP);
-        int width = stats.at<int>(object_idx, cv::CC_STAT_WIDTH);
-        int height = stats.at<int>(object_idx, cv::CC_STAT_HEIGHT);
+        obj_left = stats.at<int>(object_idx, cv::CC_STAT_LEFT);
+        obj_top = stats.at<int>(object_idx, cv::CC_STAT_TOP);
+        obj_width = stats.at<int>(object_idx, cv::CC_STAT_WIDTH);
+        obj_height = stats.at<int>(object_idx, cv::CC_STAT_HEIGHT);
 
-        for (int i = top; i < top+height; ++i)
+        for (int i = obj_top; i < obj_top + obj_height; ++i)
         {
             int i_ncols = i * n_col;
-            for (int j = left; j < left+width; ++j)
+            for (int j = obj_left; j < obj_left + obj_width; ++j)
             {
                 if (*(ptr_object_label + i_ncols + j) == object_idx)
                 {
@@ -206,12 +207,13 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
             }
         }
 
-        if (object_row_.size() < object_threshold_)
+        if (object_row_.size() < thr_object_)
         {
             for (int i = 0; i < object_row_.size(); ++i)
             {
-                *(ptr_rho_zero_value + ptr_object_row[i] * n_col + ptr_object_col[i]) = 0;
-                *(ptr_accumulated_dRdt + ptr_object_row[i] * n_col + ptr_object_col[i]) = 0.0;
+                *(ptr_rho_zero_value + ptr_object_row[i] * n_col + ptr_object_col[i])           = 0;
+                *(ptr_accumulated_dRdt + ptr_object_row[i] * n_col + ptr_object_col[i])         = 0.0;
+                *(ptr_accumulated_dRdt_score + ptr_object_row[i] * n_col + ptr_object_col[i])   = 0.0;
             }
             continue;
         }
@@ -225,12 +227,12 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
 
             for (int j = 0; j < n_col; ++j)
             {
-                *(ptr_object_area_inv + (img_height_-1) * n_col + j) = 255;
+                *(ptr_object_area_inv + (n_row-1) * n_col + j) = 255;
             }
             cv::floodFill(object_area_inv, cv::Point(0, 0), cv::Scalar(0));
             object_area_filled = (object_area | object_area_inv);
 
-            for (int i=0; i<n_row; ++i)
+            for (int i = 0; i < n_row; ++i)
             {
                 int i_ncols = i * n_col;
                 for (int j = 0; j < n_col; ++j)
@@ -254,6 +256,7 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
                         if (*(ptr_object_area_filled + i_ncols + j) != 0 && *(ptr_input_img_mask + i_ncols + j) == 0)
                         {
                             *(ptr_accumulated_dRdt + i_ncols + j) = connect_zero_mean;
+                            *(ptr_accumulated_dRdt_score + i_ncols + j) = 1;
                         }
                     }
                 }
@@ -318,28 +321,28 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
             float range_min = 0.0;
             float range_max = 0.0;
 
-            for (int p = 0; p<filled_object_rho_roi_.size(); ++p)
-            {
-                if (ptr_filled_object_rho_roi[p]>bin_range_min && ptr_filled_object_rho_roi[p]<bin_range_max)
-                {
-                    max_his_filled_object_rho_roi_.push_back(ptr_filled_object_rho_roi[p]);
-                }
-            }
-            float max_his_average = 0.0;
-            for (int i=0; i<max_his_filled_object_rho_roi_.size(); ++i)
-            {
-                max_his_average += max_his_filled_object_rho_roi_[i];
-            }
-            max_his_average = max_his_average/(float)max_his_filled_object_rho_roi_.size();
+            // for (int p = 0; p<filled_object_rho_roi_.size(); ++p)
+            // {
+            //     if (ptr_filled_object_rho_roi[p]>bin_range_min && ptr_filled_object_rho_roi[p]<bin_range_max)
+            //     {
+            //         max_his_filled_object_rho_roi_.push_back(ptr_filled_object_rho_roi[p]);
+            //     }
+            // }
+            // float max_his_average = 0.0;
+            // for (int i=0; i<max_his_filled_object_rho_roi_.size(); ++i)
+            // {
+            //     max_his_average += max_his_filled_object_rho_roi_[i];
+            // }
+            // max_his_average = max_his_average/(float)max_his_filled_object_rho_roi_.size();
 
-            if ((max_his_average - 10.0) < 0.0)
+            if ((bin_range_min - 10.0) < 0.0)
             {
                 range_min = 0.0;
             }
             else{
-                range_min = max_his_average - 10.0;
+                range_min = bin_range_min - 10.0;
             }
-            range_max = max_his_average + 10.0;
+            range_max = bin_range_max + 10.0;
 
             //
             for (int i = 0; i < n_row; ++i)
@@ -347,32 +350,32 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
                 int i_ncols = i * n_col;
                 for (int j = 0; j < n_col; ++j)
                 {
-                    if (*(ptr_object_area_filled + i_ncols + j) != 0 && *(ptr_img_rho + i_ncols + j) != 0)
+                    if (*(ptr_object_area_filled + i_ncols + j) != 0)
                     {
-                        rho_zero_filled_value_row_.push_back(i);
-                        rho_zero_filled_value_col_.push_back(j);
-                        rho_zero_filled_value_rho_roi_.push_back(*(ptr_img_rho + i_ncols + j));
+                        rho_zero_filled_row_.push_back(i);
+                        rho_zero_filled_col_.push_back(j);
+                        rho_zero_filled_rho_roi_.push_back(*(ptr_img_rho + i_ncols + j));
                     }
                 }
             }
 
-            for (int i = 0; i < rho_zero_filled_value_row_.size(); ++i)
+            for (int i = 0; i < rho_zero_filled_row_.size(); ++i)
             {
-                if ((ptr_rho_zero_filled_value_rho_roi[i] < range_min) || (ptr_rho_zero_filled_value_rho_roi[i] > range_max))
+                if ((ptr_rho_zero_filled_rho_roi[i] < range_min) || (ptr_rho_zero_filled_rho_roi[i] > range_max))
                 {
-                    if (*(ptr_object_area_filled + ptr_rho_zero_filled_value_row[i] * n_col + ptr_rho_zero_filled_value_col[i]) != 0)
+                    if (*(ptr_object_area_filled + ptr_rho_zero_filled_row[i] * n_col + ptr_rho_zero_filled_col[i]) != 0)
                     {
-                        disconti_row_.push_back(ptr_rho_zero_filled_value_row[i]);
-                        disconti_col_.push_back(ptr_rho_zero_filled_value_col[i]);
+                        disconti_row_.push_back(ptr_rho_zero_filled_row[i]);
+                        disconti_col_.push_back(ptr_rho_zero_filled_col[i]);
                     }
                 }
             }
 
             for (int i = 0; i < disconti_row_.size(); ++i)
             {
-                *(ptr_accumulated_dRdt + disconti_row_[i] * n_col + disconti_col_[i]) = 0;
+                *(ptr_accumulated_dRdt + disconti_row_[i] * n_col + disconti_col_[i])       = 0.0;
+                *(ptr_accumulated_dRdt_score + disconti_row_[i] * n_col + disconti_col_[i]) = 0.0;
             }
-
         }
     } // end for object_idx
 }
@@ -381,10 +384,6 @@ void ImageFill::interpAndfill_image(cv::Mat& input_img, cv::Mat& filled_bin)
 {
     int n_col = input_img.cols;
     int n_row = input_img.rows;
-    std::vector<int> row;
-    std::vector<int> col;
-    row.reserve(100000);
-    col.reserve(100000);
 
     float* ptr_input_img = input_img.ptr<float>(0);
     uchar* ptr_filled_bin = filled_bin.ptr<uchar>(0);
@@ -404,7 +403,10 @@ void ImageFill::interpAndfill_image(cv::Mat& input_img, cv::Mat& filled_bin)
 
     std::vector<float> four_dir(4);
 
-    float min = 0.0 ;
+    float min_4_dir = 0.0 ;
+
+    row_.resize(0);
+    col_.resize(0);
 
     for (int i=0; i<n_row; ++i)
     {
@@ -413,21 +415,21 @@ void ImageFill::interpAndfill_image(cv::Mat& input_img, cv::Mat& filled_bin)
         {
             if ((*(ptr_input_img + i_ncols + j) == 0) && (*(ptr_filled_bin + i_ncols + j) > 0))
             {
-                row.push_back(i);
-                col.push_back(j);
+                row_.push_back(i);
+                col_.push_back(j);
             }
         }
     }
 
-    if (row.size()==0)
+    if (row_.size()==0)
     {
         return;
     }
 
-    for (int k=0; k<row.size(); ++k)
+    for (int k=0; k<row_.size(); ++k)
     {
-        int i = row[k];
-        int j = col[k];
+        int i = row_[k];
+        int j = col_[k];
 
         left_dir = 0.0;
         right_dir = 0.0;
@@ -438,6 +440,7 @@ void ImageFill::interpAndfill_image(cv::Mat& input_img, cv::Mat& filled_bin)
         cnt_right = 1;
         cnt_up = 1;
         cnt_down = 1;
+        
         // left
         while (left_dir == 0.0)
         {
@@ -478,12 +481,13 @@ void ImageFill::interpAndfill_image(cv::Mat& input_img, cv::Mat& filled_bin)
             down_dir = *(ptr_input_img + (i + cnt_down) * n_col + j);
             cnt_down += 1;
         } // end while
+
         four_dir[0] = (left_dir);
         four_dir[1] = (right_dir);
         four_dir[2] = (up_dir);
         four_dir[3] = (down_dir);
-        min = *min_element(four_dir.begin(), four_dir.end());
-        *(ptr_input_img_cp + i * n_col + j) = min;
+        min_4_dir = *min_element(four_dir.begin(), four_dir.end());
+        *(ptr_input_img_cp + i * n_col + j) = min_4_dir;
     }
     input_img_cp.copyTo(input_img);
 }

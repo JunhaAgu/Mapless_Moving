@@ -447,8 +447,6 @@ void MaplessDynamic::solve(
     double dt_toc9 = timer::toc(); // milliseconds
     ROS_INFO_STREAM("elapsed time for 'plugImageZeroHoles' :" <<  dt_toc9 << " [ms]");
 
-
-
     timer::tic();
     float* ptr_accumulated_dRdt_ = accumulated_dRdt_.ptr<float>(0);
     float* ptr_accumulated_dRdt_score_ = accumulated_dRdt_score_.ptr<float>(0);

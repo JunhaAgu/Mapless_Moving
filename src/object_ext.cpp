@@ -489,8 +489,8 @@ void ObjectExt::updateScore(cv::Mat& accumulated_dRdt, cv::Mat& accumulated_dRdt
 {
     int n_row = accumulated_dRdt.rows;
     int n_col = accumulated_dRdt.cols;
-    float* ptr_accumulated_dRdt = accumulated_dRdt.ptr<float>(0);
-    float* ptr_accumulated_dRdt_score = accumulated_dRdt_score.ptr<float>(0);
+    float* ptr_accumulated_dRdt         = accumulated_dRdt.ptr<float>(0);
+    float* ptr_accumulated_dRdt_score   = accumulated_dRdt_score.ptr<float>(0);
     
     for (int i=0; i<n_row; ++i)
     {
@@ -501,14 +501,7 @@ void ObjectExt::updateScore(cv::Mat& accumulated_dRdt, cv::Mat& accumulated_dRdt
             {
                 *(ptr_accumulated_dRdt_score + i_ncols + j) += 1;
             }
-        }
-    }
 
-    for (int i=0; i<n_row; ++i)
-    {
-        int i_ncols = i * n_col;
-        for (int j=0; j<n_col; ++j)
-        {
             if (*(ptr_accumulated_dRdt_score + i_ncols + j) > 2.0)
             {
                 *(ptr_accumulated_dRdt + i_ncols + j) *= 5.0;
