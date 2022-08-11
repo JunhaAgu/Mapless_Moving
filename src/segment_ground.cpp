@@ -511,3 +511,8 @@ void SegmentGround::ransacLine(std::vector<float>& points_rho, std::vector<float
     }
     // output: mask_inlier
 }
+
+void SegmentGround::reset()
+{
+    this->groundPtsIdx_next_ = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
+}

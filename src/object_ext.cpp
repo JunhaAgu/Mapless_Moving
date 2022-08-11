@@ -22,7 +22,7 @@ ObjectExt::ObjectExt(const std::unique_ptr<UserParam>& user_param)
     object_col_.reserve(500000);
     object_rho_roi_.reserve(500000);
 
-    max_his_object_rho_roi_.reserve(500000);
+    // max_his_object_rho_roi_.reserve(500000);
 
     disconti_row_.reserve(500000);
     disconti_col_.reserve(500000);
@@ -129,7 +129,7 @@ void ObjectExt::extractObjectCandidate(cv::Mat& accumulated_dRdt, std::unique_pt
         object_row_.resize(0);
         object_col_.resize(0);
         object_rho_roi_.resize(0);
-        max_his_object_rho_roi_.resize(0);
+        // max_his_object_rho_roi_.resize(0);
         disconti_row_.resize(0);
         disconti_col_.resize(0);
         diff_object_area_conti_row_.resize(0);
@@ -302,6 +302,10 @@ void ObjectExt::checkSegment(cv::Mat& accumulated_dRdt, std::unique_ptr<CloudFra
 
     cv::Mat roi_up = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
     uchar* ptr_roi_up = roi_up.ptr<uchar>(0);
+
+    idx_row_.resize(0);
+    idx_col_.resize(0);
+    check_.resize(0);
 
     for (int i=0; i<n_row; ++i)
     {
@@ -485,7 +489,7 @@ void ObjectExt::checkSegment(cv::Mat& accumulated_dRdt, std::unique_ptr<CloudFra
     // exit(0);
 }
 
-void ObjectExt::updateScore(cv::Mat& accumulated_dRdt, cv::Mat& accumulated_dRdt_score)
+void ObjectExt::updateAccum(cv::Mat& accumulated_dRdt, cv::Mat& accumulated_dRdt_score)
 {
     int n_row = accumulated_dRdt.rows;
     int n_col = accumulated_dRdt.cols;
@@ -510,6 +514,87 @@ void ObjectExt::updateScore(cv::Mat& accumulated_dRdt, cv::Mat& accumulated_dRdt
                     *(ptr_accumulated_dRdt + i_ncols + j) = 1e3;
                 }
                 else{}
+            }
+            else{}
+        }
+    }
+}
+
+void ObjectExt::updateAccumdRdt(std::unique_ptr<CloudFrame>& CloudFrame_next, cv::Mat &accumulated_dRdt, cv::Mat &accumulated_dRdt_score, cv::Mat& dRdt, cv::Mat& groundPtsIdx_next)
+{
+    int n_row = accumulated_dRdt.rows;
+    int n_col = accumulated_dRdt.cols;
+
+    float *ptr_accumulated_dRdt = accumulated_dRdt.ptr<float>(0);
+    float *ptr_accumulated_dRdt_score = accumulated_dRdt_score.ptr<float>(0);
+    float *ptr_next_img_rho = CloudFrame_next->str_rhopts_->img_rho.ptr<float>(0);
+    float *ptr_dRdt = dRdt.ptr<float>(0);
+
+    for (int i = 0; i < n_row; ++i)
+    {
+        int i_ncols = i * n_col;
+        for (int j = 0; j < n_col; ++j)
+        {
+            if (*(ptr_next_img_rho + i_ncols + j) != 0)
+            {
+            }
+            else
+            {
+                *(ptr_accumulated_dRdt + i_ncols + j) = 0.0;
+            }
+        }
+    }
+
+    bool n_accumulated_dRdt = false;
+
+    for (int i = 0; i < n_row; ++i)
+    {
+        int i_ncols = i * n_col;
+        for (int j = 0; j < n_col; ++j)
+        {
+            if (*(ptr_accumulated_dRdt + i_ncols + j) != 0)
+            {
+                n_accumulated_dRdt = true;
+                break;
+            }
+        }
+    }
+
+    if (n_accumulated_dRdt == false)
+    {
+        for (int i = 0; i < n_row; ++i)
+        {
+            int i_ncols = i * n_col;
+            for (int j = 0; j < n_col; ++j)
+            {
+                if ((*(ptr_dRdt + i_ncols + j) < 0.0) && *(ptr_dRdt + i_ncols + j) > -(0.1 * *(ptr_next_img_rho + i_ncols + j)) && (*(ptr_accumulated_dRdt_score + i_ncols + j) > 1.0))
+                {
+                    *(ptr_accumulated_dRdt + i_ncols + j) = -*(ptr_dRdt + i_ncols + j);
+                }
+                else
+                {}
+            }
+        }
+        this->checkSegment(accumulated_dRdt, CloudFrame_next, groundPtsIdx_next);
+    }
+}
+
+void ObjectExt::updateAccumScore(cv::Mat &accumulated_dRdt, cv::Mat &accumulated_dRdt_score)
+{
+    int n_row = accumulated_dRdt.rows;
+    int n_col = accumulated_dRdt.cols;
+
+    float *ptr_accumulated_dRdt = accumulated_dRdt.ptr<float>(0);
+    float *ptr_accumulated_dRdt_score = accumulated_dRdt_score.ptr<float>(0);
+
+    for(int i=0; i<n_row; ++i)
+    {
+        int i_ncols = i * n_col;
+        for(int j=0; j<n_col; ++j)
+        {
+            if (*(ptr_accumulated_dRdt + i_ncols + j)==0)
+            {
+                *(ptr_accumulated_dRdt_score + i_ncols + j) = 0;
             }
             else{}
         }

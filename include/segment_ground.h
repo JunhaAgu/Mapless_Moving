@@ -38,6 +38,8 @@ class SegmentGround
         void fastsegmentGround(std::unique_ptr<CloudFrame>& CloudFrame_in);
 
         void ransacLine(std::vector<float>& points_rho, std::vector<float>& points_z, /*output*/ bool mask_inlier[], int num_seg);
+
+        void reset();
 };
 
 #endif

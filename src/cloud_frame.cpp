@@ -47,7 +47,6 @@ CloudFrame::CloudFrame(const std::unique_ptr<UserParam>& user_param)
         str_rhopts_->pts_per_pixel_index_valid[i].reserve(5000);
     }
     str_rhopts_->pts        = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
-    str_rhopts_->ptsInImage = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
     str_rhopts_->img_restore_mask      = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
     str_rhopts_->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
 };
@@ -638,4 +637,47 @@ void CloudFrame::interpPts(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in, bool cur_
     // fs_q << "matImage" << str_rhopts_->img_z;
     // fs_q.release();
     // exit(0); 
+}
+
+void CloudFrame::reset()
+{
+    this->str_rhopts_->rho.resize(0);
+    this->str_rhopts_->phi.resize(0);
+    this->str_rhopts_->theta.resize(0);
+    this->str_rhopts_->img_rho = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    this->str_rhopts_->img_index = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+    this->str_rhopts_->img_x = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    this->str_rhopts_->img_y = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    this->str_rhopts_->img_z = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    this->str_rhopts_->img_restore_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+    this->str_rhopts_->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+
+    for (int i = 0; i < img_height_ * img_width_; ++i)
+    {
+        this->str_rhopts_->pts_per_pixel_n[i] = 0;
+    }
+
+    for (int i = 0; i < img_height_ * img_width_; ++i)
+    {
+        if (this->str_rhopts_->pts_per_pixel_index[i].size() != 0)
+        {
+            this->str_rhopts_->pts_per_pixel_index[i].resize(0);
+        }
+    }
+
+    for (int i = 0; i < img_height_ * img_width_; ++i)
+    {
+        if (this->str_rhopts_->pts_per_pixel_rho[i].size() != 0)
+        {
+            this->str_rhopts_->pts_per_pixel_rho[i].resize(0);
+        }
+    }
+
+    for (int i = 0; i < img_height_ * img_width_; ++i)
+    {
+        if (this->str_rhopts_->pts_per_pixel_index_valid[i].size() != 0)
+        {
+            this->str_rhopts_->pts_per_pixel_index_valid[i].resize(0);
+        }
+    }
 }

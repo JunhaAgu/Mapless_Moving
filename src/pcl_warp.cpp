@@ -102,39 +102,13 @@ void PclWarp::initializeStructAndPcl(std::unique_ptr<CloudFrame>& CloudFrame_war
         CloudFrame_warpPointcloud->str_rhopts_->img_x                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
         CloudFrame_warpPointcloud->str_rhopts_->img_y                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
         CloudFrame_warpPointcloud->str_rhopts_->img_z                 = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-        // CloudFrame_warpPointcloud->str_rhopts_->img_restore_mask      = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
-        // CloudFrame_warpPointcloud->str_rhopts_->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
-
-        // for (int i = 0; i < img_height_ * img_width_; ++i)
-        // {
-        //     CloudFrame_warpPointcloud->str_rhopts_->pts_per_pixel_n[i] = 0;
-        // }
-
-        // for (int i = 0; i < img_height_ * img_width_; ++i)
-        // {
-        //     if (CloudFrame_warpPointcloud->str_rhopts_->pts_per_pixel_index[i].size() != 0)
-        //     {
-        //         CloudFrame_warpPointcloud->str_rhopts_->pts_per_pixel_index[i].resize(0);
-        //     }
-        // }
-
-        // for (int i = 0; i < img_height_ * img_width_; ++i)
-        // {
-        //     if (CloudFrame_warpPointcloud->str_rhopts_->pts_per_pixel_rho[i].size() != 0)
-        //     {
-        //         CloudFrame_warpPointcloud->str_rhopts_->pts_per_pixel_rho[i].resize(0);
-        //     }
-        // }
-
-        // for (int i = 0; i < img_height_ * img_width_; ++i)
-        // {
-        //     if (CloudFrame_warpPointcloud->str_rhopts_->pts_per_pixel_index_valid[i].size() != 0)
-        //     {
-        //         CloudFrame_warpPointcloud->str_rhopts_->pts_per_pixel_index_valid[i].resize(0);
-        //     }
-        // }
     }
-
     velo_xyz_->resize(0);
     pts_warpewd_->resize(0);
+}
+
+void PclWarp::reset()
+{
+    this->velo_xyz_->resize(0);
+    this->pts_warpewd_->resize(0);
 }

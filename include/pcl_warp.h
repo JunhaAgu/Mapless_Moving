@@ -25,6 +25,8 @@ public:
     void warpPointcloud(std::unique_ptr<CloudFrame>& CloudFrame_in, std::unique_ptr<CloudFrame>& CloudFrame_warpPointcloud, const Pose &T01, cv::Mat &mat_in, int cnt_data);
 
     void initializeStructAndPcl(std::unique_ptr<CloudFrame>& CloudFrame_warpPointcloud);
+
+    void reset();
 };
 
 #endif

@@ -33,7 +33,7 @@ public:
     std::vector<int> object_col_;
     std::vector<float> object_rho_roi_;
 
-    std::vector<float> max_his_object_rho_roi_;
+    // std::vector<float> max_his_object_rho_roi_;
 
     std::vector<int> disconti_row_;
     std::vector<int> disconti_col_;
@@ -56,7 +56,11 @@ public:
 
     void checkSegment(cv::Mat &accumulated_dRdt, std::unique_ptr<CloudFrame>& CloudFrame_next, cv::Mat &groundPtsIdx_next);
 
-    void updateScore(cv::Mat &accumulated_dRdt, cv::Mat &accumulated_dRdt_score);
+    void updateAccum(cv::Mat &accumulated_dRdt, cv::Mat &accumulated_dRdt_score);
+
+    void updateAccumdRdt(std::unique_ptr<CloudFrame>& CloudFrame_next, cv::Mat &accumulated_dRdt, cv::Mat &accumulated_dRdt_score, cv::Mat& dRdt, cv::Mat& groundPtsIdx_next);
+
+    void updateAccumScore(cv::Mat &accumulated_dRdt, cv::Mat &accumulated_dRdt_score);
 };
 
 #endif

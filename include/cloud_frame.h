@@ -41,6 +41,8 @@ class CloudFrame
         void interpRangeImage(bool cur_next);
 
         void interpPts(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in, bool cur_next);
+
+        void reset();
 };
 
 

@@ -75,7 +75,6 @@ private:
     
     cv::Mat accumulated_dRdt_;
     cv::Mat accumulated_dRdt_score_;
-    cv::Mat background_mask_;
 
     Pose T_next2cur_;
     
@@ -118,7 +117,7 @@ public:
 private:
     void getUserSettingParameters();
 
-    void copyStruct(pcl::PointCloud<pcl::PointXYZ>::Ptr p1, pcl::PointCloud<pcl::PointXYZ>::Ptr p0, int cnt_data);
+    void copyStructAndinitialize(pcl::PointCloud<pcl::PointXYZ>::Ptr p1, pcl::PointCloud<pcl::PointXYZ>::Ptr p0, int cnt_data);
 
     void countZerofloat(cv::Mat& input_mat);
     void countZeroint(cv::Mat& input_mat);
