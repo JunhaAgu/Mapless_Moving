@@ -24,8 +24,11 @@ class ROSWrapper{
 // Previous variables
 private:
     Mask                     mask0;
-    sensor_msgs::PointCloud2 p0;
-    bool                     is_initialized; // = default : false.
+    sensor_msgs::PointCloud2 p0_msg_;
+    sensor_msgs::PointCloud2 p1_msg_;
+    bool                     is_initialized_; // = default : false.
+    pcl::PointCloud<pcl::PointXYZ>::Ptr p0_pcl_;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr p1_pcl_;
 
 // ROS nodehandle & subscriber for LiDAR data.
 private:
@@ -33,19 +36,19 @@ private:
     ros::Subscriber sub_lidar_;
     
     std::string     topicname_lidar_;
+    bool            rosbag_play_;
+    bool            T01_slam_;
+    std::string     data_number_;
 
 // Mapless Dynamic algorithm object. 
 private:
     std::unique_ptr<MaplessDynamic> solver_;
 
-    bool test_flag_;
-
-
 /* =========
     METHODS
    ========= */
 public:
-    ROSWrapper(ros::NodeHandle& nh, bool test_flag); // constructor
+    ROSWrapper(ros::NodeHandle& nh); // constructor
     ~ROSWrapper(); // destructor
 
 private:
@@ -53,7 +56,7 @@ private:
     
     void getLaunchParameters();
     void callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg);    
-    void updatePreviousVariables(const sensor_msgs::PointCloud2& p1, const Mask& mask1);
+    void updatePreviousVariables(pcl::PointCloud<pcl::PointXYZ>::Ptr p0_pcl, pcl::PointCloud<pcl::PointXYZ>::Ptr p1_pcl, const Mask& mask1);
 };
 
 #endif

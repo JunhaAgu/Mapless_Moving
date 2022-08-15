@@ -66,7 +66,9 @@ private:
     ros::Publisher pub_dynamic_pts_;
     ros::Publisher pub_static_pts_;
 
-    bool test_flag_;
+    bool rosbag_play_;
+    std::string data_number_;
+
     int img_height_;
     int img_width_;
 
@@ -87,7 +89,6 @@ private:
 private: 
     //test
     std::string test_data_type_;
-    std::vector<TestData *> data_buf_;
     std::vector<std::vector<float>> all_pose_;
     std::vector<Pose> all_T_gt_;
     std::vector<int> valid_data_;
@@ -102,9 +103,13 @@ private:
     std::vector<std::string> file_lists_;
 
 public:
-    MaplessDynamic(ros::NodeHandle& nh, bool test_flag); // constructor
+    std::vector<TestData *> data_buf_;
+
+public:
+    MaplessDynamic(ros::NodeHandle& nh, bool rosbag_play, std::string& data_number); // constructor
     ~MaplessDynamic(); // destructor
 
+    void RosbagData();
     void TEST(); // algorithm test function with a loaded data
 
     void solve(        

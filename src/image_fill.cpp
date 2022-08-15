@@ -119,10 +119,10 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
         }
     }
 
-    for (int j = 0; j < n_col; ++j)
-    {
-        *(ptr_rho_zero_value + j) = 0;
-    }
+    // for (int j = 0; j < n_col; ++j)
+    // {
+    //     *(ptr_rho_zero_value + j) = 0;
+    // }
 
     cv::Mat input_img_tmp = accumulated_dRdt.clone();
     float* ptr_input_img_tmp = input_img_tmp.ptr<float>(0);
@@ -165,17 +165,20 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
     cv::Mat object_area_inv     = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
     uchar *ptr_object_area_inv  = object_area_inv.ptr<uchar>(0);
 
+    cv::Mat object_area_inv_pad = cv::Mat::zeros(img_height_ + 2, img_width_ + 2, CV_8UC1);
+
     int obj_left = 0;
     int obj_top = 0;
     int obj_width = 0;
     int obj_height = 0;
-
+    // timer::tic();
     for (int object_idx = 0; object_idx < n_label; ++object_idx)
     {
         if (object_idx==0) //0: background
         {
             continue;
         }
+        
 
         object_row_.resize(0);
         object_col_.resize(0);
@@ -200,6 +203,8 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
         obj_top = stats.at<int>(object_idx, cv::CC_STAT_TOP);
         obj_width = stats.at<int>(object_idx, cv::CC_STAT_WIDTH);
         obj_height = stats.at<int>(object_idx, cv::CC_STAT_HEIGHT);
+
+
 
         for (int i = obj_top; i < obj_top + obj_height; ++i)
         {
@@ -231,9 +236,9 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
         {
             float connect_zero_mean = 0.0;
             int n_connet_zero = 0;
-
-            cv::Mat object_area_inv = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
-            cv::Mat object_area_inv_pad = cv::Mat::zeros(img_height_+2, img_width_+2, CV_8UC1);            
+            timer::tic();
+            // object_area_inv = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
+            // object_area_inv_pad = cv::Mat::zeros(img_height_+2, img_width_+2, CV_8UC1);            
             // zero padding
             cv::copyMakeBorder(object_area, object_area_pad, 1,1,1,1, cv::BORDER_CONSTANT, cv::Scalar(0));
 
@@ -242,7 +247,8 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
             object_area_filled_pad = (object_area_pad | object_area_inv_pad);
             // crop
             object_area_filled = object_area_filled_pad(cv::Range(0+1,img_height_+2-1), cv::Range(0+1,img_width_+2-1));
-
+            double dt_obj = timer::toc(); // milliseconds
+        ROS_INFO_STREAM("elapsed time for 'dt_obj' :" << dt_obj << " [ms]");
             for (int i = 0; i < n_row; ++i)
             {
                 int i_ncols = i * n_col;
@@ -389,6 +395,8 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
             }
         }
     } // end for object_idx
+    // double dt_obj = timer::toc(); // milliseconds
+    //     ROS_INFO_STREAM("elapsed time for 'dt_obj' :" << dt_obj << " [ms]");
 }
 
 void ImageFill::interpAndfill_image(cv::Mat& input_img, cv::Mat& filled_bin)

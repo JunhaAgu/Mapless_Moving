@@ -189,7 +189,7 @@ void ObjectExt::extractObjectCandidate(cv::Mat& accumulated_dRdt, std::unique_pt
                 if (max_n <= histogram_.at<float>(p))
                 {
                     max_n = histogram_.at<float>(p);
-                    std::cout << "p: " <<p << " " << "max_n: " << max_n<< std::endl;
+                    // std::cout << "p: " <<p << " " << "max_n: " << max_n<< std::endl;
                     max_idx = p;
                 }
             }

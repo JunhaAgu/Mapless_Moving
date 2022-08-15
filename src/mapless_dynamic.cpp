@@ -4,8 +4,8 @@
 
 #include <user_param.h>
 
-MaplessDynamic::MaplessDynamic(ros::NodeHandle& nh, bool test_flag)
-: nh_(nh), test_flag_(test_flag), is_initialized_test_(false)
+MaplessDynamic::MaplessDynamic(ros::NodeHandle& nh, bool rosbag_play, std::string& data_number)
+: nh_(nh), rosbag_play_(rosbag_play), data_number_(data_number), is_initialized_test_(false)
  {
     // constructor
     ROS_INFO_STREAM("MaplessDynamic - constructed.");
@@ -43,9 +43,7 @@ MaplessDynamic::MaplessDynamic(ros::NodeHandle& nh, bool test_flag)
     accumulated_dRdt_score_ = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
     dRdt_                   = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
 
-    if (test_flag_){
-        this->loadTestData();
-    }
+    this->loadTestData();
     // END YOUR CODE
 };
 
@@ -58,6 +56,55 @@ MaplessDynamic::~MaplessDynamic() {
     // END YOUR CODE
 };
 
+void MaplessDynamic::RosbagData(){
+    static int cnt_data = 0;
+    std::cout<< "Iter: "<< cnt_data << std::endl;
+
+    // p0 = get!
+    // p1 = get!
+    // T01 = get!
+
+    // this->algorithm(p0,p1,T01);
+    
+    // END YOUR CODE
+
+    if( is_initialized_test_ ){ // If initialized, 
+        // 0. Get the current LiDAR data
+        p1_msg_test_ = *(data_buf_[cnt_data]->pcl_msg_);
+        pcl::fromROSMsg(p1_msg_test_, *p1_pcl_test_);
+
+        // 1. Calculate T01 from the SLAM (or Odometry) algorithm
+        Pose T01;
+        timer::tic();
+        // T01 =  vo->solve();
+        T01 = data_buf_[cnt_data]->T_gt_.inverse();
+        double dt_slam = timer::toc(); // milliseconds
+        ROS_INFO_STREAM("elapsed time for 'SLAM' :" << dt_slam << " [ms]");
+
+        // 2. Solve the Mapless Dynamic algorithm.
+        // timer::tic();
+        Mask mask1;
+        this->solve(p0_pcl_test_, p1_pcl_test_, T01, mask1, cnt_data);
+        // double dt_solver = timer::toc(); // milliseconds
+        // ROS_INFO_STREAM("elapsed time for 'solver' :" << dt_solver << " [ms]");
+
+        // 3. Update the previous variables
+        // updatePreviousVariables(p1, mask1);
+    }
+    else { // If not initialized, 
+        is_initialized_test_ = true;
+        
+        // Initialize the first data.
+        p0_msg_test_ = *(data_buf_[0]->pcl_msg_);
+        pcl::fromROSMsg(p0_msg_test_, *p0_pcl_test_);
+        
+        CloudFrame_cur_ ->genRangeImages(p0_pcl_test_, true);
+
+        mask0_test_.resize(p0_msg_test_.width, true);
+    }
+    cnt_data += 1;
+    // std::cout << cnt_data << std::endl;
+}
 
 void MaplessDynamic::TEST(){
     static int cnt_data = 0;
@@ -131,8 +178,11 @@ void MaplessDynamic::TEST(){
 
 
 
+
+
 void MaplessDynamic::loadTestData(){
-    std::string data_num = "07";
+    std::string data_num = data_number_; //"07";
+    std::cout <<"data_number: " << data_num <<std::endl;
     std::string dataset_dir = "/home/junhakim/KITTI_odometry/";
     float pose_arr[12];
     Pose T_tmp;
@@ -345,20 +395,22 @@ void MaplessDynamic::solve(
 
     // END YOUR ALGORITHM
 
-    // if (cnt_data == 3)
+    // if (cnt_data == 1)
     // {
-    //     std::cout << p0.size()<<std::endl;
+    //     std::cout <<"p0 size: " << p0->size()<<std::endl;
     //     sensor_msgs::PointCloud2 converted_msg_d;
-    //     pcl::toROSMsg(p0, converted_msg_d);
+    //     pcl::toROSMsg(*p0, converted_msg_d);
     //     converted_msg_d.header.frame_id = "map";
     //     pub_dynamic_pts_.publish(converted_msg_d);
 
+    //     std::cout <<"p1 size: " << p1->size()<<std::endl;
     //     sensor_msgs::PointCloud2 converted_msg_s;
-    //     pcl::toROSMsg(p1, converted_msg_s);
+    //     pcl::toROSMsg(*p1, converted_msg_s);
     //     converted_msg_s.header.frame_id = "map";
     //     pub_static_pts_.publish(converted_msg_s);
     //     exit(0);
     // }
+    // ROS_INFO_STREAM("# of p0' :" << p0->size() << " " << "# of p1' :" << p1->size() << " ");
 
     // timer::tic();
     // double dt_slam = timer::toc(); // milliseconds
@@ -617,9 +669,13 @@ void MaplessDynamic::copyStructAndinitialize(pcl::PointCloud<pcl::PointXYZ>::Ptr
         CloudFrame_next_->str_rhopts_->img_restore_warp_mask.copyTo(CloudFrame_cur_->str_rhopts_->img_restore_warp_mask);
     }
 
-    p0_pcl_test_->resize(0);
-    pcl::copyPointCloud(*p1, *p0_pcl_test_);
-    p1->resize(0);
+    // only in test
+    if (rosbag_play_ == false)
+    {
+        p0_pcl_test_->resize(0);
+        pcl::copyPointCloud(*p1, *p0_pcl_test_);
+        p1->resize(0);
+    }
 
     // Next -> reset();
     CloudFrame_next_->reset();

@@ -1,8 +1,14 @@
 <launch>
-    <arg name="topicname_lidar"     default="/velodyne_points/lidar0"/>
+    <arg name="topicname_lidar"     default="/debug/pc_raw"/> <!-- "/velodyne_points/lidar0"/> -->
+    <arg name="rosbag_play"         default="true"/>
+    <arg name="T01_slam"            default="false"/>
+    <arg name="data_number"         default="01"/>
 
     <node pkg="mapless_dynamic" name="mapless_dynamic_node" type="mapless_dynamic_node" output="screen">
         <param name="topicname_lidar" type="string" value="$(arg topicname_lidar)"/>
+        <param name="rosbag_play" type="bool" value="$(arg rosbag_play)"/>
+        <param name="T01_slam" type="bool" value="$(arg T01_slam)"/>
+        <param name="data_number" type="string" value="$(arg data_number)"/>
     </node>
 
     <arg name="rviz" default="true" />
