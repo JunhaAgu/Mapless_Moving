@@ -42,6 +42,9 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
     cv::Mat dRdt_score_bin  = cv::Mat::zeros(img_height_,img_width_, CV_8UC1);
     uchar* ptr_dRdt_bin         = dRdt_bin.ptr<uchar>(0);
     uchar* ptr_dRdt_score_bin   = dRdt_score_bin.ptr<uchar>(0);
+    // padding
+    cv::Mat dRdt_bin_pad        = cv::Mat::zeros(img_height_+2,img_width_+2, CV_8UC1);
+    cv::Mat dRdt_score_bin_pad  = cv::Mat::zeros(img_height_+2,img_width_+2, CV_8UC1);
 
     float* ptr_img_rho = CloudFrame_next->str_rhopts_->img_rho.ptr<float>(0);
 
@@ -66,33 +69,32 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
 
     // imfill 
     //invert dRdt_bin
-    cv::Mat dRdt_bin_inv = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
-    cv::bitwise_not(dRdt_bin, dRdt_bin_inv);
-    uchar *ptr_dRdt_bin_inv = dRdt_bin_inv.ptr<uchar>(0);
-    int n_row_minus1_n_col = (n_row - 1) * n_col;
-    for (int j = 0; j < n_col; ++j)
-    {
-        *(ptr_dRdt_bin_inv + n_row_minus1_n_col + j) = 255;
-    }
+    cv::Mat dRdt_bin_inv        = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
+    cv::Mat dRdt_bin_inv_pad    = cv::Mat::zeros(img_height_ + 2, img_width_ + 2, CV_8UC1);
+    // zero padding
+    cv::copyMakeBorder(dRdt_bin, dRdt_bin_pad, 1, 1, 1, 1, cv::BORDER_CONSTANT, cv::Scalar(0));
+    
+    cv::bitwise_not(dRdt_bin_pad, dRdt_bin_inv_pad);
+    cv::floodFill(dRdt_bin_inv_pad, cv::Point(0, 0), cv::Scalar(0));
+    cv::Mat dRdt_bin_filled_pad = (dRdt_bin_pad | dRdt_bin_inv_pad);
+    // crop
+    cv::Mat dRdt_bin_filled = dRdt_bin_filled_pad(cv::Range(0 + 1, img_height_ + 2 - 1), cv::Range(0 + 1, img_width_ + 2 -1));
 
-    cv::floodFill(dRdt_bin_inv, cv::Point(0,0), cv::Scalar(0));
-    cv::Mat dRdt_bin_filled = (dRdt_bin | dRdt_bin_inv);
     interpAndfill_image(accumulated_dRdt, dRdt_bin_filled);
 
-    cv::Mat dRdt_score_bin_inv = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
-    cv::bitwise_not(dRdt_score_bin, dRdt_score_bin_inv);
-    uchar *ptr_dRdt_score_bin_inv = dRdt_score_bin_inv.ptr<uchar>(0);
-    for (int j = 0; j < n_col; ++j)
-    {
-        *(ptr_dRdt_score_bin_inv + n_row_minus1_n_col + j) = 255;
-    }
-    cv::floodFill(dRdt_score_bin_inv, cv::Point(0,0), cv::Scalar(0));
-    cv::Mat dRdt_score_bin_filled = (dRdt_score_bin | dRdt_score_bin_inv);
-    interpAndfill_image(accumulated_dRdt_score, dRdt_score_bin_filled);
+    //invert dRdt_score_bin
+    cv::Mat dRdt_score_bin_inv      = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
+    cv::Mat dRdt_score_bin_inv_pad  = cv::Mat::zeros(img_height_ + 2, img_width_ + 2, CV_8UC1);
+    // zero padding
+    cv::copyMakeBorder(dRdt_score_bin, dRdt_score_bin_pad, 1, 1, 1, 1, cv::BORDER_CONSTANT, cv::Scalar(0));
 
-    // cv::imshow("accumulated_dRdt", dRdt_bin_filled);
-    // cv::waitKey(0);
-    // exit(0);
+    cv::bitwise_not(dRdt_score_bin_pad, dRdt_score_bin_inv_pad);
+    cv::floodFill(dRdt_score_bin_inv_pad, cv::Point(0, 0), cv::Scalar(0));
+    cv::Mat dRdt_score_bin_filled_pad = (dRdt_score_bin_pad | dRdt_score_bin_inv_pad);
+    // crop
+    cv::Mat dRdt_score_bin_filled = dRdt_score_bin_filled_pad(cv::Range(0 + 1, img_height_ + 2 - 1), cv::Range(0 + 1, img_width_ + 2 - 1));
+
+    interpAndfill_image(accumulated_dRdt_score, dRdt_score_bin_filled);
 
     cv::Mat rho_zero_value = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
     uchar* ptr_rho_zero_value = rho_zero_value.ptr<uchar>(0);
@@ -119,7 +121,7 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
 
     for (int j = 0; j < n_col; ++j)
     {
-        *(ptr_img_rho + j) = 0;
+        *(ptr_rho_zero_value + j) = 0;
     }
 
     cv::Mat input_img_tmp = accumulated_dRdt.clone();
@@ -151,6 +153,10 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
     cv::Mat object_area             = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
     cv::Mat object_area_filled      = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
     cv::Mat filled_object_rho_mat   = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+
+    // padding
+    cv::Mat object_area_pad             = cv::Mat::zeros(img_height_+2, img_width_+2, CV_8UC1);
+    cv::Mat object_area_filled_pad      = cv::Mat::zeros(img_height_+2, img_width_+2, CV_8UC1);
 
     uchar *ptr_object_area              = object_area.ptr<uchar>(0);
     uchar *ptr_object_area_filled       = object_area_filled.ptr<uchar>(0);
@@ -187,6 +193,9 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
         object_area_filled      = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
         filled_object_rho_mat   = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
 
+        object_area_pad             = cv::Mat::zeros(img_height_+2, img_width_+2, CV_8UC1);
+        object_area_filled_pad      = cv::Mat::zeros(img_height_+2, img_width_+2, CV_8UC1);
+
         obj_left = stats.at<int>(object_idx, cv::CC_STAT_LEFT);
         obj_top = stats.at<int>(object_idx, cv::CC_STAT_TOP);
         obj_width = stats.at<int>(object_idx, cv::CC_STAT_WIDTH);
@@ -207,6 +216,7 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
             }
         }
 
+        // if (object_row_.size() < thr_object_ || *(ptr_object_area + 1*n_col+0) == 255)
         if (object_row_.size() < thr_object_)
         {
             for (int i = 0; i < object_row_.size(); ++i)
@@ -222,15 +232,16 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
             float connect_zero_mean = 0.0;
             int n_connet_zero = 0;
 
-            // cv::Mat object_area_inv = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
-            cv::bitwise_not(object_area, object_area_inv);
+            cv::Mat object_area_inv = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
+            cv::Mat object_area_inv_pad = cv::Mat::zeros(img_height_+2, img_width_+2, CV_8UC1);            
+            // zero padding
+            cv::copyMakeBorder(object_area, object_area_pad, 1,1,1,1, cv::BORDER_CONSTANT, cv::Scalar(0));
 
-            for (int j = 0; j < n_col; ++j)
-            {
-                *(ptr_object_area_inv + (n_row-1) * n_col + j) = 255;
-            }
-            cv::floodFill(object_area_inv, cv::Point(0, 0), cv::Scalar(0));
-            object_area_filled = (object_area | object_area_inv);
+            cv::bitwise_not(object_area_pad, object_area_inv_pad);
+            cv::floodFill(object_area_inv_pad, cv::Point(0, 0), cv::Scalar(0));
+            object_area_filled_pad = (object_area_pad | object_area_inv_pad);
+            // crop
+            object_area_filled = object_area_filled_pad(cv::Range(0+1,img_height_+2-1), cv::Range(0+1,img_width_+2-1));
 
             for (int i = 0; i < n_row; ++i)
             {

@@ -149,7 +149,7 @@ void MaplessDynamic::loadTestData(){
         final_num = 4530 + 1; // 1 ~ 141+2 75
     }
     else if (data_num == "01"){
-        start_num = 150 + 00;
+        start_num = 150 + 00; //94;
         final_num = 250 + 1; // 1 ~ 101+2
     }
     else if (data_num == "02"){
@@ -157,7 +157,7 @@ void MaplessDynamic::loadTestData(){
         final_num = 950 + 1; // 1 ~ 91+2
     }
     else if (data_num == "05"){
-        start_num = 2350 + 144+41;
+        start_num = 2350 + 00; //144+41;
         final_num = 2670 + 1; // 1 ~ 321+2
         //         start_num = 2350+269; final_num = 2670+1; // 1 ~ 321+2
     }
@@ -381,6 +381,9 @@ void MaplessDynamic::solve(
     ROS_INFO_STREAM("elapsed time for 'segmentSGround' :" << dt_toc2 << " [ms]");
     //// Occlusion accumulation ////
     // Compute the occlusion dRdt
+
+        // cv::imshow("SegmentGround_", SegmentGround_->groundPtsIdx_next_);
+
     
     timer::tic();
     dRCalc_->dR_warpPointcloud(CloudFrame_next_, CloudFrame_cur_, CloudFrame_cur_warped_, p0, T_next2cur_, cnt_data, dRdt_);
@@ -398,6 +401,8 @@ void MaplessDynamic::solve(
     PclWarp_->warpPointcloud(CloudFrame_cur_, CloudFrame_warpPointcloud_, T_next2cur_, accumulated_dRdt_score_, cnt_data);
     double dt_toc4 = timer::toc(); // milliseconds
     ROS_INFO_STREAM("elapsed time for 'warpPointcloud' :" << dt_toc4 << " [ms]");
+
+    // cv::imshow("after warpPointcloud", accumulated_dRdt_);
     
     //     if (cnt_data == 2)
     // {
@@ -411,6 +416,8 @@ void MaplessDynamic::solve(
     ObjectExt_->filterOutAccumdR(CloudFrame_next_, CloudFrame_cur_warped_, accumulated_dRdt_, accumulated_dRdt_score_, dRdt_);
     double dt_toc5 = timer::toc(); // milliseconds
     ROS_INFO_STREAM("elapsed time for 'filterOutAccumdR' :" << dt_toc5 << " [ms]");
+
+    // cv::imshow("after filterOutAccumdR", accumulated_dRdt_);
 
     // if (cnt_data == 2)
     // {
@@ -427,6 +434,7 @@ void MaplessDynamic::solve(
     double dt_toc6 = timer::toc(); // milliseconds
     ROS_INFO_STREAM("elapsed time for 'extractObjectCandidate' :" <<  dt_toc6 << " [ms]");
 
+    // cv::imshow("after extractObjectCandidate", accumulated_dRdt_);
     //// update object_mask
     //object_mask = accumulated_dRdt>0;
     timer::tic();
@@ -434,7 +442,7 @@ void MaplessDynamic::solve(
     ObjectExt_->checkSegment(accumulated_dRdt_, CloudFrame_next_, SegmentGround_->groundPtsIdx_next_);
     double dt_toc7 = timer::toc(); // milliseconds
     ROS_INFO_STREAM("elapsed time for 'checkSegment' :" <<  dt_toc7 << " [ms]");
-
+    // cv::imshow("after checkSegment", accumulated_dRdt_);
     //// update object_mask
     //object_mask = accumulated_dRdt>0;
     timer::tic();
@@ -442,15 +450,19 @@ void MaplessDynamic::solve(
     double dt_toc8 = timer::toc(); // milliseconds
     ROS_INFO_STREAM("elapsed time for 'updateAccum' :" <<  dt_toc8 << " [ms]");
 
+    // cv::imshow("after updateAccum", accumulated_dRdt_);
+
     timer::tic();
     ImageFill_->plugImageZeroHoles(accumulated_dRdt_, accumulated_dRdt_score_, CloudFrame_next_);
     double dt_toc9 = timer::toc(); // milliseconds
     ROS_INFO_STREAM("elapsed time for 'plugImageZeroHoles' :" <<  dt_toc9 << " [ms]");
 
+    // cv::imshow("after plugImageZeroHoles", accumulated_dRdt_);
+    
     timer::tic();
     ObjectExt_->updateAccumdRdt(CloudFrame_next_, accumulated_dRdt_, accumulated_dRdt_score_, dRdt_, SegmentGround_->groundPtsIdx_next_);
     double dt_toc10 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'plugImageZeroHoles' :" <<  dt_toc10 << " [ms]");
+    ROS_INFO_STREAM("elapsed time for 'updateAccumdRdt' :" <<  dt_toc10 << " [ms]");
 
     float* ptr_accumulated_dRdt = accumulated_dRdt_.ptr<float>(0);
     float* ptr_accumulated_dRdt_score = accumulated_dRdt_score_.ptr<float>(0);
@@ -554,6 +566,9 @@ void MaplessDynamic::solve(
     double dt_toc_total = dt_toc1 + dt_toc2 + dt_toc3 + dt_toc4 + dt_toc5 + dt_toc6 + dt_toc7 + dt_toc8 + dt_toc9 + dt_toc10 + dt_toc11 + dt_toc12 + dt_toc13;
     ROS_INFO_STREAM("elapsed time for 'total' :" <<  dt_toc_total << " [ms]");
     ROS_INFO_STREAM("=======================================================");
+
+    // cv::imshow("final", accumulated_dRdt_);
+    // cv::waitKey(0);
 };
 
 void MaplessDynamic::copyStructAndinitialize(pcl::PointCloud<pcl::PointXYZ>::Ptr p1 ,pcl::PointCloud<pcl::PointXYZ>::Ptr p0, int cnt_data)

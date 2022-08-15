@@ -100,8 +100,9 @@ void SegmentGround::fastsegmentGround(std::unique_ptr<CloudFrame>& CloudFrame_in
             // std::cout << (*(ptr_rho_sample + i * n_col_sample + j)) << " " << (*(ptr_pts_z_sample + i * n_col_sample + j)) <<std::endl;
         }
         
+        // std::cout << j <<": "<<std::endl;;
         ransacLine(points_rho, points_z, /*output*/ mask_inlier, j);
-
+        // std::cout<< " " <<std::endl;
 
         for (int i=0; i<n_row; ++i)
         {
@@ -111,11 +112,17 @@ void SegmentGround::fastsegmentGround(std::unique_ptr<CloudFrame>& CloudFrame_in
             }
         }
     }
+    // exit(0);
     // std::cout << mask_inlier_mat <<std::endl;
     // exit(0);
     
     // cv::imshow("mat", mask_inlier_mat);
     // cv::waitKey(0);
+
+    // cv::FileStorage fs_w("/home/junhakim/mask_inlier_mat.yaml", cv::FileStorage::WRITE);
+    // fs_w << "matImage" << mask_inlier_mat;
+    // fs_w.release();
+    // exit(0);
 
     // upscale: sample size -> original image size
     float rep_z_value = 0.0;
@@ -342,6 +349,7 @@ void SegmentGround::ransacLine(std::vector<float>& points_rho, std::vector<float
             n2 = dis(gen);
             if (n1 != n2)
             {
+                // std::cout<< 0 << "~" <<n_pts_valid-1<<": "<<n1<<", "<<n2<<std::endl;
                 break;
             }
         }
@@ -497,6 +505,7 @@ void SegmentGround::ransacLine(std::vector<float>& points_rho, std::vector<float
 
     float residual_leastsquare = 0.0;
     float line_updown = 0.0;
+    // int cnt_inlier = 0;
 
     for (int i=0; i<points_rho_dup.size(); ++i)
     {
@@ -507,9 +516,12 @@ void SegmentGround::ransacLine(std::vector<float>& points_rho, std::vector<float
         if ((residual_leastsquare < thr_) || (line_updown > 0))
         {
             mask_inlier[i] = true;
+            // cnt_inlier += 1;
         }
     }
     // output: mask_inlier
+    // std::cout << t(0) << " " << t(2) << " # of inlier: " << cnt_inlier <<std::endl;
+    
 }
 
 void SegmentGround::reset()

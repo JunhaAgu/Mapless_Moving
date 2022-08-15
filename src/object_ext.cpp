@@ -168,8 +168,11 @@ void ObjectExt::extractObjectCandidate(cv::Mat& accumulated_dRdt, std::unique_pt
         }
         else
         {   
+            
             float his_range_max = *max_element(object_rho_roi_.begin(), object_rho_roi_.end());
             float his_range_min = *min_element(object_rho_roi_.begin(), object_rho_roi_.end());
+
+
             float his_range[] = {his_range_min, his_range_max};
             const int* channel_numbers = {0};
             const float* his_ranges= his_range;
@@ -183,13 +186,17 @@ void ObjectExt::extractObjectCandidate(cv::Mat& accumulated_dRdt, std::unique_pt
             int max_idx = 100;
             for (int p = 0; p < number_bins; ++p)
             {
-                if (max_n < histogram_.at<float>(p))
+                if (max_n <= histogram_.at<float>(p))
                 {
                     max_n = histogram_.at<float>(p);
+                    std::cout << "p: " <<p << " " << "max_n: " << max_n<< std::endl;
                     max_idx = p;
                 }
             }
+            // his_range_max = ceil(his_range_max * 100) / 100;
+            // his_range_min = floor(his_range_min * 100) / 100;
             float his_interval = (his_range_max-his_range_min)/(float)number_bins;
+            // his_interval = ceil(his_interval*1000) / 1000;
             float bin_range_min = his_range_min + (float)(max_idx)*his_interval;
             float bin_range_max = his_range_min + (float)(max_idx+1)*his_interval;
             float range_min = 0.0;
@@ -218,6 +225,8 @@ void ObjectExt::extractObjectCandidate(cv::Mat& accumulated_dRdt, std::unique_pt
             }
             range_max = bin_range_max + 1.0;
 
+            // std::cout << "#: "<<object_row_.size() << " " <<"range_min: " <<range_min << " " << "range_max: "<<range_max <<std::endl;
+
             for (int i = 0; i < object_row_.size(); ++i)
             {
                 if((object_rho_roi_[i]<range_min) || (object_rho_roi_[i]>range_max))
@@ -231,6 +240,7 @@ void ObjectExt::extractObjectCandidate(cv::Mat& accumulated_dRdt, std::unique_pt
                     diff_object_area_conti_col_.push_back(object_col_[i]);
                 }
             }
+            // std::cout << "object_row_.size(): " << object_row_.size() << " " << "disconti_row_.size(): " << disconti_row_.size() <<std::endl;
             if((object_row_.size()-disconti_row_.size()) < thr_object_ )
             {
                 for (int i = 0; i < object_row_.size(); ++i)
