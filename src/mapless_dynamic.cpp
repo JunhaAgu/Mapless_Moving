@@ -641,8 +641,8 @@ void MaplessDynamic::copyStructAndinitialize(pcl::PointCloud<pcl::PointXYZ>::Ptr
         CloudFrame_next_->str_rhopts_->img_y.copyTo(CloudFrame_cur_->str_rhopts_->img_y);
         CloudFrame_next_->str_rhopts_->img_z.copyTo(CloudFrame_cur_->str_rhopts_->img_z);
 
-        CloudFrame_cur_->str_rhopts_->pts_per_pixel_n.resize(0);
-        std::copy(CloudFrame_next_->str_rhopts_->pts_per_pixel_n.begin(), CloudFrame_next_->str_rhopts_->pts_per_pixel_n.end(), CloudFrame_cur_->str_rhopts_->pts_per_pixel_n.begin());
+        // CloudFrame_cur_->str_rhopts_->pts_per_pixel_n.resize(0);
+        // std::copy(CloudFrame_next_->str_rhopts_->pts_per_pixel_n.begin(), CloudFrame_next_->str_rhopts_->pts_per_pixel_n.end(), CloudFrame_cur_->str_rhopts_->pts_per_pixel_n.begin());
 
         for (int i=0; i<img_height_*img_width_; ++i)
         {

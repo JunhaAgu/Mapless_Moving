@@ -58,7 +58,8 @@ void dRCalc::dR_warpPointcloud(std::unique_ptr<CloudFrame>& CloudFrame_next, std
     pcl::transformPointCloud(*velo_cur_, *cur_pts_warped_, T01);
     
     // current warped image
-    CloudFrame_cur_warped->genRangeImages(cur_pts_warped_, false);
+    // CloudFrame_cur_warped->genRangeImages(cur_pts_warped_, false);
+    CloudFrame_cur_warped->genRangeImages_dR(cur_pts_warped_, false);
 
     // fill range image using interpolation
     interpRangeImageMin(CloudFrame_cur_warped);
@@ -123,6 +124,9 @@ void dRCalc::compensateCurRhoZeroWarp(std::unique_ptr<CloudFrame>& CloudFrame_cu
     // fs_w << "matImage" << CloudFrame_cur->str_rhopts_->img_rho;
     // fs_w.release();
     // exit(0);
+    float new_phi_alpha;
+    float new_theta_alpha;
+    float min_rho_cos;
 
     for (int i = 0 + 1; i < n_ring_ - 1; ++i)
     {
@@ -140,8 +144,8 @@ void dRCalc::compensateCurRhoZeroWarp(std::unique_ptr<CloudFrame>& CloudFrame_cu
             dir_tmp.resize(0);
             vec_inv_sum = 0.0;
             min_rho_4_dir = 0.0;
-            
-            if (*(ptr_cur_img_rho + i_ncols + j) == 0)
+            int i_ncols_j = i_ncols + j;
+            if (*(ptr_cur_img_rho + i_ncols_j) == 0)
             {
                     cnt_left = 1;
                     cnt_right = 1;
@@ -155,7 +159,7 @@ void dRCalc::compensateCurRhoZeroWarp(std::unique_ptr<CloudFrame>& CloudFrame_cu
                             // left_dir_rho = 100.0;
                             break;
                         }
-                        left_dir_rho = *(ptr_cur_img_rho + i_ncols + (j - cnt_left));
+                        left_dir_rho = *(ptr_cur_img_rho + i_ncols_j - cnt_left);
                         cnt_left += 1;
                     } // end while
                     //right
@@ -166,7 +170,7 @@ void dRCalc::compensateCurRhoZeroWarp(std::unique_ptr<CloudFrame>& CloudFrame_cu
                             // right_dir_rho = 100.0;
                             break;
                         }
-                        right_dir_rho = *(ptr_cur_img_rho + i_ncols + (j + cnt_right));
+                        right_dir_rho = *(ptr_cur_img_rho + i_ncols_j + cnt_right);
                         cnt_right += 1;
                     } // end while
                     //up
@@ -177,7 +181,7 @@ void dRCalc::compensateCurRhoZeroWarp(std::unique_ptr<CloudFrame>& CloudFrame_cu
                             // up_dir_rho = 100.0;
                             break;
                         }
-                        up_dir_rho = *(ptr_cur_img_rho + (i - cnt_up) * n_col + j);
+                        up_dir_rho = *(ptr_cur_img_rho + i_ncols_j - (cnt_up * n_col)); //(i - cnt_up) * n_col + j);
                         cnt_up += 1;
                     } // end while
                     //down
@@ -188,7 +192,7 @@ void dRCalc::compensateCurRhoZeroWarp(std::unique_ptr<CloudFrame>& CloudFrame_cu
                             // down_dir_rho = 100.0;
                             break;
                         }
-                        down_dir_rho = *(ptr_cur_img_rho + (i + cnt_down) * n_col + j);
+                        down_dir_rho = *(ptr_cur_img_rho + i_ncols_j + (cnt_down * n_col)); //(i + cnt_down) * n_col + j);
                         cnt_down += 1;
                     } // end while
                     four_dir[0] = (left_dir_rho);
@@ -248,14 +252,17 @@ void dRCalc::compensateCurRhoZeroWarp(std::unique_ptr<CloudFrame>& CloudFrame_cu
                     if (min_rho_4_dir > 0.0)
                     {
                         new_phi = v_angle_[i] * D2R;
-                        new_theta = 0.4 * (j+1) * D2R;
+                        new_theta = 0.4 * (j + 1) * D2R;
                         for (int m = 0; m < 5; ++m)
                         {
+                            new_phi_alpha = new_phi + ((float)m - 2.0) * 0.2 * D2R;
+                            min_rho_cos = -min_rho_4_dir * cosf(new_phi_alpha);
                             for (int p = 0; p < 5; ++p)
                             {
-                                velo_cur_->push_back(pcl::PointXYZ(-min_rho_4_dir * cosf(new_phi + ((float)m - 2.0) * 0.2 * D2R) * cosf(new_theta + ((float)p - 2.0) * 0.08 * D2R),
-                                                                 -min_rho_4_dir * cosf(new_phi + ((float)m - 2.0) * 0.2 * D2R) * sinf(new_theta + ((float)p - 2.0) * 0.08 * D2R),
-                                                                 min_rho_4_dir * sinf(new_phi + ((float)m - 2) * 0.2 * D2R)));
+                                new_theta_alpha = new_theta + ((float)p - 2.0) * 0.08 * D2R;
+                                velo_cur_->push_back(pcl::PointXYZ(min_rho_cos * cosf(new_theta_alpha),
+                                                                 min_rho_cos * sinf(new_theta_alpha),
+                                                                 min_rho_4_dir * sinf(new_phi_alpha)));
                             }
                         }
                     } // end if
@@ -275,61 +282,66 @@ void dRCalc::interpRangeImageMin(std::unique_ptr<CloudFrame>& CloudFrame_in)
     int n_col = CloudFrame_in->str_rhopts_->img_rho.cols;
     int n_row = CloudFrame_in->str_rhopts_->img_rho.rows;
 
+    int n_col_2 = 2*n_col;
+    int i_ncols = 0;
+    int i_ncols_j = 0;
+
     for (int i = 0 + 2; i < (n_ring_ - 2); ++i)
     {
-        int i_ncols = i * n_col;
+        i_ncols = i * n_col;
         for (int j = 0 + 2; j < (n_radial_ - 2); ++j)
-        {            
-            if (*(ptr_img_rho + i_ncols + j) == 0)
+        {
+            i_ncols_j = i_ncols + j;            
+            if (*(ptr_img_rho + i_ncols_j) == 0)
             {
-                if (*(ptr_img_rho + i_ncols - n_col + j) != 0 && *(ptr_img_rho + i_ncols + n_col + j) != 0)
+                if (*(ptr_img_rho + i_ncols_j - n_col) != 0 && *(ptr_img_rho + i_ncols_j + n_col) != 0)
                 {
-                    if (fabsf32(*(ptr_img_rho + i_ncols - n_col + j) - *(ptr_img_rho + i_ncols + n_col + j)) < 0.1)
+                    if (fabsf32(*(ptr_img_rho + i_ncols_j - n_col) - *(ptr_img_rho + i_ncols_j + n_col)) < 0.1)
                     {
-                        *(ptr_img_restore_warp_mask + i_ncols + j) = 1;
-                        *(ptr_img_rho_new + i_ncols + j) = (*(ptr_img_rho + i_ncols - n_col + j) + *(ptr_img_rho + i_ncols + n_col + j)) * 0.5;
+                        *(ptr_img_restore_warp_mask + i_ncols_j) = 1;
+                        *(ptr_img_rho_new + i_ncols_j) = (*(ptr_img_rho + i_ncols_j - n_col) + *(ptr_img_rho + i_ncols_j + n_col)) * 0.5;
                     }
                     else
                     {
-                        *(ptr_img_restore_warp_mask + i_ncols + j) = 10;
-                        *(ptr_img_rho_new + i_ncols + j) = std::min(*(ptr_img_rho + i_ncols - n_col + j), *(ptr_img_rho + i_ncols + n_col + j));
+                        *(ptr_img_restore_warp_mask + i_ncols_j) = 10;
+                        *(ptr_img_rho_new + i_ncols_j) = std::min(*(ptr_img_rho + i_ncols_j - n_col), *(ptr_img_rho + i_ncols_j + n_col));
                     }
                 }
-                else if (*(ptr_img_rho + i_ncols - n_col + j) != 0 && *(ptr_img_rho + (i + 2) * n_col + j) != 0)
+                else if (*(ptr_img_rho + i_ncols_j - n_col) != 0 && *(ptr_img_rho + i_ncols_j + n_col_2) != 0)
                 {
-                    if (fabsf32(*(ptr_img_rho + i_ncols - n_col + j) - *(ptr_img_rho + (i + 2) * n_col + j)) < 0.1)
+                    if (fabsf32(*(ptr_img_rho + i_ncols_j - n_col) - *(ptr_img_rho + i_ncols_j + n_col_2)) < 0.1)
                     {
-                        *(ptr_img_restore_warp_mask + i_ncols + j)          = 2;
-                        *(ptr_img_restore_warp_mask + i_ncols + n_col + j)  = 3;
-                        *(ptr_img_rho_new + i_ncols + j)            = *(ptr_img_rho + i_ncols - n_col + j) * (0.6666667) + *(ptr_img_rho + (i + 2) * n_col + j) * (0.3333333);
-                        *(ptr_img_rho_new + i_ncols + n_col + j)    = *(ptr_img_rho + i_ncols - n_col + j) * (0.3333333) + *(ptr_img_rho + (i + 2) * n_col + j) * (0.6666667);
+                        *(ptr_img_restore_warp_mask + i_ncols_j)          = 2;
+                        *(ptr_img_restore_warp_mask + i_ncols_j + n_col)  = 3;
+                        *(ptr_img_rho_new + i_ncols_j)            = *(ptr_img_rho + i_ncols_j - n_col) * (0.6666667) + *(ptr_img_rho + i_ncols_j + n_col_2) * (0.3333333);
+                        *(ptr_img_rho_new + i_ncols_j + n_col)    = *(ptr_img_rho + i_ncols_j - n_col) * (0.3333333) + *(ptr_img_rho + i_ncols_j + n_col_2) * (0.6666667);
                     }
                     else
                     {
-                        *(ptr_img_restore_warp_mask + i_ncols + j)          = 20;
-                        *(ptr_img_restore_warp_mask + i_ncols + n_col + j)  = 30;
-                        *(ptr_img_rho_new + i_ncols + j)            = std::min(*(ptr_img_rho + i_ncols - n_col + j), *(ptr_img_rho + (i + 2) * n_col + j));
-                        *(ptr_img_rho_new + i_ncols + n_col + j)    = std::min(*(ptr_img_rho + i_ncols - n_col + j), *(ptr_img_rho + (i + 2) * n_col + j));
+                        *(ptr_img_restore_warp_mask + i_ncols_j)          = 20;
+                        *(ptr_img_restore_warp_mask + i_ncols_j + n_col)  = 30;
+                        *(ptr_img_rho_new + i_ncols_j)            = std::min(*(ptr_img_rho + i_ncols_j - n_col), *(ptr_img_rho + i_ncols_j + n_col_2));
+                        *(ptr_img_rho_new + i_ncols_j + n_col)    = std::min(*(ptr_img_rho + i_ncols_j - n_col), *(ptr_img_rho + i_ncols_j + n_col_2));
                     }
                 }
 
-                if (*(ptr_img_rho + i_ncols + (j - 1)) != 0 && *(ptr_img_rho + i_ncols + (j + 1)) != 0)
+                if (*(ptr_img_rho + i_ncols_j - 1) != 0 && *(ptr_img_rho + i_ncols_j + 1) != 0)
                 {
-                    if (fabsf32(*(ptr_img_rho + i_ncols + (j - 1)) - *(ptr_img_rho + i_ncols + (j + 1))) < 0.05)
+                    if (fabsf32(*(ptr_img_rho + i_ncols_j - 1) - *(ptr_img_rho + i_ncols_j + 1)) < 0.05)
                     {
-                        *(ptr_img_restore_warp_mask + i_ncols + j) = 4;
-                        *(ptr_img_rho_new + i_ncols + j) = (*(ptr_img_rho + i_ncols + (j - 1)) + *(ptr_img_rho + i_ncols + (j + 1))) * 0.5;
+                        *(ptr_img_restore_warp_mask + i_ncols_j) = 4;
+                        *(ptr_img_rho_new + i_ncols_j) = (*(ptr_img_rho + i_ncols_j - 1) + *(ptr_img_rho + i_ncols_j + 1)) * 0.5;
                     }
                     else{}
                 }
-                else if (*(ptr_img_rho + i_ncols + (j - 1)) != 0 && *(ptr_img_rho + i_ncols + (j + 2)) != 0)
+                else if (*(ptr_img_rho + i_ncols_j - 1) != 0 && *(ptr_img_rho + i_ncols_j + 2) != 0)
                 {
-                    if (fabsf32(*(ptr_img_rho + i_ncols + (j - 1)) - *(ptr_img_rho + i_ncols + (j + 2))) < 0.05)
+                    if (fabsf32(*(ptr_img_rho + i_ncols_j - 1) - *(ptr_img_rho + i_ncols_j + 2)) < 0.05)
                     {
-                        *(ptr_img_restore_warp_mask + i_ncols + j)          = 5;
-                        *(ptr_img_restore_warp_mask + i_ncols + (j + 1))    = 6;
-                        *(ptr_img_rho_new + i_ncols + j)        = *(ptr_img_rho + i_ncols + (j - 1)) * (0.6666667) + *(ptr_img_rho + i_ncols + (j + 2)) * (0.3333333);
-                        *(ptr_img_rho_new + i_ncols + (j + 1))  = *(ptr_img_rho + i_ncols + (j - 1)) * (0.3333333) + *(ptr_img_rho + i_ncols + (j + 2)) * (0.6666667);
+                        *(ptr_img_restore_warp_mask + i_ncols_j)          = 5;
+                        *(ptr_img_restore_warp_mask + i_ncols_j + 1)    = 6;
+                        *(ptr_img_rho_new + i_ncols_j)        = *(ptr_img_rho + i_ncols_j - 1) * (0.6666667) + *(ptr_img_rho + i_ncols_j + 2) * (0.3333333);
+                        *(ptr_img_rho_new + i_ncols_j + 1)  = *(ptr_img_rho + i_ncols_j - 1) * (0.3333333) + *(ptr_img_rho + i_ncols_j + 2) * (0.6666667);
                     }
                     else{}
                 }
@@ -346,99 +358,97 @@ void dRCalc::interpPtsWarp(std::unique_ptr<CloudFrame>& CloudFrame_in)
 {
     int n_row = n_ring_;
     int n_col = n_radial_;
+    int n_col_2 = 2*n_col;
     float* ptr_img_rho  = CloudFrame_in->str_rhopts_->img_rho.ptr<float>(0);
     float* ptr_img_x    = CloudFrame_in->str_rhopts_->img_x.ptr<float>(0);
     float* ptr_img_y    = CloudFrame_in->str_rhopts_->img_y.ptr<float>(0);
     float* ptr_img_z    = CloudFrame_in->str_rhopts_->img_z.ptr<float>(0);
     int* ptr_img_restore_warp_mask = CloudFrame_in->str_rhopts_->img_restore_warp_mask.ptr<int>(0);
 
+    int i_ncols = 0;
+    int i_ncols_j = 0;
+
     for (int i = 0 + 2; i < n_row - 2; ++i)
     {
-        int i_ncols = i * n_col;
+        i_ncols = i * n_col;
         for (int j = 0 + 2; j < n_col - 2; ++j)
-        {            
-            if (*(ptr_img_restore_warp_mask + i_ncols + j) == 1)
+        {         
+            i_ncols_j = i_ncols + j;   
+            switch(*(ptr_img_restore_warp_mask + i_ncols_j))
             {
-                *(ptr_img_x + i_ncols + j) = 0.5 * (*(ptr_img_x + (i - 1) * n_col + j) + *(ptr_img_x + (i + 1) * n_col + j));
-                *(ptr_img_y + i_ncols + j) = 0.5 * (*(ptr_img_y + (i - 1) * n_col + j) + *(ptr_img_y + (i + 1) * n_col + j));
-                *(ptr_img_z + i_ncols + j) = 0.5 * (*(ptr_img_z + (i - 1) * n_col + j) + *(ptr_img_z + (i + 1) * n_col + j));
-            }
-            else if (*(ptr_img_restore_warp_mask + i_ncols + j) == 10)
-            {
-                if ((*(ptr_img_rho + (i - 1) * n_col + j) < *(ptr_img_rho + (i + 1) * n_col + j)))
+            case 1:
+                *(ptr_img_x + i_ncols_j) = 0.5 * (*(ptr_img_x + i_ncols_j - n_col) + *(ptr_img_x + i_ncols_j + n_col));
+                *(ptr_img_y + i_ncols_j) = 0.5 * (*(ptr_img_y + i_ncols_j - n_col) + *(ptr_img_y + i_ncols_j + n_col));
+                *(ptr_img_z + i_ncols_j) = 0.5 * (*(ptr_img_z + i_ncols_j - n_col) + *(ptr_img_z + i_ncols_j + n_col));
+                break;
+            case 10:
+                if ((*(ptr_img_rho + i_ncols_j - n_col) < *(ptr_img_rho + i_ncols_j + n_col)))
                 {
-                    *(ptr_img_x + i_ncols + j) = *(ptr_img_x + (i-1) * n_col + j);
-                    *(ptr_img_y + i_ncols + j) = *(ptr_img_y + (i-1) * n_col + j);
-                    *(ptr_img_z + i_ncols + j) = *(ptr_img_z + (i-1) * n_col + j);
+                    *(ptr_img_x + i_ncols_j) = *(ptr_img_x + i_ncols_j - n_col);
+                    *(ptr_img_y + i_ncols_j) = *(ptr_img_y + i_ncols_j - n_col);
+                    *(ptr_img_z + i_ncols_j) = *(ptr_img_z + i_ncols_j - n_col);
                 }
                 else
                 {
-                    *(ptr_img_x + i_ncols + j) = *(ptr_img_x + (i+1) * n_col + j);
-                    *(ptr_img_y + i_ncols + j) = *(ptr_img_y + (i+1) * n_col + j);
-                    *(ptr_img_z + i_ncols + j) = *(ptr_img_z + (i+1) * n_col + j);
+                    *(ptr_img_x + i_ncols_j) = *(ptr_img_x + i_ncols_j + n_col);
+                    *(ptr_img_y + i_ncols_j) = *(ptr_img_y + i_ncols_j + n_col);
+                    *(ptr_img_z + i_ncols_j) = *(ptr_img_z + i_ncols_j + n_col);
                 }
-            }
-            else if (*(ptr_img_restore_warp_mask + i_ncols + j) == 2)
-            {
-                *(ptr_img_x + i_ncols + j) = (0.6666667) * (*(ptr_img_x + (i - 1) * n_col + j)) + (0.3333333) * (*(ptr_img_x + (i + 2) * n_col + j));
-                *(ptr_img_y + i_ncols + j) = (0.6666667) * (*(ptr_img_y + (i - 1) * n_col + j)) + (0.3333333) * (*(ptr_img_y + (i + 2) * n_col + j));
-                *(ptr_img_z + i_ncols + j) = (0.6666667) * (*(ptr_img_z + (i - 1) * n_col + j)) + (0.3333333) * (*(ptr_img_z + (i + 2) * n_col + j));
-            }
-            else if (*(ptr_img_restore_warp_mask + i_ncols + j) == 20)
-            {
-                if ((*(ptr_img_rho + (i - 1) * n_col + j) < *(ptr_img_rho + (i + 2) * n_col + j)))
+                break;
+            case 2:
+                *(ptr_img_x + i_ncols_j) = (0.6666667) * (*(ptr_img_x + i_ncols_j - n_col)) + (0.3333333) * (*(ptr_img_x + i_ncols_j + n_col_2));
+                *(ptr_img_y + i_ncols_j) = (0.6666667) * (*(ptr_img_y + i_ncols_j - n_col)) + (0.3333333) * (*(ptr_img_y + i_ncols_j + n_col_2));
+                *(ptr_img_z + i_ncols_j) = (0.6666667) * (*(ptr_img_z + i_ncols_j - n_col)) + (0.3333333) * (*(ptr_img_z + i_ncols_j + n_col_2));
+                break;
+            case 20:
+                if ((*(ptr_img_rho + i_ncols_j - n_col) < *(ptr_img_rho + i_ncols_j + n_col_2)))
                 {
-                    *(ptr_img_x + i_ncols + j) = *(ptr_img_x + (i-1) * n_col + j);
-                    *(ptr_img_y + i_ncols + j) = *(ptr_img_y + (i-1) * n_col + j);
-                    *(ptr_img_z + i_ncols + j) = *(ptr_img_z + (i-1) * n_col + j);
+                    *(ptr_img_x + i_ncols_j) = *(ptr_img_x + i_ncols_j - n_col);
+                    *(ptr_img_y + i_ncols_j) = *(ptr_img_y + i_ncols_j - n_col);
+                    *(ptr_img_z + i_ncols_j) = *(ptr_img_z + i_ncols_j - n_col);
                 }
                 else
                 {
-                    *(ptr_img_x + i_ncols + j) = *(ptr_img_x + (i+2) * n_col + j);
-                    *(ptr_img_y + i_ncols + j) = *(ptr_img_y + (i+2) * n_col + j);
-                    *(ptr_img_z + i_ncols + j) = *(ptr_img_z + (i+2) * n_col + j);
+                    *(ptr_img_x + i_ncols_j) = *(ptr_img_x + i_ncols_j + n_col_2);
+                    *(ptr_img_y + i_ncols_j) = *(ptr_img_y + i_ncols_j + n_col_2);
+                    *(ptr_img_z + i_ncols_j) = *(ptr_img_z + i_ncols_j + n_col_2);
                 }
-            }
-            else if (*(ptr_img_restore_warp_mask + i_ncols + j) == 3)
-            {
-                *(ptr_img_x + i_ncols + j) = (0.3333333) * (*(ptr_img_x + (i - 2) * n_col + j)) + (0.6666667) * (*(ptr_img_x + (i + 1) * n_col + j));
-                *(ptr_img_y + i_ncols + j) = (0.3333333) * (*(ptr_img_y + (i - 2) * n_col + j)) + (0.6666667) * (*(ptr_img_y + (i + 1) * n_col + j));
-                *(ptr_img_z + i_ncols + j) = (0.3333333) * (*(ptr_img_z + (i - 2) * n_col + j)) + (0.6666667) * (*(ptr_img_z + (i + 1) * n_col + j));
-            }
-            else if (*(ptr_img_restore_warp_mask + i_ncols + j) == 30)
-            {
-                if ((*(ptr_img_rho + (i - 2) * n_col + j) < *(ptr_img_rho + (i + 1) * n_col + j)))
+                break;
+            case 3:
+                *(ptr_img_x + i_ncols_j) = (0.3333333) * (*(ptr_img_x + i_ncols_j - n_col_2)) + (0.6666667) * (*(ptr_img_x + i_ncols_j + n_col ));
+                *(ptr_img_y + i_ncols_j) = (0.3333333) * (*(ptr_img_y + i_ncols_j - n_col_2)) + (0.6666667) * (*(ptr_img_y + i_ncols_j + n_col ));
+                *(ptr_img_z + i_ncols_j) = (0.3333333) * (*(ptr_img_z + i_ncols_j - n_col_2)) + (0.6666667) * (*(ptr_img_z + i_ncols_j + n_col ));
+                break;
+            case 30:
+                if ((*(ptr_img_rho + i_ncols_j - n_col_2) < *(ptr_img_rho + i_ncols_j + n_col)))
                 {
-                    *(ptr_img_x + i_ncols + j) = *(ptr_img_x + (i-2) * n_col + j);
-                    *(ptr_img_y + i_ncols + j) = *(ptr_img_y + (i-2) * n_col + j);
-                    *(ptr_img_z + i_ncols + j) = *(ptr_img_z + (i-2) * n_col + j);
+                    *(ptr_img_x + i_ncols_j) = *(ptr_img_x + i_ncols_j - n_col_2);
+                    *(ptr_img_y + i_ncols_j) = *(ptr_img_y + i_ncols_j - n_col_2);
+                    *(ptr_img_z + i_ncols_j) = *(ptr_img_z + i_ncols_j - n_col_2);
                 }
                 else
                 {
-                    *(ptr_img_x + i_ncols + j) = *(ptr_img_x + (i+1) * n_col + j);
-                    *(ptr_img_y + i_ncols + j) = *(ptr_img_y + (i+1) * n_col + j);
-                    *(ptr_img_z + i_ncols + j) = *(ptr_img_z + (i+1) * n_col + j);
+                    *(ptr_img_x + i_ncols_j) = *(ptr_img_x + i_ncols_j + n_col);
+                    *(ptr_img_y + i_ncols_j) = *(ptr_img_y + i_ncols_j + n_col);
+                    *(ptr_img_z + i_ncols_j) = *(ptr_img_z + i_ncols_j + n_col);
                 }
+                break;
+            case 4:
+                *(ptr_img_x + i_ncols_j) = 0.5 * (*(ptr_img_x + i_ncols_j - 1) + (*(ptr_img_x + i_ncols_j + 1)));
+                *(ptr_img_y + i_ncols_j) = 0.5 * (*(ptr_img_y + i_ncols_j - 1) + (*(ptr_img_y + i_ncols_j + 1)));
+                *(ptr_img_z + i_ncols_j) = 0.5 * (*(ptr_img_z + i_ncols_j - 1) + (*(ptr_img_z + i_ncols_j + 1)));
+                break;
+            case 5:
+                *(ptr_img_x + i_ncols_j) = (0.6666667) * (*(ptr_img_x + i_ncols_j - 1)) + (0.3333333) * (*(ptr_img_x + i_ncols_j + 2));
+                *(ptr_img_y + i_ncols_j) = (0.6666667) * (*(ptr_img_y + i_ncols_j - 1)) + (0.3333333) * (*(ptr_img_y + i_ncols_j + 2));
+                *(ptr_img_z + i_ncols_j) = (0.6666667) * (*(ptr_img_z + i_ncols_j - 1)) + (0.3333333) * (*(ptr_img_z + i_ncols_j + 2));
+                break;
+            case 6:
+                *(ptr_img_x + i_ncols_j) = (0.3333333) * (*(ptr_img_x + i_ncols_j - 2)) + (0.6666667) * (*(ptr_img_x + i_ncols_j + 1));
+                *(ptr_img_y + i_ncols_j) = (0.3333333) * (*(ptr_img_y + i_ncols_j - 2)) + (0.6666667) * (*(ptr_img_y + i_ncols_j + 1));
+                *(ptr_img_z + i_ncols_j) = (0.3333333) * (*(ptr_img_z + i_ncols_j - 2)) + (0.6666667) * (*(ptr_img_z + i_ncols_j + 1));
+                break;
             }
-            else if (*(ptr_img_restore_warp_mask + i_ncols + j) == 4)
-            {
-                *(ptr_img_x + i_ncols + j) = 0.5 * (*(ptr_img_x + i_ncols + (j - 1)) + (*(ptr_img_x + i_ncols + (j + 1))));
-                *(ptr_img_y + i_ncols + j) = 0.5 * (*(ptr_img_y + i_ncols + (j - 1)) + (*(ptr_img_y + i_ncols + (j + 1))));
-                *(ptr_img_z + i_ncols + j) = 0.5 * (*(ptr_img_z + i_ncols + (j - 1)) + (*(ptr_img_z + i_ncols + (j + 1))));
-            }
-            else if (*(ptr_img_restore_warp_mask + i_ncols + j) == 5)
-            {
-                *(ptr_img_x + i_ncols + j) = (0.6666667) * (*(ptr_img_x + i_ncols + (j - 1))) + (0.3333333) * (*(ptr_img_x + i_ncols + (j + 2)));
-                *(ptr_img_y + i_ncols + j) = (0.6666667) * (*(ptr_img_y + i_ncols + (j - 1))) + (0.3333333) * (*(ptr_img_y + i_ncols + (j + 2)));
-                *(ptr_img_z + i_ncols + j) = (0.6666667) * (*(ptr_img_z + i_ncols + (j - 1))) + (0.3333333) * (*(ptr_img_z + i_ncols + (j + 2)));
-            }
-            else if (*(ptr_img_restore_warp_mask + i_ncols + j) == 6)
-            {
-                *(ptr_img_x + i_ncols + j) = (0.3333333) * (*(ptr_img_x + i_ncols + (j - 2))) + (0.6666667) * (*(ptr_img_x + i_ncols + (j + 1)));
-                *(ptr_img_y + i_ncols + j) = (0.3333333) * (*(ptr_img_y + i_ncols + (j - 2))) + (0.6666667) * (*(ptr_img_y + i_ncols + (j + 1)));
-                *(ptr_img_z + i_ncols + j) = (0.3333333) * (*(ptr_img_z + i_ncols + (j - 2))) + (0.6666667) * (*(ptr_img_z + i_ncols + (j + 1)));
-            }
-            else{}
         } // end for j
     } // end for i
 }

@@ -41,7 +41,7 @@ struct StrRhoPts
     cv::Mat img_y;
     cv::Mat img_z;
 
-    std::vector<int> pts_per_pixel_n;
+    // std::vector<int> pts_per_pixel_n;
     std::vector<std::vector<int>> pts_per_pixel_index;
     std::vector<std::vector<float>> pts_per_pixel_rho;
     std::vector<std::vector<int>> pts_per_pixel_index_valid;
@@ -58,7 +58,7 @@ struct StrRhoPts
         theta.resize(0);
 
         // img_rho = 
-        for(auto it : pts_per_pixel_n)           it = 0;
+        // for(auto it : pts_per_pixel_n)           it = 0;
         for(auto it : pts_per_pixel_index)       it.resize(0);
         for(auto it : pts_per_pixel_rho)         it.resize(0);
         for(auto it : pts_per_pixel_index_valid) it.resize(0);
@@ -69,7 +69,7 @@ struct StrRhoPts
         std::cout << "(vector) rho size: " << rho.size() << std::endl;
         std::cout << "(vector) phi size: " << phi.size() << std::endl;
         std::cout << "(vector) theta size: " << theta.size() << std::endl;
-        std::cout << "(vector) pts_per_pixel_n size: " << pts_per_pixel_n.size() << std::endl;
+        // std::cout << "(vector) pts_per_pixel_n size: " << pts_per_pixel_n.size() << std::endl;
         std::cout << "(vector(vector)) pts_per_pixel_index size: " << pts_per_pixel_index.size() << std::endl;
         std::cout << "(vector(vector)) pts_per_pixel_rho size: " << pts_per_pixel_rho.size() << std::endl;
         std::cout << "(vector) pts_per_pixel_index_valid size: " << pts_per_pixel_index_valid.size() << std::endl;

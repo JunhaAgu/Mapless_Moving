@@ -30,7 +30,7 @@ CloudFrame::CloudFrame(const std::unique_ptr<UserParam>& user_param)
     str_rhopts_->img_y     = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
     str_rhopts_->img_z     = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
 
-    str_rhopts_->pts_per_pixel_n.resize(img_height_ * img_width_);
+    // str_rhopts_->pts_per_pixel_n.resize(img_height_ * img_width_);
     str_rhopts_->pts_per_pixel_index.resize(img_height_ * img_width_);
     str_rhopts_->pts_per_pixel_rho.resize(img_height_ * img_width_);
     str_rhopts_->pts_per_pixel_index_valid.resize(img_height_ * img_width_);
@@ -100,6 +100,17 @@ void CloudFrame::genRangeImages(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in, bool
     // ROS_INFO_STREAM("elapsed time for 'interpPts' :" << dt_interpPts << " [ms]");
 }
 
+void CloudFrame::genRangeImages_dR(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in, bool cur_next)
+{
+    n_pts_ = pcl_in->size();
+
+    calcuateRho(pcl_in, cur_next);    
+
+    makeRangeImageAndPtsPerPixel_dR(cur_next);
+
+    interpRangeImage_dR(cur_next);
+}
+
 void CloudFrame::genRangeImages_noComp(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in, bool cur_next)
 {
     n_pts_ = pcl_in->size();
@@ -133,9 +144,10 @@ void CloudFrame::calcuateRho(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in, bool cu
 
     for (int i = 0; i < n_pts; ++i)
     {
+        // str_rhopts_->rho.push_back(sqrt((pcl_in->points[i].x * pcl_in->points[i].x + pcl_in->points[i].y * pcl_in->points[i].y + pcl_in->points[i].z * pcl_in->points[i].z)));
         str_rhopts_->rho.push_back(NORM(pcl_in->points[i].x, pcl_in->points[i].y, pcl_in->points[i].z));
-        str_rhopts_->phi.push_back(asin(pcl_in->points[i].z / ptr_rho[i]));
-        invrhocos = (float)1.0 / (ptr_rho[i] * cos(ptr_phi[i]));
+        str_rhopts_->phi.push_back(asinf32(pcl_in->points[i].z / ptr_rho[i]));
+        invrhocos = (float)1.0 / (ptr_rho[i] * cosf32(ptr_phi[i]));
 
         cospsi = pcl_in->points[i].x * invrhocos;
         if (cospsi > 1)
@@ -157,22 +169,22 @@ void CloudFrame::calcuateRho(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in, bool cu
         {
             if (sinpsi >= 0) // 1 quadrant
             {
-                str_rhopts_->theta.push_back(acos(cospsi) + offset_theta);
+                str_rhopts_->theta.push_back(acosf32(cospsi) + offset_theta);
             }
             else // 4 quadrant
             {
-                str_rhopts_->theta.push_back(twopi_plus_offset_theta - acos(cospsi));
+                str_rhopts_->theta.push_back(twopi_plus_offset_theta - acosf32(cospsi));
             }
         }
         else
         {
             if (sinpsi >= 0) // 2 quadrant
             {
-                str_rhopts_->theta.push_back(M_PI_plus_offset_theta - acos(-cospsi));
+                str_rhopts_->theta.push_back(M_PI_plus_offset_theta - acosf32(-cospsi));
             }
             else // 3 quadrant
             {
-                str_rhopts_->theta.push_back(M_PI_plus_offset_theta + acos(-cospsi));
+                str_rhopts_->theta.push_back(M_PI_plus_offset_theta + acosf32(-cospsi));
             }
         }
 
@@ -215,7 +227,7 @@ void CloudFrame::makeRangeImageAndPtsPerPixel(bool cur_next)
     float* ptr_img_rho = str_rhopts_->img_rho.ptr<float>(0);
     int* ptr_img_index = str_rhopts_->img_index.ptr<int>(0);
 
-    int* ptr_pts_per_pixel_n = str_rhopts_->pts_per_pixel_n.data();
+    // int* ptr_pts_per_pixel_n = str_rhopts_->pts_per_pixel_n.data();
 
     int n_row = str_rhopts_->img_rho.rows;
     int n_col = str_rhopts_->img_rho.cols;
@@ -229,8 +241,10 @@ void CloudFrame::makeRangeImageAndPtsPerPixel(bool cur_next)
 
     float phi_R2D = 0.0f;
 
-    std::string line;
-    std::ofstream file("/home/junhakim/debug_rowcol.txt");
+    int n_ring_minus_1 = n_ring_-1;
+    int i_row_ncols_i_col = 0;
+    // std::string line;
+    // std::ofstream file("/home/junhakim/debug_rowcol.txt");
     
     for (int i = 0; i < n_pts_; ++i)
     {
@@ -270,7 +284,7 @@ void CloudFrame::makeRangeImageAndPtsPerPixel(bool cur_next)
 
         i_col = roundf(ptr_theta[i]*az_step_R2D);
 
-        if ( (i_row > n_ring_-1) || (i_row < 0) )
+        if ( (i_row > n_ring_minus_1) || (i_row < 0) )
         {
             continue;
         }
@@ -287,20 +301,20 @@ void CloudFrame::makeRangeImageAndPtsPerPixel(bool cur_next)
         //     }
         // }
         
-        int i_row_ncols_i_col = i_row * n_col + i_col;
-        if (*(ptr_img_rho + i_row_ncols_i_col) == 0) //(str_rhopts_->img_rho.at<float>(i_row,i_col) == 0)
+        i_row_ncols_i_col = i_row * n_col + i_col;
+        if (*(ptr_img_rho + i_row_ncols_i_col) == 0 || *(ptr_img_rho + i_row_ncols_i_col) > ptr_rho[i]) //(str_rhopts_->img_rho.at<float>(i_row,i_col) == 0)
         {   
             *(ptr_img_rho + i_row_ncols_i_col) = ptr_rho[i];
             *(ptr_img_index + i_row_ncols_i_col) = i;
         }
-        else if (*(ptr_img_rho + i_row_ncols_i_col) > ptr_rho[i])
-        {
-            *(ptr_img_rho + i_row_ncols_i_col) = ptr_rho[i];
-            *(ptr_img_index + i_row_ncols_i_col) = i;
-        }
+        // else if (*(ptr_img_rho + i_row_ncols_i_col) > ptr_rho[i])
+        // {
+        //     *(ptr_img_rho + i_row_ncols_i_col) = ptr_rho[i];
+        //     *(ptr_img_index + i_row_ncols_i_col) = i;
+        // }
         else{}
 
-        ptr_pts_per_pixel_n[i_row_ncols_i_col] += 1;
+        // ptr_pts_per_pixel_n[i_row_ncols_i_col] += 1;
         str_rhopts_->pts_per_pixel_index[i_row_ncols_i_col].push_back(i);
         str_rhopts_->pts_per_pixel_rho[i_row_ncols_i_col].push_back(ptr_rho[i]);
     } // end for
@@ -345,6 +359,68 @@ void CloudFrame::makeRangeImageAndPtsPerPixel(bool cur_next)
     // ROS_INFO_STREAM("elapsed time for 'makeRangeImageAndPtsPerPixel' :" << dt_slam << " [ms]");
 }
 
+void CloudFrame::makeRangeImageAndPtsPerPixel_dR(bool cur_next)
+{
+    int i_row = 0;
+    int i_col = 0;
+
+    float* ptr_img_rho = str_rhopts_->img_rho.ptr<float>(0);
+
+    int n_row = str_rhopts_->img_rho.rows;
+    int n_col = str_rhopts_->img_rho.cols;
+
+    float* ptr_rho      = str_rhopts_->rho.data();
+    float* ptr_phi      = str_rhopts_->phi.data();
+    float* ptr_theta    = str_rhopts_->theta.data();
+    float* ptr_v_angle  = v_angle_.data();
+
+    float az_step_R2D = az_step_*R2D;
+
+    float phi_R2D = 0.0f;
+
+    int n_ring_minus_1 = n_ring_-1;
+
+    for (int i = 0; i < n_pts_; ++i)
+    {
+        phi_R2D = (ptr_phi[i] * R2D);
+
+        if (phi_R2D > 2.5) // 2.5[degree]
+        {
+            i_row = 0;
+        }
+        else if (phi_R2D > -8.0) // -8.0[degree]
+        {
+            i_row = (int)ceil((-2.9523810 * phi_R2D + 7.3809524));
+        }
+        else if (phi_R2D > -8.5) // -8.5[degree]
+        {
+            i_row = 32;
+        }
+        else if (phi_R2D > -23.8) // -23.8[degree]
+        {
+            i_row = (int)ceil((-2.0261438 * phi_R2D + 14.7777778));
+        }
+        else
+        {
+            i_row = 63;
+        }
+
+        i_col = roundf(ptr_theta[i]*az_step_R2D);
+
+        if ( (i_row > n_ring_minus_1) || (i_row < 0) )
+        {
+            continue;
+        }
+        
+        int i_row_ncols_i_col = i_row * n_col + i_col;
+        if (*(ptr_img_rho + i_row_ncols_i_col) == 0 || *(ptr_img_rho + i_row_ncols_i_col) > ptr_rho[i]) //(str_rhopts_->img_rho.at<float>(i_row,i_col) == 0)
+        {   
+            *(ptr_img_rho + i_row_ncols_i_col) = ptr_rho[i];
+        }
+        else{}
+    } // end for
+}
+
 void CloudFrame::interpRangeImage(bool cur_next)
 {    
     int n_col = str_rhopts_->img_rho.cols;
@@ -357,13 +433,18 @@ void CloudFrame::interpRangeImage(bool cur_next)
     int* ptr_img_index          = str_rhopts_->img_index.ptr<int>(0);
     int* ptr_img_restore_mask   = str_rhopts_->img_restore_mask.ptr<int>(0);
 
+    int i_ncols = 0;
+    int i_minus_ncols = 0;
+    int i_plus_ncols = 0;
+
     for (int i = 27; i < 32; i++)
     {
-        int i_ncols = i * n_col;
-        int i_minus_ncols = (i - 1) * n_col;
-        int i_plus_ncols  = (i + 1) * n_col;
+        i_ncols = i * n_col;
+        i_minus_ncols = (i - 1) * n_col;
+        i_plus_ncols  = (i + 1) * n_col;
         for (int j = 0 + 2; j < (n_radial_ - 2); ++j)
         {
+
             if (*(ptr_img_rho + i_ncols + j) == 0)
             {
                 if ((*(ptr_img_rho + i_minus_ncols + j) != 0))
@@ -435,6 +516,101 @@ void CloudFrame::interpRangeImage(bool cur_next)
                     {
                         *(ptr_img_restore_mask + i_ncols + j) = 5;
                         *(ptr_img_restore_mask + i_ncols + (j + 1)) = 6;
+                        *(ptr_img_rho_new + i_ncols + j) = *(ptr_img_rho + i_ncols + (j - 1)) * (0.6666667) + *(ptr_img_rho + i_ncols + (j + 2)) * (0.3333333);
+                        *(ptr_img_rho_new + i_ncols + (j + 1)) = *(ptr_img_rho + i_ncols + (j - 1)) * (0.3333333) + *(ptr_img_rho + i_ncols + (j + 2)) * (0.6666667);
+                    }
+                    else{}
+                }
+                else{}
+            }
+            else{}
+
+        } // end col
+
+    } // end row
+
+    img_rho_new.copyTo(str_rhopts_->img_rho);
+}
+
+void CloudFrame::interpRangeImage_dR(bool cur_next)
+{    
+    int n_col = str_rhopts_->img_rho.cols;
+    int n_row = str_rhopts_->img_rho.rows;
+
+    cv::Mat img_rho_new = str_rhopts_->img_rho.clone();
+    float* ptr_img_rho_new = img_rho_new.ptr<float>(0);
+
+    float* ptr_img_rho          = str_rhopts_->img_rho.ptr<float>(0);
+
+    for (int i = 27; i < 32; i++)
+    {
+        int i_ncols = i * n_col;
+        int i_minus_ncols = (i - 1) * n_col;
+        int i_plus_ncols  = (i + 1) * n_col;
+        for (int j = 0 + 2; j < (n_radial_ - 2); ++j)
+        {
+            if (*(ptr_img_rho + i_ncols + j) == 0)
+            {
+                if ((*(ptr_img_rho + i_minus_ncols + j) != 0))
+                {
+                    if ((*(ptr_img_rho + i_plus_ncols + j) != 0))
+                    {
+                        if (fabsf32(*(ptr_img_rho + i_minus_ncols + j) - *(ptr_img_rho + i_plus_ncols + j)) < 0.1)
+                        {
+                            *(ptr_img_rho_new + i_ncols + j) = (*(ptr_img_rho + i_minus_ncols + j) + *(ptr_img_rho + i_plus_ncols + j)) * 0.5;
+                        }
+                        else
+                        {
+                            if (cur_next == false)
+                            {
+                                *(ptr_img_rho_new + i_ncols + j) = std::min(*(ptr_img_rho + i_minus_ncols + j), *(ptr_img_rho + i_plus_ncols + j));
+                            }
+                            else
+                            {
+                                *(ptr_img_rho_new + i_ncols + j) = std::max(*(ptr_img_rho + i_minus_ncols + j), *(ptr_img_rho + i_plus_ncols + j));
+                            }
+                        }
+                    }
+                    else if ((*(ptr_img_rho + (i + 2) * n_col + j) != 0))
+                    {
+                        if (fabsf32(*(ptr_img_rho + i_minus_ncols + j) - *(ptr_img_rho + i_plus_ncols + n_col + j)) < 0.1)
+                        {
+                            *(ptr_img_rho_new + i_ncols + j)        = *(ptr_img_rho + i_minus_ncols + j) * (0.6666667) + *(ptr_img_rho + i_plus_ncols + n_col + j) * (0.3333333);
+                            *(ptr_img_rho_new + i_plus_ncols + j)   = *(ptr_img_rho + i_minus_ncols + j) * (0.3333333) + *(ptr_img_rho + i_plus_ncols + n_col + j) * (0.6666667);
+                        }
+                        else
+                        {
+                            if (cur_next == false)
+                            {
+                                *(ptr_img_rho_new + i_ncols + j)        = std::min(*(ptr_img_rho + i_minus_ncols + j), *(ptr_img_rho + i_plus_ncols + n_col + j));
+                                *(ptr_img_rho_new + i_plus_ncols + j)   = std::min(*(ptr_img_rho + i_minus_ncols + j), *(ptr_img_rho + i_plus_ncols + n_col + j));
+                            }
+                            else
+                            {
+                                *(ptr_img_rho_new + i_ncols + j)        = std::max(*(ptr_img_rho + i_minus_ncols + j), *(ptr_img_rho + i_plus_ncols + n_col + j));
+                                *(ptr_img_rho_new + i_plus_ncols + j)   = std::max(*(ptr_img_rho + i_minus_ncols + j), *(ptr_img_rho + i_plus_ncols + n_col + j));
+                            }
+                        }
+                    }
+                    else{}
+                }
+            } // end if
+            else{}
+
+            if (*(ptr_img_rho + i_ncols + (j - 1)) != 0)
+            {
+                if ((*(ptr_img_rho + i_ncols + (j + 1)) != 0))
+                {
+                    if (fabsf32(*(ptr_img_rho + i_ncols + (j - 1)) - *(ptr_img_rho + i_ncols + (j + 1))) < 0.05)
+                    {
+                        *(ptr_img_rho_new + i_ncols + j) = (*(ptr_img_rho + i_ncols + (j - 1)) + *(ptr_img_rho + i_ncols + (j + 1))) * 0.5;
+                    }
+                    else{}
+                }
+                else if ((*(ptr_img_rho + i_ncols + (j + 2)) != 0))
+                {
+                    if (fabsf32(*(ptr_img_rho + i_ncols + (j - 1)) - *(ptr_img_rho + i_ncols + (j + 2))) < 0.05)
+                    {
                         *(ptr_img_rho_new + i_ncols + j) = *(ptr_img_rho + i_ncols + (j - 1)) * (0.6666667) + *(ptr_img_rho + i_ncols + (j + 2)) * (0.3333333);
                         *(ptr_img_rho_new + i_ncols + (j + 1)) = *(ptr_img_rho + i_ncols + (j - 1)) * (0.3333333) + *(ptr_img_rho + i_ncols + (j + 2)) * (0.6666667);
                     }
@@ -652,10 +828,10 @@ void CloudFrame::reset()
     this->str_rhopts_->img_restore_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
     this->str_rhopts_->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
 
-    for (int i = 0; i < img_height_ * img_width_; ++i)
-    {
-        this->str_rhopts_->pts_per_pixel_n[i] = 0;
-    }
+    // for (int i = 0; i < img_height_ * img_width_; ++i)
+    // {
+    //     this->str_rhopts_->pts_per_pixel_n[i] = 0;
+    // }
 
     for (int i = 0; i < img_height_ * img_width_; ++i)
     {

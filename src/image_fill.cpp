@@ -236,7 +236,6 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
         {
             float connect_zero_mean = 0.0;
             int n_connet_zero = 0;
-            timer::tic();
             // object_area_inv = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
             // object_area_inv_pad = cv::Mat::zeros(img_height_+2, img_width_+2, CV_8UC1);            
             // zero padding
@@ -247,8 +246,6 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
             object_area_filled_pad = (object_area_pad | object_area_inv_pad);
             // crop
             object_area_filled = object_area_filled_pad(cv::Range(0+1,img_height_+2-1), cv::Range(0+1,img_width_+2-1));
-            double dt_obj = timer::toc(); // milliseconds
-        ROS_INFO_STREAM("elapsed time for 'dt_obj' :" << dt_obj << " [ms]");
             for (int i = 0; i < n_row; ++i)
             {
                 int i_ncols = i * n_col;
@@ -275,29 +272,71 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
                             *(ptr_accumulated_dRdt + i_ncols + j) = connect_zero_mean;
                             *(ptr_accumulated_dRdt_score + i_ncols + j) = 1;
                         }
+
+                        if (*(ptr_img_rho + i_ncols + j) != 0 && *(ptr_input_img_tmp + i_ncols + j) != 0 && *(ptr_object_area_filled + i_ncols + j) != 0)
+                        {
+                            filled_object_row_.push_back(i);
+                            filled_object_col_.push_back(j);
+                            filled_object_rho_roi_.push_back(*(ptr_img_rho + i_ncols + j));
+                            *(ptr_filled_object_rho_mat + i_ncols + j) = *(ptr_img_rho + i_ncols + j);
+                        }
+                        else
+                        {}
+
+                        if (*(ptr_object_area_filled + i_ncols + j) != 0)
+                        {
+                            rho_zero_filled_row_.push_back(i);
+                            rho_zero_filled_col_.push_back(j);
+                            rho_zero_filled_rho_roi_.push_back(*(ptr_img_rho + i_ncols + j));
+                        }
+                        else{}
                     }
                 }
             }
             else
             {
                 // continue;
-            }
-
-            for (int i = 0; i < n_row; ++i)
-            {
-                int i_ncols = i * n_col;
-                for (int j = 0; j < n_col; ++j)
+                for (int i = 0; i < n_row; ++i)
                 {
-                    if (*(ptr_img_rho + i_ncols + j) != 0 && *(ptr_input_img_tmp + i_ncols + j) != 0 && *(ptr_object_area_filled + i_ncols + j) != 0)
+                    int i_ncols = i * n_col;
+                    for (int j = 0; j < n_col; ++j)
                     {
-                        filled_object_row_.push_back(i);
-                        filled_object_col_.push_back(j);
-                        filled_object_rho_roi_.push_back(*(ptr_img_rho + i_ncols + j));
-                        *(ptr_filled_object_rho_mat + i_ncols + j) = *(ptr_img_rho + i_ncols + j);
+                        if (*(ptr_img_rho + i_ncols + j) != 0 && *(ptr_input_img_tmp + i_ncols + j) != 0 && *(ptr_object_area_filled + i_ncols + j) != 0)
+                        {
+                            filled_object_row_.push_back(i);
+                            filled_object_col_.push_back(j);
+                            filled_object_rho_roi_.push_back(*(ptr_img_rho + i_ncols + j));
+                            *(ptr_filled_object_rho_mat + i_ncols + j) = *(ptr_img_rho + i_ncols + j);
+                        }
+                        else
+                        {}
+
+                        if (*(ptr_object_area_filled + i_ncols + j) != 0)
+                        {
+                            rho_zero_filled_row_.push_back(i);
+                            rho_zero_filled_col_.push_back(j);
+                            rho_zero_filled_rho_roi_.push_back(*(ptr_img_rho + i_ncols + j));
+                        }
+                        else{}
                     }
-                    else{}
                 }
             }
+
+            // for (int i = 0; i < n_row; ++i)
+            // {
+            //     int i_ncols = i * n_col;
+            //     for (int j = 0; j < n_col; ++j)
+            //     {
+            //         if (*(ptr_img_rho + i_ncols + j) != 0 && *(ptr_input_img_tmp + i_ncols + j) != 0 && *(ptr_object_area_filled + i_ncols + j) != 0)
+            //         {
+            //             filled_object_row_.push_back(i);
+            //             filled_object_col_.push_back(j);
+            //             filled_object_rho_roi_.push_back(*(ptr_img_rho + i_ncols + j));
+            //             *(ptr_filled_object_rho_mat + i_ncols + j) = *(ptr_img_rho + i_ncols + j);
+            //         }
+            //         else{}
+            //     }
+            // }
 
             if (filled_object_rho_roi_.size()<2)
             {
@@ -362,19 +401,19 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
             range_max = bin_range_max + 10.0;
 
             //
-            for (int i = 0; i < n_row; ++i)
-            {
-                int i_ncols = i * n_col;
-                for (int j = 0; j < n_col; ++j)
-                {
-                    if (*(ptr_object_area_filled + i_ncols + j) != 0)
-                    {
-                        rho_zero_filled_row_.push_back(i);
-                        rho_zero_filled_col_.push_back(j);
-                        rho_zero_filled_rho_roi_.push_back(*(ptr_img_rho + i_ncols + j));
-                    }
-                }
-            }
+            // for (int i = 0; i < n_row; ++i)
+            // {
+            //     int i_ncols = i * n_col;
+            //     for (int j = 0; j < n_col; ++j)
+            //     {
+            //         if (*(ptr_object_area_filled + i_ncols + j) != 0)
+            //         {
+            //             rho_zero_filled_row_.push_back(i);
+            //             rho_zero_filled_col_.push_back(j);
+            //             rho_zero_filled_rho_roi_.push_back(*(ptr_img_rho + i_ncols + j));
+            //         }
+            //     }
+            // }
 
             for (int i = 0; i < rho_zero_filled_row_.size(); ++i)
             {

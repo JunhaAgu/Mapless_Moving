@@ -1,8 +1,8 @@
 <launch>
     <arg name="topicname_lidar"     default="/debug/pc_raw"/> <!-- "/velodyne_points/lidar0"/> -->
-    <arg name="rosbag_play"         default="true"/>
-    <arg name="T01_slam"            default="false"/>
-    <arg name="data_number"         default="01"/>
+    <arg name="rosbag_play"         default="true"/>    <!-- true: rosbag / false: pcd data -->
+    <arg name="T01_slam"            default="false"/>   <!-- true: T01 from slam / false: T01 from GT -->
+    <arg name="data_number"         default="07"/>      <!-- true: KITTI data number -->
 
     <node pkg="mapless_dynamic" name="mapless_dynamic_node" type="mapless_dynamic_node" output="screen">
         <param name="topicname_lidar" type="string" value="$(arg topicname_lidar)"/>

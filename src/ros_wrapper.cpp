@@ -66,8 +66,8 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
 
     if( is_initialized_ ){ // If initialized, 
         // 0. Get the current LiDAR data
-        sensor_msgs::PointCloud2 p1_msg_ = *msg;
-        pcl::fromROSMsg(p1_msg_, *p1_pcl_);
+        // p1_msg_ = *msg;
+        pcl::fromROSMsg(*msg, *p1_pcl_);
 
         // 1. Calculate T01 from the SLAM (or Odometry) algorithm
         Pose T01;
@@ -80,7 +80,9 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
         }
         else
         {
-            T01 = solver_->data_buf_[cnt_data+2]->T_gt_.inverse();
+            T01 = solver_->data_buf_[cnt_data+2]->T_gt_.inverse(); 
+            //"00": +3
+            //"01": +2
         }
 
         // 2. Solve the Mapless Dynamic algorithm.
@@ -88,7 +90,7 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
         Mask mask1;
 
         ROS_INFO_STREAM("Data is from rosbag");
-
+        ROS_INFO_STREAM("p0_ size:" << p0_pcl_->size() << " " << "p1_ size:" << p1_pcl_->size() << " ");
         solver_->solve(p0_pcl_, p1_pcl_, T01, mask1, cnt_data);
         double dt_solver = timer::toc(); // milliseconds
         ROS_INFO_STREAM("elapsed time for 'solver' :" << dt_solver << " [ms]");
