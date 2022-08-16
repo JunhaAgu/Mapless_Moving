@@ -109,12 +109,11 @@ public:
     MaplessDynamic(ros::NodeHandle& nh, bool rosbag_play, std::string& data_number); // constructor
     ~MaplessDynamic(); // destructor
 
-    void RosbagData();
     void TEST(); // algorithm test function with a loaded data
 
     void solve(        
         /* inputs */ 
-        pcl::PointCloud<pcl::PointXYZ>::Ptr p0, pcl::PointCloud<pcl::PointXYZ>::Ptr p1, const Pose& T01, 
+        pcl::PointCloud<pcl::PointXYZ>::Ptr p0, pcl::PointCloud<pcl::PointXYZ>::Ptr p1, const Pose& T10, 
         /* outputs */
         Mask& mask1, int cnt);
 

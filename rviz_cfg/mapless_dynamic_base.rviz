@@ -9,6 +9,7 @@ Panels:
         - /Axes1
         - /PointCloud21
         - /PointCloud22
+        - /Marker1
       Splitter Ratio: 0.5
     Tree Height: 549
   - Class: rviz/Selection
@@ -29,7 +30,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: PointCloud2
+    SyncSource: ""
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -118,6 +119,22 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /marker/node
+      Name: Marker
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /lidar_marker/node
+      Name: Marker
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -146,7 +163,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 46.60262680053711
+      Distance: 45.27013397216797
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -183,4 +200,4 @@ Window Geometry:
     collapsed: false
   Width: 1267
   X: 170
-  Y: 74
+  Y: 27

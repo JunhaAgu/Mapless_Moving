@@ -15,7 +15,7 @@ PclWarp::~PclWarp()
 
 };
 
-void PclWarp::warpPointcloud(std::unique_ptr<CloudFrame>& CloudFrame_in, std::unique_ptr<CloudFrame>& CloudFrame_warpPointcloud, const Pose &T01, 
+void PclWarp::warpPointcloud(std::unique_ptr<CloudFrame>& CloudFrame_in, std::unique_ptr<CloudFrame>& CloudFrame_warpPointcloud, const Pose &T10, 
                             /*output*/ cv::Mat& mat_in, int cnt_data)
 {
     int n_row = CloudFrame_in->str_rhopts_->img_rho.rows;
@@ -54,7 +54,7 @@ void PclWarp::warpPointcloud(std::unique_ptr<CloudFrame>& CloudFrame_in, std::un
     {
         return;
     }
-    pcl::transformPointCloud(*velo_xyz_, *pts_warpewd_, T01);
+    pcl::transformPointCloud(*velo_xyz_, *pts_warpewd_, T10);
 
     CloudFrame_warpPointcloud->genRangeImages_noComp(pts_warpewd_, false);
 

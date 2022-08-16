@@ -16,6 +16,7 @@
 // Mapless Dynamic header
 #include "mapless_dynamic.h"
 
+#include <visualization_msgs/Marker.h>
 
 class ROSWrapper{
 /* =========
@@ -34,6 +35,10 @@ private:
 private:
     ros::NodeHandle nh_;
     ros::Subscriber sub_lidar_;
+    ros::Publisher marker_pub_;
+    ros::Publisher lidar_marker_pub_;
+    visualization_msgs::Marker marker_;
+    visualization_msgs::Marker lidar_marker_;
     
     std::string     topicname_lidar_;
     bool            rosbag_play_;

@@ -19,6 +19,47 @@ ROSWrapper::ROSWrapper(ros::NodeHandle& nh)
     // subscriber
     sub_lidar_ = nh_.subscribe<sensor_msgs::PointCloud2>(
             topicname_lidar_, 1, &ROSWrapper::callbackLiDAR, this);
+
+    // publish
+    marker_pub_ = nh_.advertise<visualization_msgs::Marker>("marker/node", 1);
+    lidar_marker_pub_ = nh_.advertise<visualization_msgs::Marker>("lidar_marker/node", 1);
+    
+    //marker setting
+    {
+        marker_.header.frame_id = "/map"; // map frame
+        marker_.color.a = 1.0; // Don't forget to set the alpha!
+        marker_.color.r = 0.0;
+        marker_.color.g = 1.0;
+        marker_.color.b = 0.0;
+        marker_.scale.x = 0.1;
+        marker_.scale.y = 0.1;
+        marker_.scale.z = 3.0;
+        marker_.type = visualization_msgs::Marker::TEXT_VIEW_FACING; //TEXT_VIEW_FACING; SPHERE;
+        marker_.id = 0;
+        marker_.action = visualization_msgs::Marker::ADD;
+        marker_.pose.orientation.x = 0.0;
+        marker_.pose.orientation.y = 0.0;
+        marker_.pose.orientation.z = 0.0;
+        marker_.pose.orientation.w = 1.0;
+    }
+    //lidar marker setting
+    {
+        lidar_marker_.header.frame_id = "/map"; // map frame
+        lidar_marker_.color.a = 1.0; // Don't forget to set the alpha!
+        lidar_marker_.color.r = 0.0;
+        lidar_marker_.color.g = 1.0;
+        lidar_marker_.color.b = 0.0;
+        lidar_marker_.scale.x = 1.0;
+        lidar_marker_.scale.y = 1.0;
+        lidar_marker_.scale.z = 1.0;
+        lidar_marker_.type = visualization_msgs::Marker::CYLINDER; //TEXT_VIEW_FACING; SPHERE;
+        lidar_marker_.id = 0;
+        lidar_marker_.action = visualization_msgs::Marker::ADD;
+        lidar_marker_.pose.orientation.x = 0.0;
+        lidar_marker_.pose.orientation.y = 0.0;
+        lidar_marker_.pose.orientation.z = 0.0;
+        lidar_marker_.pose.orientation.w = 1.0;
+    }
   
     // spin.   
     this->run();
@@ -71,6 +112,7 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
 
         // 1. Calculate T01 from the SLAM (or Odometry) algorithm
         Pose T01;
+        Pose T10;
         if (T01_slam_==true)
         {
             timer::tic();
@@ -80,7 +122,8 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
         }
         else
         {
-            T01 = solver_->data_buf_[cnt_data+2]->T_gt_.inverse(); 
+            T01 = solver_->data_buf_[cnt_data+2]->T_gt_;
+            T10 = solver_->data_buf_[cnt_data+2]->T_gt_.inverse();
             //"00": +3
             //"01": +2
         }
@@ -91,12 +134,26 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
 
         ROS_INFO_STREAM("Data is from rosbag");
         ROS_INFO_STREAM("p0_ size:" << p0_pcl_->size() << " " << "p1_ size:" << p1_pcl_->size() << " ");
-        solver_->solve(p0_pcl_, p1_pcl_, T01, mask1, cnt_data);
+        solver_->solve(p0_pcl_, p1_pcl_, T10, mask1, cnt_data);
         double dt_solver = timer::toc(); // milliseconds
         ROS_INFO_STREAM("elapsed time for 'solver' :" << dt_solver << " [ms]");
 
         // // 3. Update the previous variables
         updatePreviousVariables(p0_pcl_, p1_pcl_, mask1);
+        
+        marker_.header.stamp = ros::Time::now();
+        marker_.text = std::to_string(cnt_data);
+        marker_.pose.position.x = T01(0,3);     //x
+        marker_.pose.position.y = T01(1,3);     //y
+        marker_.pose.position.z = T01(2,3) + 10; //z
+
+        lidar_marker_.header.stamp = ros::Time::now();
+        lidar_marker_.pose.position.x = T01(0,3);     //x
+        lidar_marker_.pose.position.y = T01(1,3);     //y
+        lidar_marker_.pose.position.z = T01(2,3); //z
+
+        marker_pub_.publish(marker_);
+        lidar_marker_pub_.publish(lidar_marker_);
 
         cnt_data += 1;
     }

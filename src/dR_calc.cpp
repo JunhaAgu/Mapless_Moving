@@ -19,7 +19,7 @@ dRCalc::~dRCalc()
 };
 
 void dRCalc::dR_warpPointcloud(std::unique_ptr<CloudFrame>& CloudFrame_next, std::unique_ptr<CloudFrame>& CloudFrame_cur, std::unique_ptr<CloudFrame>& CloudFrame_cur_warped,
-                                pcl::PointCloud<pcl::PointXYZ>::Ptr p0, Pose& T01, int cnt_data, cv::Mat& dRdt)
+                                pcl::PointCloud<pcl::PointXYZ>::Ptr p0, Pose& T10, int cnt_data, cv::Mat& dRdt)
 {
     int n_row = CloudFrame_next->str_rhopts_->img_rho.rows;
     int n_col = CloudFrame_next->str_rhopts_->img_rho.cols; 
@@ -55,7 +55,7 @@ void dRCalc::dR_warpPointcloud(std::unique_ptr<CloudFrame>& CloudFrame_next, std
     // compensate zero in current rho image for warping
     compensateCurRhoZeroWarp(CloudFrame_cur);
 
-    pcl::transformPointCloud(*velo_cur_, *cur_pts_warped_, T01);
+    pcl::transformPointCloud(*velo_cur_, *cur_pts_warped_, T10);
     
     // current warped image
     // CloudFrame_cur_warped->genRangeImages(cur_pts_warped_, false);
