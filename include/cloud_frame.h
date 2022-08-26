@@ -30,13 +30,13 @@ class CloudFrame
         CloudFrame(const std::unique_ptr<UserParam>& user_param);
         ~CloudFrame();
 
-        void genRangeImages(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in, bool cur_next);
+        void genRangeImages(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur_next);
 
-        void genRangeImages_dR(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in, bool cur_next);
+        void genRangeImages_dR(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur_next);
 
-        void genRangeImages_noComp(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in, bool cur_next);
+        void genRangeImages_noComp(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur_next);
 
-        void calcuateRho(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in, bool cur_next);
+        void calcuateRho(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur_next);
 
         void makeRangeImageAndPtsPerPixel(bool cur_next);
 
@@ -46,7 +46,7 @@ class CloudFrame
 
         void interpRangeImage_dR(bool cur_next);
 
-        void interpPts(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in, bool cur_next);
+        void interpPts(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur_next);
 
         void reset();
 };

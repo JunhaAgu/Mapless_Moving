@@ -9,6 +9,7 @@
         <param name="rosbag_play" type="bool" value="$(arg rosbag_play)"/>
         <param name="T01_slam" type="bool" value="$(arg T01_slam)"/>
         <param name="data_number" type="string" value="$(arg data_number)"/>
+        <!-- <param name="/use_sim_time" value="true" /> -->
     </node>
 
     <arg name="rviz" default="true" />

@@ -6,8 +6,8 @@ ROSWrapper::ROSWrapper(ros::NodeHandle& nh)
     // constructor
     ROS_INFO_STREAM("ROSWrapper - constructed.");
 
-    p0_pcl_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
-    p1_pcl_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
+    p0_pcl_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
+    p1_pcl_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
 
     // get ROS parameter (from '*.launch' file).
     // If parameters are not set, this function throws an exception and terminates the node.
@@ -71,11 +71,11 @@ ROSWrapper::~ROSWrapper(){
 };
 
 void ROSWrapper::run(){
-    int freq_spin = 100; // [Hz]
+    int freq_spin = 100; // test: 10[Hz], rosbag: <100[Hz]
     ros::Rate rate(freq_spin);
     ROS_INFO_STREAM("ROSWrapper - 'run()' - run at [" << freq_spin << "] Hz.");
+    ROS_INFO_STREAM("Rosbag can be started");
     while(ros::ok()){
-        
         if (rosbag_play_ == false)
         {
             ROS_INFO_STREAM("Data is from saved pcd");
@@ -105,6 +105,7 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
     static int cnt_data = 0;
     std::cout<< "Iter: "<< cnt_data << std::endl;
 
+    cloudHeader_ = msg->header;
     if( is_initialized_ ){ // If initialized, 
         // 0. Get the current LiDAR data
         // p1_msg_ = *msg;
@@ -122,8 +123,8 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
         }
         else
         {
-            T01 = solver_->data_buf_[cnt_data+2]->T_gt_;
-            T10 = solver_->data_buf_[cnt_data+2]->T_gt_.inverse();
+            T01 = solver_->data_buf_[cnt_data+1]->T_gt_;
+            T10 = solver_->data_buf_[cnt_data+1]->T_gt_.inverse();
             //"00": +3
             //"01": +2
         }
@@ -134,7 +135,7 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
 
         ROS_INFO_STREAM("Data is from rosbag");
         ROS_INFO_STREAM("p0_ size:" << p0_pcl_->size() << " " << "p1_ size:" << p1_pcl_->size() << " ");
-        solver_->solve(p0_pcl_, p1_pcl_, T10, mask1, cnt_data);
+        solver_->solve(p0_pcl_, p1_pcl_, T10, mask1, cnt_data, cloudHeader_);
         double dt_solver = timer::toc(); // milliseconds
         ROS_INFO_STREAM("elapsed time for 'solver' :" << dt_solver << " [ms]");
 
@@ -143,14 +144,14 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
         
         marker_.header.stamp = ros::Time::now();
         marker_.text = std::to_string(cnt_data);
-        marker_.pose.position.x = T01(0,3);     //x
-        marker_.pose.position.y = T01(1,3);     //y
-        marker_.pose.position.z = T01(2,3) + 10; //z
+        marker_.pose.position.x = 0; //T01(0,3);     //x
+        marker_.pose.position.y = 0; //T01(1,3);     //y
+        marker_.pose.position.z = 10; //T01(2,3) + 10; //z
 
         lidar_marker_.header.stamp = ros::Time::now();
-        lidar_marker_.pose.position.x = T01(0,3);     //x
-        lidar_marker_.pose.position.y = T01(1,3);     //y
-        lidar_marker_.pose.position.z = T01(2,3); //z
+        lidar_marker_.pose.position.x = 0; //T01(0,3);     //x
+        lidar_marker_.pose.position.y = 0; //T01(1,3);     //y
+        lidar_marker_.pose.position.z = 0; //T01(2,3); //z
 
         marker_pub_.publish(marker_);
         lidar_marker_pub_.publish(lidar_marker_);
@@ -166,13 +167,13 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
         // mask0.resize(p0.width, true);
 
         solver_->CloudFrame_cur_ ->genRangeImages(p0_pcl_, true);
-
+        ROS_INFO_STREAM("p0_ size:" << p0_pcl_->size());
         // mask0_test_.resize(p0_msg_test_.width, true);
         cnt_data = 1;
     }
 };
 
-void ROSWrapper::updatePreviousVariables(pcl::PointCloud<pcl::PointXYZ>::Ptr p0_pcl, pcl::PointCloud<pcl::PointXYZ>::Ptr p1_pcl, const Mask& mask1){
+void ROSWrapper::updatePreviousVariables(pcl::PointCloud<pcl::PointXYZI>::Ptr p0_pcl, pcl::PointCloud<pcl::PointXYZI>::Ptr p1_pcl, const Mask& mask1){
     // p0_pcl_ = p1_pcl_;
 
     p0_pcl->resize(0);

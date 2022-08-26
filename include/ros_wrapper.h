@@ -28,8 +28,8 @@ private:
     sensor_msgs::PointCloud2 p0_msg_;
     sensor_msgs::PointCloud2 p1_msg_;
     bool                     is_initialized_; // = default : false.
-    pcl::PointCloud<pcl::PointXYZ>::Ptr p0_pcl_;
-    pcl::PointCloud<pcl::PointXYZ>::Ptr p1_pcl_;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr p0_pcl_;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr p1_pcl_;
 
 // ROS nodehandle & subscriber for LiDAR data.
 private:
@@ -44,6 +44,8 @@ private:
     bool            rosbag_play_;
     bool            T01_slam_;
     std::string     data_number_;
+
+    std_msgs::Header cloudHeader_;
 
 // Mapless Dynamic algorithm object. 
 private:
@@ -61,7 +63,7 @@ private:
     
     void getLaunchParameters();
     void callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg);    
-    void updatePreviousVariables(pcl::PointCloud<pcl::PointXYZ>::Ptr p0_pcl, pcl::PointCloud<pcl::PointXYZ>::Ptr p1_pcl, const Mask& mask1);
+    void updatePreviousVariables(pcl::PointCloud<pcl::PointXYZI>::Ptr p0_pcl, pcl::PointCloud<pcl::PointXYZI>::Ptr p1_pcl, const Mask& mask1);
 };
 
 #endif

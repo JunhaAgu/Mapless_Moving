@@ -16,6 +16,7 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/common/transforms.h>
+// #include <pcl/registration/icp.h>
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
@@ -96,14 +97,18 @@ private:
     bool is_initialized_test_;
     Mask                     mask0_test_;
     sensor_msgs::PointCloud2 p0_msg_test_;
-    pcl::PointCloud<pcl::PointXYZ>::Ptr p0_pcl_test_;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr p0_pcl_test_;
     sensor_msgs::PointCloud2 p1_msg_test_;
-    pcl::PointCloud<pcl::PointXYZ>::Ptr p1_pcl_test_;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr p1_pcl_test_;
 
     std::vector<std::string> file_lists_;
 
 public:
     std::vector<TestData *> data_buf_;
+
+    std_msgs::Header cloudHeader_test_;
+
+    // pcl::IterativeClosestPoint<pcl::PointXYZI, pcl::PointXYZI> icp_;
 
 public:
     MaplessDynamic(ros::NodeHandle& nh, bool rosbag_play, std::string& data_number); // constructor
@@ -113,15 +118,15 @@ public:
 
     void solve(        
         /* inputs */ 
-        pcl::PointCloud<pcl::PointXYZ>::Ptr p0, pcl::PointCloud<pcl::PointXYZ>::Ptr p1, const Pose& T10, 
+        pcl::PointCloud<pcl::PointXYZI>::Ptr p0, pcl::PointCloud<pcl::PointXYZI>::Ptr p1, const Pose& T10, 
         /* outputs */
-        Mask& mask1, int cnt);
+        Mask& mask1, int cnt, std_msgs::Header& cloudHeader);
 
 // From this, declare your own sub-functions. 
 private:
     void getUserSettingParameters();
 
-    void copyStructAndinitialize(pcl::PointCloud<pcl::PointXYZ>::Ptr p1, pcl::PointCloud<pcl::PointXYZ>::Ptr p0, int cnt_data);
+    void copyStructAndinitialize(pcl::PointCloud<pcl::PointXYZI>::Ptr p1, pcl::PointCloud<pcl::PointXYZI>::Ptr p0, int cnt_data);
 
     void countZerofloat(cv::Mat& input_mat);
     void countZeroint(cv::Mat& input_mat);

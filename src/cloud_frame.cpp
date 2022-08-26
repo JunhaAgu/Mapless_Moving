@@ -46,7 +46,7 @@ CloudFrame::CloudFrame(const std::unique_ptr<UserParam>& user_param)
     {
         str_rhopts_->pts_per_pixel_index_valid[i].reserve(5000);
     }
-    str_rhopts_->pts        = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
+    str_rhopts_->pts        = boost::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
     str_rhopts_->img_restore_mask      = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
     str_rhopts_->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
 };
@@ -56,7 +56,7 @@ CloudFrame::~CloudFrame()
     // destructor
 };
 
-void CloudFrame::genRangeImages(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in, bool cur_next)
+void CloudFrame::genRangeImages(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur_next)
 {
     n_pts_ = pcl_in->size();
 
@@ -100,7 +100,7 @@ void CloudFrame::genRangeImages(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in, bool
     // ROS_INFO_STREAM("elapsed time for 'interpPts' :" << dt_interpPts << " [ms]");
 }
 
-void CloudFrame::genRangeImages_dR(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in, bool cur_next)
+void CloudFrame::genRangeImages_dR(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur_next)
 {
     n_pts_ = pcl_in->size();
 
@@ -111,7 +111,7 @@ void CloudFrame::genRangeImages_dR(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in, b
     interpRangeImage_dR(cur_next);
 }
 
-void CloudFrame::genRangeImages_noComp(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in, bool cur_next)
+void CloudFrame::genRangeImages_noComp(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur_next)
 {
     n_pts_ = pcl_in->size();
 
@@ -120,7 +120,7 @@ void CloudFrame::genRangeImages_noComp(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_i
     makeRangeImageAndPtsPerPixel(cur_next);
 }
 
-void CloudFrame::calcuateRho(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in, bool cur_next)
+void CloudFrame::calcuateRho(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur_next)
 {
     // timer::tic();
 
@@ -627,7 +627,7 @@ void CloudFrame::interpRangeImage_dR(bool cur_next)
     img_rho_new.copyTo(str_rhopts_->img_rho);
 }
 
-void CloudFrame::interpPts(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_in, bool cur_next)
+void CloudFrame::interpPts(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur_next)
 {
     int n_row = str_rhopts_->img_rho.rows;
     int n_col = str_rhopts_->img_rho.cols;

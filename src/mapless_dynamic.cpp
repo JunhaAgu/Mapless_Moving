@@ -21,8 +21,8 @@ MaplessDynamic::MaplessDynamic(ros::NodeHandle& nh, bool rosbag_play, std::strin
 
     this->getUserSettingParameters();
 
-    p0_pcl_test_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
-    p1_pcl_test_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
+    p0_pcl_test_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
+    p1_pcl_test_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
     
 
     // Construct Class
@@ -73,6 +73,7 @@ void MaplessDynamic::TEST(){
     // END YOUR CODE
 
     if( is_initialized_test_ ){ // If initialized, 
+        cloudHeader_test_ = data_buf_[cnt_data]->pcl_msg_->header;
         // 0. Get the current LiDAR data
         p1_msg_test_ = *(data_buf_[cnt_data]->pcl_msg_);
         pcl::fromROSMsg(p1_msg_test_, *p1_pcl_test_);
@@ -95,18 +96,18 @@ void MaplessDynamic::TEST(){
 
         // 1. Calculate T01 from the SLAM (or Odometry) algorithm
         Pose T10;
-        timer::tic();
+        // timer::tic();
         // T01 =  vo->solve();
         T10 = data_buf_[cnt_data]->T_gt_.inverse();
-        double dt_slam = timer::toc(); // milliseconds
-        ROS_INFO_STREAM("elapsed time for 'SLAM' :" << dt_slam << " [ms]");
+        // double dt_slam = timer::toc(); // milliseconds
+        // ROS_INFO_STREAM("elapsed time for 'SLAM' :" << dt_slam << " [ms]");
 
         // 2. Solve the Mapless Dynamic algorithm.
-        // timer::tic();
+        timer::tic();
         Mask mask1;
-        this->solve(p0_pcl_test_, p1_pcl_test_, T10, mask1, cnt_data);
-        // double dt_solver = timer::toc(); // milliseconds
-        // ROS_INFO_STREAM("elapsed time for 'solver' :" << dt_solver << " [ms]");
+        this->solve(p0_pcl_test_, p1_pcl_test_, T10, mask1, cnt_data, cloudHeader_test_);
+        double dt_solver = timer::toc(); // milliseconds
+        ROS_INFO_STREAM("elapsed time for 'solver' :" << dt_solver << " [ms]");
 
         // 3. Update the previous variables
         // updatePreviousVariables(p1, mask1);
@@ -335,10 +336,22 @@ void MaplessDynamic::loadTestData(){
 
 void MaplessDynamic::solve(
     /* inputs */ //const sensor_msgs::PointCloud2& p1
-    pcl::PointCloud<pcl::PointXYZ>::Ptr p0, pcl::PointCloud<pcl::PointXYZ>::Ptr p1, const Pose& T10, 
+    pcl::PointCloud<pcl::PointXYZI>::Ptr p0, pcl::PointCloud<pcl::PointXYZI>::Ptr p1, const Pose& T10, 
     /* outputs */ 
-    Mask& mask1, int cnt_data)
+    Mask& mask1, int cnt_data, std_msgs::Header& cloudHeader)
 {
+    static int pub_num = 0;
+    // timer::tic();
+    // icp_.setInputSource(p0);
+    // icp_.setInputTarget(p1);
+    // // icp_.setMaxCorrespondenceDistance(0.05);
+    // icp_.setMaximumIterations(1);
+    // pcl::PointCloud<pcl::PointXYZI> Final;
+    // icp_.align(Final);
+    // Eigen::Matrix4f Tcn   = icp_.getFinalTransformation();
+    // double dd = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'dd' :" << dd << " [ms]");
+    // exit(0);
     // IMPLEMENT YOUR ALGORITHM FROM THIS LINE.
 
     // do something...
@@ -368,41 +381,42 @@ void MaplessDynamic::solve(
 
     // pointcloud input, p1
     // p0 is already processed in initial step
-    timer::tic();
+    // timer::tic();
     CloudFrame_next_->genRangeImages(p1, true);
-    double dt_toc1 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'genRangeImages' :" << dt_toc1 << " [ms]");
+    // double dt_toc1 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'genRangeImages' :" << dt_toc1 << " [ms]");
 
     // Warp pcl represented in current frame to next frame
     T_next2cur_ = T10;
+    // T_next2cur_ = Tcn;
     
     // Segment ground
-    timer::tic();
+    // timer::tic();
     SegmentGround_->fastsegmentGround(CloudFrame_next_);
-    double dt_toc2 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'segmentSGround' :" << dt_toc2 << " [ms]");
+    // double dt_toc2 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'segmentSGround' :" << dt_toc2 << " [ms]");
     //// Occlusion accumulation ////
     // Compute the occlusion dRdt
 
         // cv::imshow("SegmentGround_", SegmentGround_->groundPtsIdx_next_);
 
     
-    timer::tic();
+    // timer::tic();
     dRCalc_->dR_warpPointcloud(CloudFrame_next_, CloudFrame_cur_, CloudFrame_cur_warped_, p0, T_next2cur_, cnt_data, dRdt_);
-    double dt_toc3 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'dR_warpPointcloud' :" << dt_toc3 << " [ms]");
+    // double dt_toc3 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'dR_warpPointcloud' :" << dt_toc3 << " [ms]");
     // str_next_->state();
     //     cv::imshow("residual_", residual_);
     // cv::waitKey(0);
     // exit(0);
 
-    timer::tic();
+    // timer::tic();
     // warp the occlusion accumulation map
     PclWarp_->warpPointcloud(CloudFrame_cur_, CloudFrame_warpPointcloud_, T_next2cur_, accumulated_dRdt_, cnt_data);
     PclWarp_->initializeStructAndPcl(CloudFrame_warpPointcloud_);
     PclWarp_->warpPointcloud(CloudFrame_cur_, CloudFrame_warpPointcloud_, T_next2cur_, accumulated_dRdt_score_, cnt_data);
-    double dt_toc4 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'warpPointcloud' :" << dt_toc4 << " [ms]");
+    // double dt_toc4 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'warpPointcloud' :" << dt_toc4 << " [ms]");
 
     // cv::imshow("after warpPointcloud", accumulated_dRdt_);
     
@@ -413,11 +427,11 @@ void MaplessDynamic::solve(
     //     cv::imshow("before  k", accumulated_dRdt_score_);
     //     countZerofloat(accumulated_dRdt_score_);
     // }
-    timer::tic();
+    // timer::tic();
     // filter out outliers
     ObjectExt_->filterOutAccumdR(CloudFrame_next_, CloudFrame_cur_warped_, accumulated_dRdt_, accumulated_dRdt_score_, dRdt_);
-    double dt_toc5 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'filterOutAccumdR' :" << dt_toc5 << " [ms]");
+    // double dt_toc5 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'filterOutAccumdR' :" << dt_toc5 << " [ms]");
 
     // cv::imshow("after filterOutAccumdR", accumulated_dRdt_);
 
@@ -430,41 +444,41 @@ void MaplessDynamic::solve(
     //     cv::waitKey(0);
     //     exit(0);
     // }
-    timer::tic();
+    // timer::tic();
     // Extract object candidate via connected components in 2-D binary image
     ObjectExt_->extractObjectCandidate(accumulated_dRdt_, CloudFrame_next_);
-    double dt_toc6 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'extractObjectCandidate' :" <<  dt_toc6 << " [ms]");
+    // double dt_toc6 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'extractObjectCandidate' :" <<  dt_toc6 << " [ms]");
 
     // cv::imshow("after extractObjectCandidate", accumulated_dRdt_);
     //// update object_mask
     //object_mask = accumulated_dRdt>0;
-    timer::tic();
+    // timer::tic();
     // Fast Segment
     ObjectExt_->checkSegment(accumulated_dRdt_, CloudFrame_next_, SegmentGround_->groundPtsIdx_next_);
-    double dt_toc7 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'checkSegment' :" <<  dt_toc7 << " [ms]");
+    // double dt_toc7 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'checkSegment' :" <<  dt_toc7 << " [ms]");
     // cv::imshow("after checkSegment", accumulated_dRdt_);
     //// update object_mask
     //object_mask = accumulated_dRdt>0;
-    timer::tic();
+    // timer::tic();
     ObjectExt_->updateAccum(accumulated_dRdt_, accumulated_dRdt_score_);
-    double dt_toc8 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'updateAccum' :" <<  dt_toc8 << " [ms]");
+    // double dt_toc8 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'updateAccum' :" <<  dt_toc8 << " [ms]");
 
     // cv::imshow("after updateAccum", accumulated_dRdt_);
 
-    timer::tic();
+    // timer::tic();
     ImageFill_->plugImageZeroHoles(accumulated_dRdt_, accumulated_dRdt_score_, CloudFrame_next_);
-    double dt_toc9 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'plugImageZeroHoles' :" <<  dt_toc9 << " [ms]");
+    // double dt_toc9 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'plugImageZeroHoles' :" <<  dt_toc9 << " [ms]");
 
     // cv::imshow("after plugImageZeroHoles", accumulated_dRdt_);
     
-    timer::tic();
+    // timer::tic();
     ObjectExt_->updateAccumdRdt(CloudFrame_next_, accumulated_dRdt_, accumulated_dRdt_score_, dRdt_, SegmentGround_->groundPtsIdx_next_);
-    double dt_toc10 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'updateAccumdRdt' :" <<  dt_toc10 << " [ms]");
+    // double dt_toc10 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'updateAccumdRdt' :" <<  dt_toc10 << " [ms]");
 
     float* ptr_accumulated_dRdt = accumulated_dRdt_.ptr<float>(0);
     float* ptr_accumulated_dRdt_score = accumulated_dRdt_score_.ptr<float>(0);
@@ -473,8 +487,8 @@ void MaplessDynamic::solve(
     // cv::waitKey(0);
     // exit(0);
     timer::tic;
-    pcl::PointCloud<pcl::PointXYZ> pcl_dynamic;
-    pcl::PointCloud<pcl::PointXYZ> pcl_static;
+    pcl::PointCloud<pcl::PointXYZI> pcl_dynamic;
+    pcl::PointCloud<pcl::PointXYZI> pcl_static;
 
     // float* ptr_next_img_x = CloudFrame_next_->str_rhopts_->img_x.ptr<float>(0);
     // float* ptr_next_img_y = CloudFrame_next_->str_rhopts_->img_y.ptr<float>(0);
@@ -498,6 +512,38 @@ void MaplessDynamic::solve(
     //     }
     // }
 
+    // uchar* ptr_groundPtsIdx_next = SegmentGround_->groundPtsIdx_next_.ptr<uchar>(0);
+
+    // for (int i = 0; i < img_height_; ++i)
+    // {
+    //     int i_ncols = i * img_width_;
+    //     for (int j = 0; j < img_width_; ++j)
+    //     {
+    //         if (*(ptr_groundPtsIdx_next + i_ncols + j)!=0) // dynamic
+    //         {
+    //             if (CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j].size() != 0)
+    //             {
+    //                 for (int k = 0; k < CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j].size(); ++k)
+    //                 {
+    //                     pcl_dynamic.push_back(
+    //                         pcl::PointXYZI((*p1)[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]]));
+    //                 }
+    //             }
+    //         }
+    //         else // static
+    //         {
+    //             if (CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j].size() != 0)
+    //             {
+    //                 for (int k = 0; k < CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j].size(); ++k)
+    //                 {
+    //                     pcl_static.push_back(
+    //                         pcl::PointXYZI((*p1)[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]]));
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
+
     for (int i = 0; i < img_height_; ++i)
     {
         int i_ncols = i * img_width_;
@@ -510,7 +556,7 @@ void MaplessDynamic::solve(
                     for (int k = 0; k < CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j].size(); ++k)
                     {
                         pcl_dynamic.push_back(
-                            pcl::PointXYZ((*p1)[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]]));
+                            pcl::PointXYZI((*p1)[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]]));
                     }
                 }
             }
@@ -521,33 +567,37 @@ void MaplessDynamic::solve(
                     for (int k = 0; k < CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j].size(); ++k)
                     {
                         pcl_static.push_back(
-                            pcl::PointXYZ((*p1)[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]]));
+                            pcl::PointXYZI((*p1)[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]]));
                     }
                 }
             }
         }
     }
-    double dt_toc11 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'segmentWholePts' :" <<  dt_toc11 << " [ms]");
+    // double dt_toc11 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'segmentWholePts' :" <<  dt_toc11 << " [ms]");
 
-    timer::tic();
+    // timer::tic();
     //// visualization ////
     // dynamic //
     sensor_msgs::PointCloud2 converted_msg_d;
     pcl::toROSMsg(pcl_dynamic, converted_msg_d);
-    converted_msg_d.header.frame_id = "map";
+    converted_msg_d.header.frame_id = "/map";
+    converted_msg_d.header.stamp = cloudHeader.stamp;
     pub_dynamic_pts_.publish(converted_msg_d);
 
     sensor_msgs::PointCloud2 converted_msg_s;
     pcl::toROSMsg(pcl_static, converted_msg_s);
-    converted_msg_s.header.frame_id = "map";
+    converted_msg_s.header.frame_id = "/map";
+    converted_msg_s.header.stamp = cloudHeader.stamp;
     pub_static_pts_.publish(converted_msg_s);
+    pub_num +=1;
+    std::cout <<pub_num <<", "<< pcl_static.size()<<std::endl;
     // if (cnt_data == 3)
     // {exit(0);}
-    double dt_toc12 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'publish' :" <<  dt_toc12 << " [ms]");
+    // double dt_toc12 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'publish' :" <<  dt_toc12 << " [ms]");
 
-    timer::tic();
+    // timer::tic();
     //// update for next iteration
     for (int i = 0; i < img_height_; ++i)
     {
@@ -562,18 +612,18 @@ void MaplessDynamic::solve(
     }
 
     copyStructAndinitialize(p1, p0, cnt_data);
-    double dt_toc13 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'copyRemove' :" <<  dt_toc13 << " [ms]");
+    // double dt_toc13 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'copyRemove' :" <<  dt_toc13 << " [ms]");
     
-    double dt_toc_total = dt_toc1 + dt_toc2 + dt_toc3 + dt_toc4 + dt_toc5 + dt_toc6 + dt_toc7 + dt_toc8 + dt_toc9 + dt_toc10 + dt_toc11 + dt_toc12 + dt_toc13;
-    ROS_INFO_STREAM("elapsed time for 'total' :" <<  dt_toc_total << " [ms]");
+    // double dt_toc_total = dt_toc1 + dt_toc2 + dt_toc3 + dt_toc4 + dt_toc5 + dt_toc6 + dt_toc7 + dt_toc8 + dt_toc9 + dt_toc10 + dt_toc11 + dt_toc12 + dt_toc13;
+    // ROS_INFO_STREAM("elapsed time for 'total' :" <<  dt_toc_total << " [ms]");
     ROS_INFO_STREAM("=======================================================");
 
     // cv::imshow("final", accumulated_dRdt_);
     // cv::waitKey(0);
 };
 
-void MaplessDynamic::copyStructAndinitialize(pcl::PointCloud<pcl::PointXYZ>::Ptr p1 ,pcl::PointCloud<pcl::PointXYZ>::Ptr p0, int cnt_data)
+void MaplessDynamic::copyStructAndinitialize(pcl::PointCloud<pcl::PointXYZI>::Ptr p1 ,pcl::PointCloud<pcl::PointXYZI>::Ptr p0, int cnt_data)
 {
     // copy Cur to Next
     {   CloudFrame_cur_->str_rhopts_->pts        = CloudFrame_next_->str_rhopts_->pts;

@@ -5,8 +5,8 @@ PclWarp::PclWarp(const std::unique_ptr<UserParam>& user_param)
     img_height_ = user_param->image_param_.height_;
     img_width_  = user_param->image_param_.width_;
 
-    velo_xyz_       = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
-    pts_warpewd_    = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
+    velo_xyz_       = boost::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
+    pts_warpewd_    = boost::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
 
 };
 
@@ -35,6 +35,8 @@ void PclWarp::warpPointcloud(std::unique_ptr<CloudFrame>& CloudFrame_in, std::un
     I_vec1.reserve(n_row * n_col);
     bool isempty_flag = 0;
 
+    pcl::PointXYZI pcl_xyzi;
+
     for (int i = 0; i < n_row; ++i)
     {
         int i_ncols = i * n_col;
@@ -42,7 +44,11 @@ void PclWarp::warpPointcloud(std::unique_ptr<CloudFrame>& CloudFrame_in, std::un
         {     
             if (*(ptr_mat_in + i_ncols + j) != 0 && *(ptr_img_rho + i_ncols + j) != 0)
             {
-                velo_xyz_->push_back(pcl::PointXYZ(*(ptr_img_x + i_ncols + j), *(ptr_img_y + i_ncols + j), *(ptr_img_z + i_ncols + j)));
+                pcl_xyzi.x = *(ptr_img_x + i_ncols + j);
+                pcl_xyzi.y = *(ptr_img_y + i_ncols + j);
+                pcl_xyzi.z = *(ptr_img_z + i_ncols + j);
+                pcl_xyzi.intensity = 0;
+                velo_xyz_->push_back(pcl_xyzi);
                 
                 I_vec1.push_back(*(ptr_mat_in + i_ncols + j));
                 isempty_flag = 1;

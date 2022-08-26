@@ -28,7 +28,7 @@ typedef Eigen::Matrix4d   Pose;
 
 struct StrRhoPts
 {
-    pcl::PointCloud<pcl::PointXYZ>::Ptr pts;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr pts;
 
     std::vector<float> rho;
     std::vector<float> phi;

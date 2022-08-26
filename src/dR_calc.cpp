@@ -9,8 +9,8 @@ dRCalc::dRCalc(const std::unique_ptr<UserParam>& user_param)
     n_ring_     = user_param->image_param_.height_;
     n_radial_   = user_param->image_param_.width_;
 
-    velo_cur_       = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
-    cur_pts_warped_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
+    velo_cur_       = boost::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
+    cur_pts_warped_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
 };
 
 dRCalc::~dRCalc()
@@ -19,7 +19,7 @@ dRCalc::~dRCalc()
 };
 
 void dRCalc::dR_warpPointcloud(std::unique_ptr<CloudFrame>& CloudFrame_next, std::unique_ptr<CloudFrame>& CloudFrame_cur, std::unique_ptr<CloudFrame>& CloudFrame_cur_warped,
-                                pcl::PointCloud<pcl::PointXYZ>::Ptr p0, Pose& T10, int cnt_data, cv::Mat& dRdt)
+                                pcl::PointCloud<pcl::PointXYZI>::Ptr p0, Pose& T10, int cnt_data, cv::Mat& dRdt)
 {
     int n_row = CloudFrame_next->str_rhopts_->img_rho.rows;
     int n_col = CloudFrame_next->str_rhopts_->img_rho.cols; 
@@ -28,7 +28,7 @@ void dRCalc::dR_warpPointcloud(std::unique_ptr<CloudFrame>& CloudFrame_next, std
     float* ptr_cur_img_y = CloudFrame_cur->str_rhopts_->img_y.ptr<float>(0);
     float* ptr_cur_img_z = CloudFrame_cur->str_rhopts_->img_z.ptr<float>(0);
     // int cnt = 0;
-
+    pcl::PointXYZI pcl_xyzi;
     // representative pts
     for (int i = 0; i < n_row; ++i)
     {
@@ -38,7 +38,11 @@ void dRCalc::dR_warpPointcloud(std::unique_ptr<CloudFrame>& CloudFrame_next, std
             int i_ncols_j = i_ncols + j;
             if ((*(ptr_cur_img_x + i_ncols_j) > 10.0) || (*(ptr_cur_img_x + i_ncols_j) < -10.0) || (*(ptr_cur_img_y + i_ncols_j) > 10.0) || (*(ptr_cur_img_y + i_ncols_j) < -10.0))
             {
-                velo_cur_->push_back(pcl::PointXYZ(*(ptr_cur_img_x + i_ncols_j), *(ptr_cur_img_y + i_ncols_j), *(ptr_cur_img_z + i_ncols_j)));
+                pcl_xyzi.x = *(ptr_cur_img_x + i_ncols_j);
+                pcl_xyzi.y = *(ptr_cur_img_y + i_ncols_j);
+                pcl_xyzi.z = *(ptr_cur_img_z + i_ncols_j);
+                pcl_xyzi.intensity = 0;
+                velo_cur_->push_back(pcl_xyzi);
             }
         }
     }
@@ -127,6 +131,8 @@ void dRCalc::compensateCurRhoZeroWarp(std::unique_ptr<CloudFrame>& CloudFrame_cu
     float new_phi_alpha;
     float new_theta_alpha;
     float min_rho_cos;
+    
+    pcl::PointXYZI pcl_xyzi;
 
     for (int i = 0 + 1; i < n_ring_ - 1; ++i)
     {
@@ -260,9 +266,11 @@ void dRCalc::compensateCurRhoZeroWarp(std::unique_ptr<CloudFrame>& CloudFrame_cu
                             for (int p = 0; p < 5; ++p)
                             {
                                 new_theta_alpha = new_theta + ((float)p - 2.0) * 0.08 * D2R;
-                                velo_cur_->push_back(pcl::PointXYZ(min_rho_cos * cosf(new_theta_alpha),
-                                                                 min_rho_cos * sinf(new_theta_alpha),
-                                                                 min_rho_4_dir * sinf(new_phi_alpha)));
+                                pcl_xyzi.x = min_rho_cos * cosf(new_theta_alpha);
+                                pcl_xyzi.y = min_rho_cos * sinf(new_theta_alpha);
+                                pcl_xyzi.z = min_rho_4_dir * sinf(new_phi_alpha);
+                                pcl_xyzi.intensity = 0;
+                                velo_cur_->push_back(pcl_xyzi);
                             }
                         }
                     } // end if
