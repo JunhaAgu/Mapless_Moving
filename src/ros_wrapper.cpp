@@ -14,7 +14,7 @@ ROSWrapper::ROSWrapper(ros::NodeHandle& nh)
     this->getLaunchParameters();
 
     // initialization
-    solver_ = std::make_unique<MaplessDynamic>(nh_, rosbag_play_, data_number_);
+    solver_ = std::make_unique<MaplessDynamic>(nh_, rosbag_play_, dataset_name_, data_number_);
 
     // subscriber
     sub_lidar_ = nh_.subscribe<sensor_msgs::PointCloud2>(
@@ -71,7 +71,7 @@ ROSWrapper::~ROSWrapper(){
 };
 
 void ROSWrapper::run(){
-    int freq_spin = 100; // test: 10[Hz], rosbag: <100[Hz]
+    int freq_spin = 10; // test: 10[Hz], rosbag: <100[Hz]
     ros::Rate rate(freq_spin);
     ROS_INFO_STREAM("ROSWrapper - 'run()' - run at [" << freq_spin << "] Hz.");
     ROS_INFO_STREAM("Rosbag can be started");
@@ -97,6 +97,7 @@ void ROSWrapper::getLaunchParameters(){
 
         ros::param::get("~rosbag_play", rosbag_play_);
         ros::param::get("~T01_slam", T01_slam_);
+        ros::param::get("~dataset_name", dataset_name_);
         ros::param::get("~data_number", data_number_);
 };
 
@@ -123,8 +124,9 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
         }
         else
         {
-            T01 = solver_->data_buf_[cnt_data+1]->T_gt_;
-            T10 = solver_->data_buf_[cnt_data+1]->T_gt_.inverse();
+            T01 = solver_->data_buf_[cnt_data]->T_gt_; //KITTI: cnt_data
+            std::cout << T01 << std::endl;
+            T10 = T01.inverse();
             //"00": +3
             //"01": +2
         }

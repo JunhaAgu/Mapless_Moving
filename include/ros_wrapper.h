@@ -43,6 +43,7 @@ private:
     std::string     topicname_lidar_;
     bool            rosbag_play_;
     bool            T01_slam_;
+    std::string     dataset_name_;
     std::string     data_number_;
 
     std_msgs::Header cloudHeader_;

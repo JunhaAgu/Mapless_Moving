@@ -19,6 +19,8 @@
 
 typedef std::vector<bool> Mask;
 typedef Eigen::Matrix4d   Pose; 
+typedef Eigen::Matrix3d   Rot;
+typedef Eigen::Vector3f   Euler;
 
 // distance from origin
 #define NORM(x, y, z) (sqrt(((x) * (x) + (y) * (y) + (z) * (z))))

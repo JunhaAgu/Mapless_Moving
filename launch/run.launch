@@ -1,11 +1,13 @@
 <launch>
     <arg name="topicname_lidar"     default="/debug/pc_raw"/> <!-- "/velodyne_points/lidar0"/> -->
+    <arg name="dataset_name"        default="CARLA"/>   <!-- KITTI or CARLA -->
     <arg name="rosbag_play"         default="true"/>    <!-- true: rosbag / false: pcd data -->
     <arg name="T01_slam"            default="false"/>   <!-- true: T01 from slam / false: T01 from GT -->
-    <arg name="data_number"         default="07"/>      <!-- true: KITTI data number -->
+    <arg name="data_number"         default="03"/>      <!-- KITTI data: 00 01 02 05 07 / CARLA data: 01 03 -->
 
     <node pkg="mapless_dynamic" name="mapless_dynamic_node" type="mapless_dynamic_node" output="screen">
         <param name="topicname_lidar" type="string" value="$(arg topicname_lidar)"/>
+        <param name="dataset_name" type="string" value="$(arg dataset_name)"/>
         <param name="rosbag_play" type="bool" value="$(arg rosbag_play)"/>
         <param name="T01_slam" type="bool" value="$(arg T01_slam)"/>
         <param name="data_number" type="string" value="$(arg data_number)"/>

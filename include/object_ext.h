@@ -52,7 +52,7 @@ public:
     void filterOutAccumdR(std::unique_ptr<CloudFrame>& CloudFrame_next, std::unique_ptr<CloudFrame>& CloudFrame_cur_warped,
                              cv::Mat &accumulated_dRdt, cv::Mat &accumulated_dRdt_score, cv::Mat &residual);
 
-    void extractObjectCandidate(cv::Mat &accumulated_dRdt, std::unique_ptr<CloudFrame>& CloudFrame_next);
+    void extractObjectCandidate(cv::Mat &accumulated_dRdt, std::unique_ptr<CloudFrame>& CloudFrame_next, float object_factor);
 
     void checkSegment(cv::Mat &accumulated_dRdt, std::unique_ptr<CloudFrame>& CloudFrame_next, cv::Mat &groundPtsIdx_next);
 

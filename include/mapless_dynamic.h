@@ -68,7 +68,10 @@ private:
     ros::Publisher pub_static_pts_;
 
     bool rosbag_play_;
+    std::string dataset_name_;
     std::string data_number_;
+
+    int n_valid_data_;
 
     int img_height_;
     int img_width_;
@@ -89,7 +92,6 @@ private:
 
 private: 
     //test
-    std::string test_data_type_;
     std::vector<std::vector<float>> all_pose_;
     std::vector<Pose> all_T_gt_;
     std::vector<int> valid_data_;
@@ -111,7 +113,7 @@ public:
     // pcl::IterativeClosestPoint<pcl::PointXYZI, pcl::PointXYZI> icp_;
 
 public:
-    MaplessDynamic(ros::NodeHandle& nh, bool rosbag_play, std::string& data_number); // constructor
+    MaplessDynamic(ros::NodeHandle& nh, bool rosbag_play, std::string& dataset_name, std::string& data_number); // constructor
     ~MaplessDynamic(); // destructor
 
     void TEST(); // algorithm test function with a loaded data

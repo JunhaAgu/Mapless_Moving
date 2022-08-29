@@ -83,7 +83,7 @@ void ObjectExt::filterOutAccumdR(std::unique_ptr<CloudFrame>& CloudFrame_next, s
     }
 }
 
-void ObjectExt::extractObjectCandidate(cv::Mat& accumulated_dRdt, std::unique_ptr<CloudFrame>& CloudFrame_next)
+void ObjectExt::extractObjectCandidate(cv::Mat& accumulated_dRdt, std::unique_ptr<CloudFrame>& CloudFrame_next, float object_factor)
 {
     int n_col = accumulated_dRdt.cols;
     int n_row = accumulated_dRdt.rows;
@@ -158,7 +158,7 @@ void ObjectExt::extractObjectCandidate(cv::Mat& accumulated_dRdt, std::unique_pt
             }
         }
 
-        if (object_row_.size() < thr_object_)
+        if (object_row_.size() < thr_object_*object_factor)
         {
             for (int i = 0; i < object_row_.size(); ++i)
             {
@@ -241,7 +241,7 @@ void ObjectExt::extractObjectCandidate(cv::Mat& accumulated_dRdt, std::unique_pt
                 }
             }
             // std::cout << "object_row_.size(): " << object_row_.size() << " " << "disconti_row_.size(): " << disconti_row_.size() <<std::endl;
-            if((object_row_.size()-disconti_row_.size()) < thr_object_ )
+            if((object_row_.size()-disconti_row_.size()) < thr_object_*object_factor )
             {
                 for (int i = 0; i < object_row_.size(); ++i)
                 {

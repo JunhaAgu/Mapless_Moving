@@ -3,6 +3,8 @@
 CloudFrame::CloudFrame(const std::unique_ptr<UserParam>& user_param)
 {
     // user param ///////////////////////////////////////////////////////////////////////////////////
+    dataset_name_ = user_param->dataset_name_;
+
     azimuth_res_ = user_param->cloud_filter_param_.azimuth_res_ * (float)user_param->cloud_filter_param_.h_factor_;
     az_step_ = 1.0f/azimuth_res_;
     n_radial_ = 360 * az_step_ + 1;
@@ -12,6 +14,14 @@ CloudFrame::CloudFrame(const std::unique_ptr<UserParam>& user_param)
     {
         v_angle_.push_back(user_param->sensor_spec_.v_angle_[i]);
     }
+    lidar_elevation_criteria_[0] = user_param->sensor_spec_.lidar_elevation_criteria_[0];
+    lidar_elevation_criteria_[1] = user_param->sensor_spec_.lidar_elevation_criteria_[1];
+    lidar_elevation_criteria_[2] = user_param->sensor_spec_.lidar_elevation_criteria_[2];
+    lidar_elevation_criteria_[3] = user_param->sensor_spec_.lidar_elevation_criteria_[3];
+    lidar_elevation_line0_[0] = user_param->sensor_spec_.lidar_elevation_line0_[0];
+    lidar_elevation_line0_[1] = user_param->sensor_spec_.lidar_elevation_line0_[1];
+    lidar_elevation_line1_[0] = user_param->sensor_spec_.lidar_elevation_line1_[0];
+    lidar_elevation_line1_[1] = user_param->sensor_spec_.lidar_elevation_line1_[1];
 
     img_height_ = user_param->image_param_.height_;
     img_width_ = user_param->image_param_.width_;
@@ -250,21 +260,21 @@ void CloudFrame::makeRangeImageAndPtsPerPixel(bool cur_next)
     {
         phi_R2D = (ptr_phi[i] * R2D);
 
-        if (phi_R2D > 2.5) // 2.5[degree]
+        if (phi_R2D > lidar_elevation_criteria_[0]) // 2.5[degree]
         {
             i_row = 0;
         }
-        else if (phi_R2D > -8.0) // -8.0[degree]
+        else if (phi_R2D > lidar_elevation_criteria_[1]) // -8.0[degree]
         {
-            i_row = (int)ceil((-2.9523810 * phi_R2D + 7.3809524));
+            i_row = (int)ceil((lidar_elevation_line0_[0] * phi_R2D + lidar_elevation_line0_[1]));
         }
-        else if (phi_R2D > -8.5) // -8.5[degree]
+        else if (phi_R2D > lidar_elevation_criteria_[2]) // -8.5[degree]
         {
             i_row = 32;
         }
-        else if (phi_R2D > -23.8) // -23.8[degree]
+        else if (phi_R2D > lidar_elevation_criteria_[3]) // -23.8[degree]
         {
-            i_row = (int)ceil((-2.0261438 * phi_R2D + 14.7777778));
+            i_row = (int)ceil((lidar_elevation_line1_[0] * phi_R2D + lidar_elevation_line1_[1]));
         }
         else
         {
@@ -384,21 +394,21 @@ void CloudFrame::makeRangeImageAndPtsPerPixel_dR(bool cur_next)
     {
         phi_R2D = (ptr_phi[i] * R2D);
 
-        if (phi_R2D > 2.5) // 2.5[degree]
+        if (phi_R2D > lidar_elevation_criteria_[0]) // 2.5[degree]
         {
             i_row = 0;
         }
-        else if (phi_R2D > -8.0) // -8.0[degree]
+        else if (phi_R2D > lidar_elevation_criteria_[1]) // -8.0[degree]
         {
-            i_row = (int)ceil((-2.9523810 * phi_R2D + 7.3809524));
+            i_row = (int)ceil((lidar_elevation_line0_[0] * phi_R2D + lidar_elevation_line0_[1]));
         }
-        else if (phi_R2D > -8.5) // -8.5[degree]
+        else if (phi_R2D > lidar_elevation_criteria_[2]) // -8.5[degree]
         {
             i_row = 32;
         }
-        else if (phi_R2D > -23.8) // -23.8[degree]
+        else if (phi_R2D > lidar_elevation_criteria_[3]) // -23.8[degree]
         {
-            i_row = (int)ceil((-2.0261438 * phi_R2D + 14.7777778));
+            i_row = (int)ceil((lidar_elevation_line1_[0] * phi_R2D + lidar_elevation_line1_[1]));
         }
         else
         {

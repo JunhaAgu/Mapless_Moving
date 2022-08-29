@@ -4,8 +4,8 @@
 
 #include <user_param.h>
 
-MaplessDynamic::MaplessDynamic(ros::NodeHandle& nh, bool rosbag_play, std::string& data_number)
-: nh_(nh), rosbag_play_(rosbag_play), data_number_(data_number), is_initialized_test_(false)
+MaplessDynamic::MaplessDynamic(ros::NodeHandle& nh, bool rosbag_play, std::string& dataset_name, std::string& data_number)
+: nh_(nh), rosbag_play_(rosbag_play), dataset_name_(dataset_name) ,data_number_(data_number), is_initialized_test_(false)
  {
     // constructor
     ROS_INFO_STREAM("MaplessDynamic - constructed.");
@@ -17,9 +17,9 @@ MaplessDynamic::MaplessDynamic(ros::NodeHandle& nh, bool rosbag_play, std::strin
     // Class UserParam
     std::unique_ptr<UserParam> UserParam_;
     UserParam_ = std::make_unique<UserParam>();
-    UserParam_->getUserSettingParameters();
+    UserParam_->getUserSettingParameters(dataset_name_);
 
-    this->getUserSettingParameters();
+    // this->getUserSettingParameters();
 
     p0_pcl_test_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
     p1_pcl_test_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
@@ -55,6 +55,43 @@ MaplessDynamic::~MaplessDynamic() {
 
     // END YOUR CODE
 };
+
+bool closeEnough(const float& a, const float& b, const float& epsilon = std::numeric_limits<float>::epsilon()) {
+    return (epsilon > std::abs(a - b));
+}
+
+void eulerAngles(Rot& R, Euler& e) {
+
+    //check for gimbal lock
+    if (closeEnough(R(0,2), -1.0f)) {
+        float x = 0; //gimbal lock, value of x doesn't matter
+        float y = M_PI / 2;
+        float z = x + atan2(R(1,0), R(2,0));
+        e << x, y, z;
+    } else if (closeEnough(R(0,2), 1.0f)) {
+        float x = 0;
+        float y = -M_PI / 2;
+        float z = -x + atan2(-R(1,0), -R(2,0));
+        e << x, y, z;
+    } else { //two solutions exist
+        float x1 = -asin(R(0,2));
+        float x2 = M_PI - x1;
+
+        float y1 = atan2(R(1,2) / cos(x1), R(2,2) / cos(x1));
+        float y2 = atan2(R(1,2) / cos(x2), R(2,2) / cos(x2));
+
+        float z1 = atan2(R(0,1) / cos(x1), R(0,0) / cos(x1));
+        float z2 = atan2(R(0,1) / cos(x2), R(0,0) / cos(x2));
+
+        //choose one solution to return
+        //for example the "shortest" rotation
+        if ((std::abs(x1) + std::abs(y1) + std::abs(z1)) <= (std::abs(x2) + std::abs(y2) + std::abs(z2))) {
+            e << x1, y1, z1;
+        } else {
+            e << x1, y1, z1;
+        }
+    }
+}
 
 void MaplessDynamic::TEST(){
     static int cnt_data = 0;
@@ -98,7 +135,10 @@ void MaplessDynamic::TEST(){
         Pose T10;
         // timer::tic();
         // T01 =  vo->solve();
-        T10 = data_buf_[cnt_data]->T_gt_.inverse();
+        T10 = data_buf_[cnt_data]->T_gt_.inverse(); //KITTI: cnt_data / CARLA: cnt_data-1 ,,,,
+        std::cout<<data_buf_[cnt_data]->T_gt_<<std::endl;
+        std::cout<<p0_pcl_test_->size() << " " <<p1_pcl_test_->size()<<std::endl;
+
         // double dt_slam = timer::toc(); // milliseconds
         // ROS_INFO_STREAM("elapsed time for 'SLAM' :" << dt_slam << " [ms]");
 
@@ -109,8 +149,11 @@ void MaplessDynamic::TEST(){
         double dt_solver = timer::toc(); // milliseconds
         ROS_INFO_STREAM("elapsed time for 'solver' :" << dt_solver << " [ms]");
 
-        // 3. Update the previous variables
-        // updatePreviousVariables(p1, mask1);
+        if(cnt_data == n_valid_data_ - 1) // -1 -1
+        {
+            ROS_INFO_STREAM("All data is processed");
+            exit(0);
+        }
     }
     else { // If not initialized, 
         is_initialized_test_ = true;
@@ -128,13 +171,20 @@ void MaplessDynamic::TEST(){
 };
 
 
-
-
-
 void MaplessDynamic::loadTestData(){
+    std::string dataset_name = dataset_name_; //KITTI or CARLA
     std::string data_num = data_number_; //"07";
-    std::cout <<"data_number: " << data_num <<std::endl;
-    std::string dataset_dir = "/home/junhakim/KITTI_odometry/";
+    std::cout << "dataset_name: "<< dataset_name << ", " << "data_number: " << data_num <<std::endl;
+    std::string dataset_dir;
+    if (dataset_name == "KITTI")
+    {
+        dataset_dir = "/home/junhakim/KITTI_odometry/";
+    }
+    else if (dataset_name == "CARLA")
+    {
+        dataset_dir = "/home/junhakim/CARLA/";
+    }
+    
     float pose_arr[12];
     Pose T_tmp;
     Pose T_warp;
@@ -145,33 +195,53 @@ void MaplessDynamic::loadTestData(){
     
     int start_num;
     int final_num;
-    if (data_num == "00"){
-        start_num = 4390 + 00;
-        final_num = 4530 + 1; // 1 ~ 141+2 75
+    if (dataset_name == "KITTI")
+    {
+        if (data_num == "00"){
+            start_num = 4390 + 00;
+            final_num = 4530 + 1; // 1 ~ 141+2 75
+        }
+        else if (data_num == "01"){
+            start_num = 150 + 00; //94;
+            final_num = 250 + 1; // 1 ~ 101+2
+        }
+        else if (data_num == "02"){
+            start_num = 860 + 00;
+            final_num = 950 + 1; // 1 ~ 91+2
+        }
+        else if (data_num == "05"){
+            start_num = 2350 + 00; //144+41;
+            final_num = 2670 + 1; // 1 ~ 321+2
+        }
+        else if (data_num == "07"){
+            start_num = 630 + 00;
+            final_num = 820 + 1; // 1 ~ 190+2
+        }
+        // start_num = start_num - 1;
+        // final_num = final_num - 1;
     }
-    else if (data_num == "01"){
-        start_num = 150 + 00; //94;
-        final_num = 250 + 1; // 1 ~ 101+2
+    else if(dataset_name == "CARLA")
+    {
+        if (data_num == "01"){
+            start_num = 10 + 00;
+            final_num = 370 + 1; // 1 ~ 141+2 75
+        }
+        else if (data_num == "03"){
+            start_num = 10 + 00; //94;
+            final_num = 400 + 1; // 1 ~ 101+2
+        }
     }
-    else if (data_num == "02"){
-        start_num = 860 + 00;
-        final_num = 950 + 1; // 1 ~ 91+2
-    }
-    else if (data_num == "05"){
-        start_num = 2350 + 00; //144+41;
-        final_num = 2670 + 1; // 1 ~ 321+2
-        //         start_num = 2350+269; final_num = 2670+1; // 1 ~ 321+2
-    }
-    else if (data_num == "07"){
-        start_num = 630 + 00;
-        final_num = 820 + 1; // 1 ~ 190+2
-        //         start_num = 630+140; final_num = 820+1; // 1 ~ 190+2
-    }
-    start_num = start_num - 1;
-    final_num = final_num - 1;
-    
+
     // read Association --> n_data_
-    std::string pose_dir = dataset_dir + "data_odometry_poses/dataset/poses/" + data_num + ".txt";
+    std::string pose_dir;
+    if (dataset_name == "KITTI")
+    {
+        pose_dir = dataset_dir + "data_odometry_poses/dataset/poses/" + data_num + ".txt";
+    }
+    else if (dataset_name == "CARLA")
+    {
+        pose_dir = dataset_dir + "results/sequences/" + data_num + "/" + "poses.txt";
+    }
     std::ifstream posefile;
     posefile.open(pose_dir.c_str());
     std::string s;
@@ -197,7 +267,6 @@ void MaplessDynamic::loadTestData(){
         data_buf_[i]->pcl_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
         data_buf_[i]->pcl_msg_ = (new sensor_msgs::PointCloud2);
     }
-
     // read pose file
     posefile.open(pose_dir.c_str());
     cnt_line = 0;
@@ -217,14 +286,15 @@ void MaplessDynamic::loadTestData(){
             ++cnt_line;
         }
     }
-    int n_valid_data = final_num - start_num + 1;
+    
+    n_valid_data_ = final_num - start_num + 1;
 
-    for (int i=0; i<n_valid_data; ++i)
+    for (int i=0; i<n_valid_data_; ++i)
     {
         valid_data_.push_back(start_num+i);
     }
 
-    for (int ii = 0; ii < n_valid_data; ++ii)
+    for (int ii = 0; ii < n_valid_data_; ++ii)
     {
         int i = valid_data_[ii];
         T_tmp = Pose::Zero(4, 4);
@@ -233,21 +303,21 @@ void MaplessDynamic::loadTestData(){
         T_tmp.block<1, 4>(1, 0) << all_pose_[i][4], all_pose_[i][5], all_pose_[i][6], all_pose_[i][7];
         T_tmp.block<1, 4>(2, 0) << all_pose_[i][8], all_pose_[i][9], all_pose_[i][10], all_pose_[i][11];
 
-        if (test_data_type_ == "KITTI")
+        if (dataset_name_ == "KITTI")
         {
             all_T_gt_[i] = T_tmp * T_warp;
         }
-        else if (test_data_type_ == "CARLA")
+        else if (dataset_name_ == "CARLA")
         {
             all_T_gt_[i] = T_tmp;
         }
-        
     }
-    for (int ii = 0; ii < n_valid_data; ++ii)
+
+    for (int ii = 0; ii < n_valid_data_; ++ii)
     {
         int i = valid_data_[ii];
-        if (test_data_type_ == "KITTI")
-        {
+        // if (dataset_name_ == "KITTI")
+        // {
             if (ii == 0)
             {
                 data_buf_[ii]->T_gt_ = all_T_gt_[i].inverse() * all_T_gt_[i];
@@ -257,21 +327,28 @@ void MaplessDynamic::loadTestData(){
                 data_buf_[ii]->T_gt_ = all_T_gt_[i - 1].inverse() * all_T_gt_[i];
             }
 
-            // std::cout << data_buf_[ii]->T_gt_ << std::endl;
-        }
-        else if (test_data_type_ == "CARLA")
-        {
-            if (ii == 0){}
-            else
-            {
-                data_buf_[ii-1]->T_gt_ = all_T_gt_[i-1].inverse() * all_T_gt_[i-1];
-            }
-        }
+        //     // std::cout << data_buf_[ii]->T_gt_ << std::endl;
+        // }
+        // else if (dataset_name_ == "CARLA")
+        // {
+        //     if (ii == 0){}
+        //     else
+        //     {
+        //         data_buf_[ii-1]->T_gt_ = all_T_gt_[i-1].inverse() * all_T_gt_[i];
+        //     }
+        // }
     }
 
     // LiDAR data (bin) read
     std::string bin_path;
-    bin_path = dataset_dir + "data_odometry_velodyne/dataset/sequences/" + data_num + "/velodyne/";
+    if (dataset_name == "KITTI")
+    {
+        bin_path = dataset_dir + "data_odometry_velodyne/dataset/sequences/" + data_num + "/velodyne/";
+    }
+    else if (dataset_name == "CARLA")
+    {
+        bin_path = dataset_dir + "results/sequences/" + data_num + "/velodyne/";
+    }
     read_filelists(bin_path, file_lists_, "bin");
     sort_filelists(file_lists_, "bin");
 
@@ -286,7 +363,7 @@ void MaplessDynamic::loadTestData(){
 
     int v_factor = 1;
     // vertical angle resolusion for KITTI or CARLA
-    if (test_data_type_ == "KITTI")
+    if (dataset_name_ == "KITTI")
     {
         float inter_top = (2.5 - (-8.0)) / (32 / v_factor - 1);
         for (int i = 0; i < 32 / v_factor; ++i)
@@ -314,7 +391,7 @@ void MaplessDynamic::loadTestData(){
             }
         }
     }
-    else if (test_data_type_ == "CARLA")
+    else if (dataset_name_ == "CARLA")
     {
         float inter = (2.0 - (-24.8)) / (64);
         for (int i = 0; i < 64 / v_factor; ++i)
@@ -340,6 +417,7 @@ void MaplessDynamic::solve(
     /* outputs */ 
     Mask& mask1, int cnt_data, std_msgs::Header& cloudHeader)
 {
+    float object_factor = 1.0;
     static int pub_num = 0;
     // timer::tic();
     // icp_.setInputSource(p0);
@@ -389,7 +467,16 @@ void MaplessDynamic::solve(
     // Warp pcl represented in current frame to next frame
     T_next2cur_ = T10;
     // T_next2cur_ = Tcn;
-    
+    Euler euler;
+    Rot rot = T10.block(0, 0, 3, 3);
+    eulerAngles(rot, euler); // pitch roll yaw
+    euler = euler * R2D;
+    std::cout << NORM(euler(0), euler(1), euler(2)) << std::endl;
+    if (NORM(euler(0), euler(1), euler(2)) > 3.0)
+    {
+        object_factor = 1.5;
+    }
+
     // Segment ground
     // timer::tic();
     SegmentGround_->fastsegmentGround(CloudFrame_next_);
@@ -446,7 +533,7 @@ void MaplessDynamic::solve(
     // }
     // timer::tic();
     // Extract object candidate via connected components in 2-D binary image
-    ObjectExt_->extractObjectCandidate(accumulated_dRdt_, CloudFrame_next_);
+    ObjectExt_->extractObjectCandidate(accumulated_dRdt_, CloudFrame_next_, object_factor);
     // double dt_toc6 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'extractObjectCandidate' :" <<  dt_toc6 << " [ms]");
 
@@ -469,7 +556,7 @@ void MaplessDynamic::solve(
     // cv::imshow("after updateAccum", accumulated_dRdt_);
 
     // timer::tic();
-    ImageFill_->plugImageZeroHoles(accumulated_dRdt_, accumulated_dRdt_score_, CloudFrame_next_);
+    ImageFill_->plugImageZeroHoles(accumulated_dRdt_, accumulated_dRdt_score_, CloudFrame_next_, object_factor);
     // double dt_toc9 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'plugImageZeroHoles' :" <<  dt_toc9 << " [ms]");
 
@@ -729,7 +816,7 @@ void MaplessDynamic::getUserSettingParameters(){
     // IMPLEMENT YOUR CODE FROM THIS LINE.
 
     // for test
-    test_data_type_ = "KITTI";
+    // test_data_type_ = "KITTI";
     
     // END YOUR CODE   
 };
@@ -801,14 +888,15 @@ void MaplessDynamic::readKittiPclBinData(std::string &in_file, int file_num)
         input.read((char *) &point.intensity, sizeof(float));
         data_buf_[valid_cnt]->pcl_->push_back(point);
     }
+    
     data_buf_[valid_cnt]->pcl_->resize(i-1);
     pcl::toROSMsg(*data_buf_[valid_cnt]->pcl_, *(data_buf_[valid_cnt]->pcl_msg_));
-
     // std::cout<< "bin_num: "<<file_num <<" "<<"num_pts: "<<data_buf_[valid_cnt]->pcl_->size() <<std::endl;
     // std::cout<< "bin_num: "<<file_num <<" "<<"final pts: "<<data_buf_[file_num]->pcl_->at((data_buf_[file_num]->pcl_)->size()-2) <<std::endl;
     // std::cout<< "valid_num: "<<valid_cnt <<" "<<"num_pts: "<<data_buf_[valid_cnt]->pcl_msg_->width <<std::endl;
     input.close();
     valid_cnt+=1;
+
 }
 
 void MaplessDynamic::countZerofloat(cv::Mat& input_mat)

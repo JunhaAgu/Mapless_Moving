@@ -3,7 +3,7 @@
 
 UserParam::UserParam()
 {
-    this->getUserSettingParameters();
+    // this->getUserSettingParameters();
 };
 
 UserParam::~UserParam()
@@ -11,15 +11,16 @@ UserParam::~UserParam()
     // destructor
 };
 
-void UserParam::getUserSettingParameters()
+void UserParam::getUserSettingParameters(std::string& data_type)
 {
-    std::string data_type = "KITTI"; // "CARLA"
+    dataset_name_ = data_type;
 
     cloud_filter_param_.h_factor_ = 5;
     cloud_filter_param_.v_factor_ = 1;
     cloud_filter_param_.azimuth_res_ = 0.08;
 
     this->calVangle(data_type);
+    
 
     ground_segment_param_.downsample_size = 10;
     ransac_param_.iter_ = 50;
@@ -35,7 +36,7 @@ void UserParam::getUserSettingParameters()
     image_param_.height_    = sensor_spec_.channel_ / cloud_filter_param_.v_factor_ ;
     image_param_.width_     = 360.0 / (cloud_filter_param_.azimuth_res_ * cloud_filter_param_.h_factor_) + 1;
 
-    object_param_.thr_object_ = 30;
+    object_param_.thr_object_ = 40;
     object_param_.alpha_ = 0.3;
     object_param_.beta_ = 0.1;
     object_param_.coef_accum_w_[0] = 0.5;
@@ -75,6 +76,14 @@ void UserParam::calVangle(std::string& data_type)
                 sensor_spec_.v_angle_.push_back(-8.50 - inter_bottom * i);
             }
         }
+        sensor_spec_.lidar_elevation_criteria_[0] = 2.5;
+        sensor_spec_.lidar_elevation_criteria_[1] = -8.0;
+        sensor_spec_.lidar_elevation_criteria_[2] = -8.5;
+        sensor_spec_.lidar_elevation_criteria_[3] = -23.8;
+        sensor_spec_.lidar_elevation_line0_[0] = -2.9523810; //(0-31)/(2.5-(-8.0))*(x-2.5)+0
+        sensor_spec_.lidar_elevation_line0_[1] = +7.3809524;  //(0-31)/(2.5-(-8.0))*(x-2.5)+0
+        sensor_spec_.lidar_elevation_line1_[0] = -2.0261438;  //(32-63)/(-8.5-(-23.8))*(x-(-8.5))+32
+        sensor_spec_.lidar_elevation_line1_[1] = +14.7777778; //(32-63)/(-8.5-(-23.8))*(x-(-8.5))+32
     }
     else if (data_type == "CARLA")
     {
@@ -90,5 +99,13 @@ void UserParam::calVangle(std::string& data_type)
                 sensor_spec_.v_angle_.push_back(2.0 - inter * i);
             }
         }
+        sensor_spec_.lidar_elevation_criteria_[0] = 2.0;
+        sensor_spec_.lidar_elevation_criteria_[1] = -11.1873016;
+        sensor_spec_.lidar_elevation_criteria_[2] = -11.6126984;
+        sensor_spec_.lidar_elevation_criteria_[3] = -24.8;
+        sensor_spec_.lidar_elevation_line0_[0] = -2.3507463;  //(32-63)/(-8.5-(-23.8))*(x-(-8.5))+32
+        sensor_spec_.lidar_elevation_line0_[1] = +4.7014925; //(32-63)/(-8.5-(-23.8))*(x-(-8.5))+32
+        sensor_spec_.lidar_elevation_line1_[0] = -2.3507463;  //(32-63)/(-8.5-(-23.8))*(x-(-8.5))+32
+        sensor_spec_.lidar_elevation_line1_[1] = +4.7014925; //(32-63)/(-8.5-(-23.8))*(x-(-8.5))+32
     }
 };

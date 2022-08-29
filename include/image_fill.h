@@ -51,7 +51,7 @@ public:
     ImageFill(const std::unique_ptr<UserParam> &user_param);
     ~ImageFill();
 
-    void plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulated_dRdt_score, std::unique_ptr<CloudFrame>& CloudFrame_next);
+    void plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulated_dRdt_score, std::unique_ptr<CloudFrame>& CloudFrame_next, float object_factor);
 
     void interpAndfill_image(cv::Mat& input_img, cv::Mat& filled_bin);
 };

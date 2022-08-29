@@ -15,6 +15,9 @@ struct SensorSpec
 {
     std::vector<float> v_angle_;
     int channel_;
+    float lidar_elevation_criteria_[4];
+    float lidar_elevation_line0_[2];
+    float lidar_elevation_line1_[2];
 };
 
 struct GroundSegmentParam
@@ -61,6 +64,7 @@ class UserParam
     private:
 
     public:
+        std::string dataset_name_; //from roslaunch
         CloudFilterParam cloud_filter_param_;
         SensorSpec sensor_spec_;
         RansacParam ransac_param_;
@@ -72,7 +76,7 @@ class UserParam
     public:
         UserParam();
         ~UserParam();
-        void getUserSettingParameters();
+        void getUserSettingParameters(std::string& data_type);
         void calVangle(std::string& data_type);
 };
 #endif

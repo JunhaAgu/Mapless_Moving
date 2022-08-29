@@ -32,7 +32,7 @@ ImageFill::~ImageFill()
 
 };
 
-void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulated_dRdt_score, std::unique_ptr<CloudFrame>& CloudFrame_next)
+void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulated_dRdt_score, std::unique_ptr<CloudFrame>& CloudFrame_next, float object_factor)
 {
     int n_row = accumulated_dRdt.rows;
     int n_col = accumulated_dRdt.cols;
