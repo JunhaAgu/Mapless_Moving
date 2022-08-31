@@ -61,11 +61,13 @@ public:
     std::unique_ptr<ObjectExt> ObjectExt_;
     std::unique_ptr<ImageFill> ImageFill_;
 
+    ros::Publisher pub_static_pts_;
+
 private:
     // DECLARE PRIVATE VARIABLES
     ros::NodeHandle nh_;
     ros::Publisher pub_dynamic_pts_;
-    ros::Publisher pub_static_pts_;
+    // ros::Publisher pub_static_pts_;
 
     bool rosbag_play_;
     std::string dataset_name_;

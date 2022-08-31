@@ -9,6 +9,8 @@ ROSWrapper::ROSWrapper(ros::NodeHandle& nh)
     p0_pcl_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
     p1_pcl_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
 
+    pose_pre_ = Eigen::Matrix4d::Identity();
+
     // get ROS parameter (from '*.launch' file).
     // If parameters are not set, this function throws an exception and terminates the node.
     this->getLaunchParameters();
@@ -19,7 +21,9 @@ ROSWrapper::ROSWrapper(ros::NodeHandle& nh)
     // subscriber
     sub_lidar_ = nh_.subscribe<sensor_msgs::PointCloud2>(
             topicname_lidar_, 1, &ROSWrapper::callbackLiDAR, this);
-
+    sub_pose_ = nh_.subscribe<nav_msgs::Odometry>(
+            topicname_pose_, 1, &ROSWrapper::callbackPose, this);
+// pubLaserOdometry2 = nh.advertise<> ("/integrated_to_init", 5);
     // publish
     marker_pub_ = nh_.advertise<visualization_msgs::Marker>("marker/node", 1);
     lidar_marker_pub_ = nh_.advertise<visualization_msgs::Marker>("lidar_marker/node", 1);
@@ -71,7 +75,15 @@ ROSWrapper::~ROSWrapper(){
 };
 
 void ROSWrapper::run(){
-    int freq_spin = 10; // test: 10[Hz], rosbag: <100[Hz]
+    int freq_spin; // test: 10[Hz], rosbag: <100[Hz]
+    if(rosbag_play_ == true)
+    {
+        freq_spin = 100;
+    }
+    else //rosbag_play_==false //<-- pcd dataset play
+    {
+        freq_spin = 10;
+    }
     ros::Rate rate(freq_spin);
     ROS_INFO_STREAM("ROSWrapper - 'run()' - run at [" << freq_spin << "] Hz.");
     ROS_INFO_STREAM("Rosbag can be started");
@@ -94,6 +106,7 @@ void ROSWrapper::getLaunchParameters(){
         if(!ros::param::has("~topicname_lidar")) 
             throw std::runtime_error("ROSWrapper - no 'topicname_lidar' is set. You might run the node by 'roslaunch' with parameter settings.\n");
         ros::param::get("~topicname_lidar", topicname_lidar_);
+        ros::param::get("~topicname_pose", topicname_pose_);
 
         ros::param::get("~rosbag_play", rosbag_play_);
         ros::param::get("~T01_slam", T01_slam_);
@@ -101,20 +114,63 @@ void ROSWrapper::getLaunchParameters(){
         ros::param::get("~data_number", data_number_);
 };
 
+void ROSWrapper::callbackPose(const nav_msgs::Odometry::ConstPtr& pose_msg){
+        double roll, pitch, yaw;
+        geometry_msgs::Quaternion geoQuat = pose_msg->pose.pose.orientation;
+        // tf::Matrix3x3(tf::Quaternion(geoQuat.z, geoQuat.x, geoQuat.y, geoQuat.w)).getRPY(roll, pitch, yaw);
+        Rot rot;
+        Eigen::Vector3d trans;
+        // trans << pose_msg->pose.pose.position.z, pose_msg->pose.pose.position.x, pose_msg->pose.pose.position.y;
+        trans << pose_msg->pose.pose.position.x, pose_msg->pose.pose.position.y, pose_msg->pose.pose.position.z;
+        std::cout <<"trans: " << trans <<std::endl;
+        // double q0 = geoQuat.w;
+        // double q1 = geoQuat.z;
+        // double q2 = geoQuat.x;
+        // double q3 = geoQuat.y;
+        double q0 = geoQuat.w;
+        double q1 = geoQuat.x;
+        double q2 = geoQuat.y;
+        double q3 = geoQuat.z;
+        std::cout <<"q0: " << geoQuat.w <<std::endl;
+        std::cout <<"q1: " << geoQuat.x <<std::endl;
+        std::cout <<"q2: " << geoQuat.y <<std::endl;
+        std::cout <<"q3: " << geoQuat.z <<std::endl;
+        rot << 2*(q0*q0+q1*q1)-1,   2*(q1*q2-q0*q3),    2*(q1*q3+q0*q2),
+                2*(q1*q2+q0*q3),    2*(q0*q0+q2*q2)-1,  2*(q2*q3-q0*q1),
+                2*(q1*q3-q0*q2),    2*(q2*q3+q0*q1),    2*(q0*q0+q3*q3)-1;
+        std::cout << "rot: " << rot <<std::endl;
+        pose_cur_.block(0,0,3,3) = rot;
+        pose_cur_.block(0,3,3,1) = trans;
+        pose_cur_(3,3) = 1;
+        std::cout << "pose_cur_: " << pose_cur_ <<std::endl;
+        // exit(0);
+
+        // T01_ = pose_pre_.inverse()*pose_cur_;
+        T10_ = pose_cur_.inverse()*pose_pre_;
+        std::cout << T10_ <<std::endl;
+        // transform_[0] = -pitch;
+        // transform_[1] = -yaw;
+        // transform_[2] = roll;
+        // transform_[3] = pose_msg->pose.pose.position.x;
+        // transform_[4] = pose_msg->pose.pose.position.y;
+        // transform_[5] = pose_msg->pose.pose.position.z;
+        pose_pre_ = pose_cur_;
+        is_initialized2_ = true;
+}
+
 void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
 
     static int cnt_data = 0;
+    static int cnt_initial = 0;
     std::cout<< "Iter: "<< cnt_data << std::endl;
 
     cloudHeader_ = msg->header;
-    if( is_initialized_ ){ // If initialized, 
+    if( is_initialized_ && is_initialized2_ ){ // If initialized, 
         // 0. Get the current LiDAR data
         // p1_msg_ = *msg;
         pcl::fromROSMsg(*msg, *p1_pcl_);
 
         // 1. Calculate T01 from the SLAM (or Odometry) algorithm
-        Pose T01;
-        Pose T10;
         if (T01_slam_==true)
         {
             timer::tic();
@@ -124,9 +180,9 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
         }
         else
         {
-            T01 = solver_->data_buf_[cnt_data]->T_gt_; //KITTI: cnt_data
-            std::cout << T01 << std::endl;
-            T10 = T01.inverse();
+            T01_ = solver_->data_buf_[cnt_data]->T_gt_; //KITTI: cnt_data
+            std::cout << T01_ << std::endl;
+            T10_ = T01_.inverse();
             //"00": +3
             //"01": +2
         }
@@ -137,7 +193,7 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
 
         ROS_INFO_STREAM("Data is from rosbag");
         ROS_INFO_STREAM("p0_ size:" << p0_pcl_->size() << " " << "p1_ size:" << p1_pcl_->size() << " ");
-        solver_->solve(p0_pcl_, p1_pcl_, T10, mask1, cnt_data, cloudHeader_);
+        solver_->solve(p0_pcl_, p1_pcl_, T10_, mask1, cnt_data, cloudHeader_);
         double dt_solver = timer::toc(); // milliseconds
         ROS_INFO_STREAM("elapsed time for 'solver' :" << dt_solver << " [ms]");
 
@@ -146,33 +202,37 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
         
         marker_.header.stamp = ros::Time::now();
         marker_.text = std::to_string(cnt_data);
-        marker_.pose.position.x = 0; //T01(0,3);     //x
-        marker_.pose.position.y = 0; //T01(1,3);     //y
-        marker_.pose.position.z = 10; //T01(2,3) + 10; //z
+        marker_.pose.position.x = 0; //T01_(0,3);     //x
+        marker_.pose.position.y = 0; //T01_(1,3);     //y
+        marker_.pose.position.z = 10; //T01_(2,3) + 10; //z
 
         lidar_marker_.header.stamp = ros::Time::now();
-        lidar_marker_.pose.position.x = 0; //T01(0,3);     //x
-        lidar_marker_.pose.position.y = 0; //T01(1,3);     //y
-        lidar_marker_.pose.position.z = 0; //T01(2,3); //z
+        lidar_marker_.pose.position.x = 0; //T01_(0,3);     //x
+        lidar_marker_.pose.position.y = 0; //T01_(1,3);     //y
+        lidar_marker_.pose.position.z = 0; //T01_(2,3); //z
 
         marker_pub_.publish(marker_);
         lidar_marker_pub_.publish(lidar_marker_);
 
         cnt_data += 1;
     }
-    else { // If not initialized, 
+    else if (cnt_initial>5) { // If not initialized, 
         is_initialized_ = true;
         
         // Initialize the first data.
         p0_msg_ = *msg;
         pcl::fromROSMsg(p0_msg_, *p0_pcl_);
         // mask0.resize(p0.width, true);
-
-        solver_->CloudFrame_cur_ ->genRangeImages(p0_pcl_, true);
-        ROS_INFO_STREAM("p0_ size:" << p0_pcl_->size());
+        if(is_initialized2_==true)
+        {
+            solver_->CloudFrame_cur_ ->genRangeImages(p0_pcl_, true);
+            ROS_INFO_STREAM("p0_ size:" << p0_pcl_->size());
+        }
         // mask0_test_.resize(p0_msg_test_.width, true);
-        cnt_data = 1;
+        cnt_data += 1;
+        solver_->pub_static_pts_.publish(msg);
     }
+    cnt_initial += 1;
 };
 
 void ROSWrapper::updatePreviousVariables(pcl::PointCloud<pcl::PointXYZI>::Ptr p0_pcl, pcl::PointCloud<pcl::PointXYZI>::Ptr p1_pcl, const Mask& mask1){

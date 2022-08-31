@@ -12,7 +12,7 @@ MaplessDynamic::MaplessDynamic(ros::NodeHandle& nh, bool rosbag_play, std::strin
     // IMPLEMENT YOUR CODE FROM THIS LINE.
 
     pub_dynamic_pts_ = nh_.advertise<sensor_msgs::PointCloud2>("/dynamic_pts",1);
-    pub_static_pts_  = nh_.advertise<sensor_msgs::PointCloud2>("/static_pts",1);
+    pub_static_pts_  = nh_.advertise<sensor_msgs::PointCloud2>("/static_pts",1); // /static_pts
 
     // Class UserParam
     std::unique_ptr<UserParam> UserParam_;
