@@ -13,6 +13,7 @@ MaplessDynamic::MaplessDynamic(ros::NodeHandle& nh, bool rosbag_play, std::strin
 
     pub_dynamic_pts_ = nh_.advertise<sensor_msgs::PointCloud2>("/dynamic_pts",1);
     pub_static_pts_  = nh_.advertise<sensor_msgs::PointCloud2>("/static_pts",1); // /static_pts
+    // pub_static_pts_  = nh_.advertise<CloudMessageT>("/static_pts",1); // ct_icp
 
     // Class UserParam
     std::unique_ptr<UserParam> UserParam_;
@@ -145,7 +146,7 @@ void MaplessDynamic::TEST(){
         // 2. Solve the Mapless Dynamic algorithm.
         timer::tic();
         Mask mask1;
-        this->solve(p0_pcl_test_, p1_pcl_test_, T10, mask1, cnt_data, cloudHeader_test_);
+        // this->solve(p0_pcl_test_, p1_pcl_test_, T10, mask1, cnt_data, cloudHeader_test_);
         double dt_solver = timer::toc(); // milliseconds
         ROS_INFO_STREAM("elapsed time for 'solver' :" << dt_solver << " [ms]");
 
@@ -415,7 +416,7 @@ void MaplessDynamic::solve(
     /* inputs */ //const sensor_msgs::PointCloud2& p1
     pcl::PointCloud<pcl::PointXYZI>::Ptr p0, pcl::PointCloud<pcl::PointXYZI>::Ptr p1, const Pose& T10, 
     /* outputs */ 
-    Mask& mask1, int cnt_data, std_msgs::Header& cloudHeader)
+    Mask& mask1, int cnt_data, std_msgs::Header& cloudHeader, pcl::PointCloud<slam::XYZTPoint>::Ptr p1_w_time)
 {
     float object_factor = 1.0;
     static int pub_num = 0;
@@ -460,7 +461,9 @@ void MaplessDynamic::solve(
     // pointcloud input, p1
     // p0 is already processed in initial step
     // timer::tic();
+    
     CloudFrame_next_->genRangeImages(p1, true);
+    
     // double dt_toc1 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'genRangeImages' :" << dt_toc1 << " [ms]");
 
@@ -576,6 +579,7 @@ void MaplessDynamic::solve(
     timer::tic;
     pcl::PointCloud<pcl::PointXYZI> pcl_dynamic;
     pcl::PointCloud<pcl::PointXYZI> pcl_static;
+    CloudMessageT pcl_static_wtime;
 
     // float* ptr_next_img_x = CloudFrame_next_->str_rhopts_->img_x.ptr<float>(0);
     // float* ptr_next_img_y = CloudFrame_next_->str_rhopts_->img_y.ptr<float>(0);
@@ -630,6 +634,9 @@ void MaplessDynamic::solve(
     //         }
     //     }
     // }
+    
+    pcl_static_wtime.reserve(p1->size());
+    slam::XYZTPoint new_pt;
 
     for (int i = 0; i < img_height_; ++i)
     {
@@ -655,11 +662,19 @@ void MaplessDynamic::solve(
                     {
                         pcl_static.push_back(
                             pcl::PointXYZI((*p1)[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]]));
+
+                        new_pt.x = (*p1)[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]].x;
+                        new_pt.y = (*p1)[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]].y;
+                        new_pt.z = (*p1)[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]].z;
+                        new_pt.timestamp = (*p1_w_time)[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]].timestamp;
+                            // std::cout <<CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k] << "      " <<new_pt.timestamp <<std::endl;
+                        pcl_static_wtime.push_back(new_pt);
                     }
                 }
             }
         }
     }
+
     // double dt_toc11 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'segmentWholePts' :" <<  dt_toc11 << " [ms]");
 
@@ -672,11 +687,24 @@ void MaplessDynamic::solve(
     converted_msg_d.header.stamp = cloudHeader.stamp;
     pub_dynamic_pts_.publish(converted_msg_d);
 
+    // sensor_msgs::PointCloud2 converted_msg_s;
+    // pcl::toROSMsg(pcl_static, converted_msg_s);
+    // converted_msg_s.header.frame_id = "/map";
+    // converted_msg_s.header.stamp = cloudHeader.stamp;
+    // pub_static_pts_.publish(converted_msg_s);
+
+    // sensor_msgs::PointCloud2 converted_msg_s;
+    // pcl::toROSMsg(*p1_w_time, converted_msg_s);
+    // converted_msg_s.header.frame_id = "/map";
+    // converted_msg_s.header.stamp = cloudHeader.stamp;
+    // pub_static_pts_.publish(converted_msg_s);
+
     sensor_msgs::PointCloud2 converted_msg_s;
-    pcl::toROSMsg(pcl_static, converted_msg_s);
+    pcl::toROSMsg(pcl_static_wtime, converted_msg_s);
     converted_msg_s.header.frame_id = "/map";
     converted_msg_s.header.stamp = cloudHeader.stamp;
     pub_static_pts_.publish(converted_msg_s);
+
     pub_num +=1;
     std::cout <<pub_num <<", "<< pcl_static.size()<<std::endl;
     // if (cnt_data == 3)

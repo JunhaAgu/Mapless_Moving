@@ -9,6 +9,10 @@ ROSWrapper::ROSWrapper(ros::NodeHandle& nh)
     p0_pcl_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
     p1_pcl_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
 
+    // p1_pcl_wtime_ = boost::make_shared<pcl::PointCloud<slam::XYZTPoint>>();
+    // std::shared_ptr<pcl::PointCloud<slam::XYZTPoint>> p1_pcl_wtime_ = nullptr;
+    p1_pcl_wtime_ = boost::make_shared<pcl::PointCloud<slam::XYZTPoint>>();
+
     pose_pre_ = Eigen::Matrix4d::Identity();
 
     // get ROS parameter (from '*.launch' file).
@@ -118,11 +122,10 @@ void ROSWrapper::callbackPose(const nav_msgs::Odometry::ConstPtr& pose_msg){
         double roll, pitch, yaw;
         geometry_msgs::Quaternion geoQuat = pose_msg->pose.pose.orientation;
         // tf::Matrix3x3(tf::Quaternion(geoQuat.z, geoQuat.x, geoQuat.y, geoQuat.w)).getRPY(roll, pitch, yaw);
-        Rot rot;
-        Eigen::Vector3d trans;
-        // trans << pose_msg->pose.pose.position.z, pose_msg->pose.pose.position.x, pose_msg->pose.pose.position.y;
-        trans << pose_msg->pose.pose.position.x, pose_msg->pose.pose.position.y, pose_msg->pose.pose.position.z;
-        std::cout <<"trans: " << trans <<std::endl;
+        
+        // trans_ << pose_msg->pose.pose.position.z, pose_msg->pose.pose.position.x, pose_msg->pose.pose.position.y;
+        trans_ << pose_msg->pose.pose.position.x, pose_msg->pose.pose.position.y, pose_msg->pose.pose.position.z;
+        std::cout <<"trans: " << trans_ <<std::endl;
         // double q0 = geoQuat.w;
         // double q1 = geoQuat.z;
         // double q2 = geoQuat.x;
@@ -135,14 +138,16 @@ void ROSWrapper::callbackPose(const nav_msgs::Odometry::ConstPtr& pose_msg){
         std::cout <<"q1: " << geoQuat.x <<std::endl;
         std::cout <<"q2: " << geoQuat.y <<std::endl;
         std::cout <<"q3: " << geoQuat.z <<std::endl;
-        rot << 2*(q0*q0+q1*q1)-1,   2*(q1*q2-q0*q3),    2*(q1*q3+q0*q2),
+        rot_ << 2*(q0*q0+q1*q1)-1,   2*(q1*q2-q0*q3),    2*(q1*q3+q0*q2),
                 2*(q1*q2+q0*q3),    2*(q0*q0+q2*q2)-1,  2*(q2*q3-q0*q1),
                 2*(q1*q3-q0*q2),    2*(q2*q3+q0*q1),    2*(q0*q0+q3*q3)-1;
-        std::cout << "rot: " << rot <<std::endl;
-        pose_cur_.block(0,0,3,3) = rot;
-        pose_cur_.block(0,3,3,1) = trans;
+        std::cout << "rot_: " <<std::endl;
+        std::cout << rot_ << std::endl;
+        pose_cur_.block(0,0,3,3) = rot_;
+        pose_cur_.block(0,3,3,1) = trans_;
         pose_cur_(3,3) = 1;
-        std::cout << "pose_cur_: " << pose_cur_ <<std::endl;
+        std::cout << "pose_cur_: " << std::endl;
+        std::cout << pose_cur_ <<std::endl;
         // exit(0);
 
         // T01_ = pose_pre_.inverse()*pose_cur_;
@@ -155,7 +160,7 @@ void ROSWrapper::callbackPose(const nav_msgs::Odometry::ConstPtr& pose_msg){
         // transform_[4] = pose_msg->pose.pose.position.y;
         // transform_[5] = pose_msg->pose.pose.position.z;
         pose_pre_ = pose_cur_;
-        is_initialized2_ = true;
+        is_initialized_pose_ = true;
 }
 
 void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
@@ -165,10 +170,12 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
     std::cout<< "Iter: "<< cnt_data << std::endl;
 
     cloudHeader_ = msg->header;
-    if( is_initialized_ && is_initialized2_ ){ // If initialized, 
+    if( is_initialized_ && is_initialized_pose_ ){ // If initialized, 
         // 0. Get the current LiDAR data
         // p1_msg_ = *msg;
         pcl::fromROSMsg(*msg, *p1_pcl_);
+        pcl::fromROSMsg(*msg, *p1_pcl_wtime_);
+        std::cout << "size: p1_pcl_: "<< (*p1_pcl_).size() << "size: p1_pcl_wtime_: " << (*p1_pcl_wtime_).size() <<std::endl;
 
         // 1. Calculate T01 from the SLAM (or Odometry) algorithm
         if (T01_slam_==true)
@@ -193,12 +200,21 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
 
         ROS_INFO_STREAM("Data is from rosbag");
         ROS_INFO_STREAM("p0_ size:" << p0_pcl_->size() << " " << "p1_ size:" << p1_pcl_->size() << " ");
-        solver_->solve(p0_pcl_, p1_pcl_, T10_, mask1, cnt_data, cloudHeader_);
+        // for (int i=0; i<p1_pcl_wtime_->size() ; ++i)
+        // {
+        //     std::cout << p1_pcl_wtime_->points[i].timestamp<<std::endl;
+        // }
+        // std::cout << msg->header.stamp.sec<<std::endl;
+        // std::cout << msg->header.stamp.nsec<<std::endl;
+        // exit(0);
+        solver_->solve(p0_pcl_, p1_pcl_, T10_, mask1, cnt_data, cloudHeader_, p1_pcl_wtime_);
         double dt_solver = timer::toc(); // milliseconds
         ROS_INFO_STREAM("elapsed time for 'solver' :" << dt_solver << " [ms]");
+        // solver_->pub_static_pts_.publish(msg);
+        ROS_INFO("pub msg: %d",cnt_data);
 
         // // 3. Update the previous variables
-        updatePreviousVariables(p0_pcl_, p1_pcl_, mask1);
+        updatePreviousVariables(p0_pcl_, p1_pcl_, mask1, p1_pcl_wtime_);
         
         marker_.header.stamp = ros::Time::now();
         marker_.text = std::to_string(cnt_data);
@@ -216,14 +232,14 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
 
         cnt_data += 1;
     }
-    else if (cnt_initial>5) { // If not initialized, 
-        is_initialized_ = true;
+    else if (cnt_initial>5)  // If not initialized, 
+    {    is_initialized_ = true;
         
         // Initialize the first data.
         p0_msg_ = *msg;
         pcl::fromROSMsg(p0_msg_, *p0_pcl_);
         // mask0.resize(p0.width, true);
-        if(is_initialized2_==true)
+        if(is_initialized_pose_==true)
         {
             solver_->CloudFrame_cur_ ->genRangeImages(p0_pcl_, true);
             ROS_INFO_STREAM("p0_ size:" << p0_pcl_->size());
@@ -231,16 +247,28 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
         // mask0_test_.resize(p0_msg_test_.width, true);
         cnt_data += 1;
         solver_->pub_static_pts_.publish(msg);
+        ROS_INFO("pub msg: %d",cnt_data);
+    }
+    else
+    {
+        solver_->pub_static_pts_.publish(msg);
+        ROS_INFO("pub msg: %d",cnt_data);
     }
     cnt_initial += 1;
+    if (T01_slam_== false)
+    {
+        is_initialized_pose_ = true;
+    }
 };
 
-void ROSWrapper::updatePreviousVariables(pcl::PointCloud<pcl::PointXYZI>::Ptr p0_pcl, pcl::PointCloud<pcl::PointXYZI>::Ptr p1_pcl, const Mask& mask1){
+void ROSWrapper::updatePreviousVariables(pcl::PointCloud<pcl::PointXYZI>::Ptr p0_pcl, pcl::PointCloud<pcl::PointXYZI>::Ptr p1_pcl, const Mask& mask1,
+                                        CloudMessageT::Ptr p1_pcl_wtime){
     // p0_pcl_ = p1_pcl_;
 
     p0_pcl->resize(0);
     pcl::copyPointCloud(*p1_pcl, *p0_pcl);
     p1_pcl->resize(0);
+    p1_pcl_wtime->resize(0);
 
     mask0.resize(mask1.size());
     std::copy(mask1.begin(), mask1.end(), mask0.begin());

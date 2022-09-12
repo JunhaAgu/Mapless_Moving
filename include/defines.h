@@ -17,6 +17,10 @@
 #include <pcl/point_types.h>
 #include <pcl/common/transforms.h>
 
+#include <pcl/register_point_struct.h>
+#include <pcl/pcl_macros.h>
+#include <pcl/io/pcd_io.h>
+
 typedef std::vector<bool> Mask;
 typedef Eigen::Matrix4d   Pose; 
 typedef Eigen::Matrix3d   Rot;
@@ -27,6 +31,60 @@ typedef Eigen::Vector3f   Euler;
 
 #define R2D 180.0f/M_PI
 #define D2R M_PI/180.0f
+
+// #define PCL_NO_PRECOMPILE
+// struct PointXYZt
+// {
+//   PCL_ADD_POINT4D;                  // preferred way of adding a XYZ+padding
+//   float timestamp;
+//   EIGEN_MAKE_ALIGNED_OPERATOR_NEW     // make sure our new allocators are aligned
+// } EIGEN_ALIGN16;                    // enforce SSE padding for correct memory alignment
+
+// POINT_CLOUD_REGISTER_POINT_STRUCT (PointXYZt,           // here we assume a XYZ + "timestamp" (as fields)
+//                                    (float, x, x)
+//                                    (float, y, y)
+//                                    (float, z, z)
+//                                    (float, timestamp, timestamp)
+// )
+
+namespace slam {
+
+    // A XYZT point compatible with pcl
+    struct XYZTPoint {
+
+        inline XYZTPoint(const XYZTPoint &pt) : x(pt.x), y(pt.y), z(pt.z), timestamp(pt.timestamp) {
+            data[3] = 1.0f;
+        }
+
+        inline XYZTPoint &operator=(const slam::XYZTPoint &pt) {
+            x = pt.x;
+            y = pt.y;
+            z = pt.z;
+            timestamp = pt.timestamp;
+            return *this;
+        }
+
+        inline XYZTPoint() : x(0.f), y(0.f), z(0.f), timestamp(0.) {
+            data[3] = 1.0f;
+        }
+
+        PCL_ADD_POINT4D
+
+        double timestamp;
+
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+    } EIGEN_ALIGN16;
+
+} // namespace slam
+
+POINT_CLOUD_REGISTER_POINT_STRUCT (slam::XYZTPoint,
+                                    (float, x, x)
+                                    (float, y, y)
+                                    (float, z, z)
+                                    (double, timestamp, timestamp))
+
+typedef pcl::PointCloud<slam::XYZTPoint> CloudMessageT;
 
 struct StrRhoPts
 {

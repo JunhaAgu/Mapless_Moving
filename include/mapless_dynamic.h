@@ -124,7 +124,7 @@ public:
         /* inputs */ 
         pcl::PointCloud<pcl::PointXYZI>::Ptr p0, pcl::PointCloud<pcl::PointXYZI>::Ptr p1, const Pose& T10, 
         /* outputs */
-        Mask& mask1, int cnt, std_msgs::Header& cloudHeader);
+        Mask& mask1, int cnt, std_msgs::Header& cloudHeader, pcl::PointCloud<slam::XYZTPoint>::Ptr msg);
 
 // From this, declare your own sub-functions. 
 private:

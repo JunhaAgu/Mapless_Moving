@@ -31,14 +31,19 @@ private:
     sensor_msgs::PointCloud2 p0_msg_;
     sensor_msgs::PointCloud2 p1_msg_;
     bool                     is_initialized_; // = default : false.
-    bool                     is_initialized2_; // = default : false.
+    bool                     is_initialized_pose_; // = default : false.
+    bool                     is_pose_received_;
     pcl::PointCloud<pcl::PointXYZI>::Ptr p0_pcl_;
     pcl::PointCloud<pcl::PointXYZI>::Ptr p1_pcl_;
+    pcl::PointCloud<slam::XYZTPoint>::Ptr p1_pcl_wtime_;
 
     Pose pose_pre_;
     Pose pose_cur_;
     Pose T01_;
     Pose T10_;
+
+    Rot rot_;
+    Eigen::Vector3d trans_;
 
     // ROS nodehandle & subscriber for LiDAR data.
 private:
@@ -78,7 +83,8 @@ private:
     void getLaunchParameters();
     void callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg);
     void callbackPose(const nav_msgs::Odometry::ConstPtr& pose);
-    void updatePreviousVariables(pcl::PointCloud<pcl::PointXYZI>::Ptr p0_pcl, pcl::PointCloud<pcl::PointXYZI>::Ptr p1_pcl, const Mask& mask1);
+    void updatePreviousVariables(pcl::PointCloud<pcl::PointXYZI>::Ptr p0_pcl, pcl::PointCloud<pcl::PointXYZI>::Ptr p1_pcl, const Mask& mask1,
+                                 CloudMessageT::Ptr p1_pcl_wtime);
 };
 
 #endif
