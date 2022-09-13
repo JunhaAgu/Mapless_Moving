@@ -462,7 +462,7 @@ void MaplessDynamic::solve(
     // p0 is already processed in initial step
     // timer::tic();
     
-    CloudFrame_next_->genRangeImages(p1, true);
+    // CloudFrame_next_->genRangeImages(p1, true);
     
     // double dt_toc1 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'genRangeImages' :" << dt_toc1 << " [ms]");
@@ -577,9 +577,9 @@ void MaplessDynamic::solve(
     // cv::waitKey(0);
     // exit(0);
     timer::tic;
-    pcl::PointCloud<pcl::PointXYZI> pcl_dynamic;
-    pcl::PointCloud<pcl::PointXYZI> pcl_static;
-    CloudMessageT pcl_static_wtime;
+    // pcl::PointCloud<pcl::PointXYZI> pcl_dynamic;
+    // pcl::PointCloud<pcl::PointXYZI> pcl_static;
+    // CloudMessageT pcl_static_wtime;
 
     // float* ptr_next_img_x = CloudFrame_next_->str_rhopts_->img_x.ptr<float>(0);
     // float* ptr_next_img_y = CloudFrame_next_->str_rhopts_->img_y.ptr<float>(0);
@@ -635,7 +635,7 @@ void MaplessDynamic::solve(
     //     }
     // }
     
-    pcl_static_wtime.reserve(p1->size());
+    // pcl_static_wtime.reserve(p1->size());
     slam::XYZTPoint new_pt;
 
     for (int i = 0; i < img_height_; ++i)
@@ -649,7 +649,7 @@ void MaplessDynamic::solve(
                 {
                     for (int k = 0; k < CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j].size(); ++k)
                     {
-                        pcl_dynamic.push_back(
+                        pcl_dynamic_.push_back(
                             pcl::PointXYZI((*p1)[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]]));
                     }
                 }
@@ -660,7 +660,7 @@ void MaplessDynamic::solve(
                 {
                     for (int k = 0; k < CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j].size(); ++k)
                     {
-                        pcl_static.push_back(
+                        pcl_static_.push_back(
                             pcl::PointXYZI((*p1)[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]]));
 
                         new_pt.x = (*p1)[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]].x;
@@ -668,7 +668,7 @@ void MaplessDynamic::solve(
                         new_pt.z = (*p1)[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]].z;
                         new_pt.timestamp = (*p1_w_time)[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]].timestamp;
                             // std::cout <<CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k] << "      " <<new_pt.timestamp <<std::endl;
-                        pcl_static_wtime.push_back(new_pt);
+                        pcl_static_wtime_.push_back(new_pt);
                     }
                 }
             }
@@ -681,11 +681,11 @@ void MaplessDynamic::solve(
     // timer::tic();
     //// visualization ////
     // dynamic //
-    sensor_msgs::PointCloud2 converted_msg_d;
-    pcl::toROSMsg(pcl_dynamic, converted_msg_d);
-    converted_msg_d.header.frame_id = "/map";
-    converted_msg_d.header.stamp = cloudHeader.stamp;
-    pub_dynamic_pts_.publish(converted_msg_d);
+    
+    pcl::toROSMsg(pcl_dynamic_, converted_msg_d_);
+    converted_msg_d_.header.frame_id = "/map";
+    converted_msg_d_.header.stamp = cloudHeader.stamp;
+    pub_dynamic_pts_.publish(converted_msg_d_);
 
     // sensor_msgs::PointCloud2 converted_msg_s;
     // pcl::toROSMsg(pcl_static, converted_msg_s);
@@ -699,14 +699,13 @@ void MaplessDynamic::solve(
     // converted_msg_s.header.stamp = cloudHeader.stamp;
     // pub_static_pts_.publish(converted_msg_s);
 
-    sensor_msgs::PointCloud2 converted_msg_s;
-    pcl::toROSMsg(pcl_static_wtime, converted_msg_s);
-    converted_msg_s.header.frame_id = "/map";
-    converted_msg_s.header.stamp = cloudHeader.stamp;
-    pub_static_pts_.publish(converted_msg_s);
+    pcl::toROSMsg(pcl_static_wtime_, converted_msg_s_);
+    converted_msg_s_.header.frame_id = "/map";
+    converted_msg_s_.header.stamp = cloudHeader.stamp;
+    pub_static_pts_.publish(converted_msg_s_);
 
     pub_num +=1;
-    std::cout <<pub_num <<", "<< pcl_static.size()<<std::endl;
+    std::cout <<pub_num <<", "<< pcl_static_.size()<<std::endl;
     // if (cnt_data == 3)
     // {exit(0);}
     // double dt_toc12 = timer::toc(); // milliseconds
@@ -732,14 +731,16 @@ void MaplessDynamic::solve(
     
     // double dt_toc_total = dt_toc1 + dt_toc2 + dt_toc3 + dt_toc4 + dt_toc5 + dt_toc6 + dt_toc7 + dt_toc8 + dt_toc9 + dt_toc10 + dt_toc11 + dt_toc12 + dt_toc13;
     // ROS_INFO_STREAM("elapsed time for 'total' :" <<  dt_toc_total << " [ms]");
-    ROS_INFO_STREAM("=======================================================");
-
+    ROS_INFO_STREAM("================== End of the solver ==================");
     // cv::imshow("final", accumulated_dRdt_);
     // cv::waitKey(0);
 };
 
 void MaplessDynamic::copyStructAndinitialize(pcl::PointCloud<pcl::PointXYZI>::Ptr p1 ,pcl::PointCloud<pcl::PointXYZI>::Ptr p0, int cnt_data)
-{
+{   
+    pcl_dynamic_.resize(0);
+    pcl_static_.resize(0);
+    pcl_static_wtime_.resize(0);
     // copy Cur to Next
     {   CloudFrame_cur_->str_rhopts_->pts        = CloudFrame_next_->str_rhopts_->pts;
 

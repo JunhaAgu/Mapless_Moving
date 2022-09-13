@@ -45,6 +45,14 @@ private:
     Rot rot_;
     Eigen::Vector3d trans_;
 
+    geometry_msgs::Quaternion geoQuat_;
+    double q0_, q1_, q2_, q3_;
+
+    double first_time_stamp_pose_ = 0.0;
+    double first_time_stamp_pcl_ = 0.0;
+    double msg_pose_input_time_ = 0.0;
+    double msg_pcl_input_time_ = 0.0;
+
     // ROS nodehandle & subscriber for LiDAR data.
 private:
     ros::NodeHandle nh_;

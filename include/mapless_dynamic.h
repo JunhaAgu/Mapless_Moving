@@ -115,6 +115,14 @@ public:
     // pcl::IterativeClosestPoint<pcl::PointXYZI, pcl::PointXYZI> icp_;
 
 public:
+    pcl::PointCloud<pcl::PointXYZI> pcl_dynamic_;
+    pcl::PointCloud<pcl::PointXYZI> pcl_static_;
+    CloudMessageT pcl_static_wtime_;
+
+    sensor_msgs::PointCloud2 converted_msg_d_;
+    sensor_msgs::PointCloud2 converted_msg_s_;
+
+public:
     MaplessDynamic(ros::NodeHandle& nh, bool rosbag_play, std::string& dataset_name, std::string& data_number); // constructor
     ~MaplessDynamic(); // destructor
 

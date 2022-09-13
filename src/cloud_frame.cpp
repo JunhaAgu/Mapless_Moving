@@ -142,65 +142,80 @@ void CloudFrame::calcuateRho(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool c
     float cospsi = 0.0;
     float sinpsi = 0.0;
 
-    float* ptr_rho = str_rhopts_->rho.data();
-    float* ptr_phi = str_rhopts_->phi.data();
+    // Resize (n_pts)
+    str_rhopts_->rho.resize(n_pts);
+    str_rhopts_->phi.resize(n_pts);
+    str_rhopts_->theta.resize(n_pts);
+
+    float* ptr_rho   = str_rhopts_->rho.data();
+    float* ptr_phi   = str_rhopts_->phi.data();
     float* ptr_theta = str_rhopts_->theta.data();
 
-    float M_PI_plus_offset_theta = M_PI + offset_theta;
+    float M_PI_plus_offset_theta  = M_PI + offset_theta;
     float twopi_plus_offset_theta = twopi + offset_theta;
 
     // std::string line;
     // std::ofstream file("/home/junhakim/rhophitheta.txt");
 
-    for (int i = 0; i < n_pts; ++i)
-    {
-        // str_rhopts_->rho.push_back(sqrt((pcl_in->points[i].x * pcl_in->points[i].x + pcl_in->points[i].y * pcl_in->points[i].y + pcl_in->points[i].z * pcl_in->points[i].z)));
-        str_rhopts_->rho.push_back(NORM(pcl_in->points[i].x, pcl_in->points[i].y, pcl_in->points[i].z));
-        str_rhopts_->phi.push_back(asinf32(pcl_in->points[i].z / ptr_rho[i]));
-        invrhocos = (float)1.0 / (ptr_rho[i] * cosf32(ptr_phi[i]));
+    for (int i = 0; i < n_pts; ++i, ++ptr_rho, ++ptr_phi, ++ptr_theta)
+    {   
+        const pcl::PointXYZI& pclpxyzi_tmp = pcl_in->points[i];
+        const float& x_tmp = pclpxyzi_tmp.x;
+        const float& y_tmp = pclpxyzi_tmp.y;
+        const float& z_tmp = pclpxyzi_tmp.z;
 
-        cospsi = pcl_in->points[i].x * invrhocos;
+        float& rho_tmp   = *ptr_rho;
+        float& phi_tmp   = *ptr_phi;
+        float& theta_tmp = *ptr_theta;
+
+        // str_rhopts_->rho.push_back(sqrt((pcl_in->points[i].x * pcl_in->points[i].x + pcl_in->points[i].y * pcl_in->points[i].y + pcl_in->points[i].z * pcl_in->points[i].z)));
+        rho_tmp   = NORM(x_tmp, y_tmp, z_tmp);
+        phi_tmp   = asinf32(z_tmp / rho_tmp);
+        invrhocos = 1.0f / (rho_tmp * cosf32(phi_tmp));
+
+        cospsi = x_tmp * invrhocos;
+        sinpsi = y_tmp * invrhocos;
+
         if (cospsi > 1)
         {
             // std::cout << "(cospsi > 1): " << cospsi <<std::endl;
-            cospsi = (float)1.0;
+            cospsi = 1.0f;
             
         }
         else if (cospsi < -1)
         {
             // std::cout << "(cospsi < -1): " << cospsi <<std::endl;
-            cospsi = -(float)1.0;
+            cospsi = -1.0f;
         }
         else{}
 
-        sinpsi = pcl_in->points[i].y * invrhocos;
 
         if (cospsi >= 0)
         {
             if (sinpsi >= 0) // 1 quadrant
             {
-                str_rhopts_->theta.push_back(acosf32(cospsi) + offset_theta);
+                theta_tmp = acosf32(cospsi) + offset_theta;
             }
             else // 4 quadrant
             {
-                str_rhopts_->theta.push_back(twopi_plus_offset_theta - acosf32(cospsi));
+                theta_tmp = twopi_plus_offset_theta - acosf32(cospsi);
             }
         }
         else
         {
             if (sinpsi >= 0) // 2 quadrant
             {
-                str_rhopts_->theta.push_back(M_PI_plus_offset_theta - acosf32(-cospsi));
+                theta_tmp = M_PI_plus_offset_theta - acosf32(-cospsi);
             }
             else // 3 quadrant
             {
-                str_rhopts_->theta.push_back(M_PI_plus_offset_theta + acosf32(-cospsi));
+                theta_tmp = M_PI_plus_offset_theta + acosf32(-cospsi);
             }
         }
 
-        if (ptr_theta[i] >= twopi)
+        if (theta_tmp >= twopi)
         {
-            ptr_theta[i] = ptr_theta[i] - twopi;
+            theta_tmp = theta_tmp - twopi;
         }
         // std::cout << str_rhopts_->rho[i] << " " << str_rhopts_->phi[i] << " " << str_rhopts_->theta[i]<< std::endl;
 
@@ -312,9 +327,12 @@ void CloudFrame::makeRangeImageAndPtsPerPixel(bool cur_next)
         // }
         
         i_row_ncols_i_col = i_row * n_col + i_col;
-        if (*(ptr_img_rho + i_row_ncols_i_col) == 0 || *(ptr_img_rho + i_row_ncols_i_col) > ptr_rho[i]) //(str_rhopts_->img_rho.at<float>(i_row,i_col) == 0)
+
+        float& rho_tmp = ptr_rho[i];
+        float& img_rho_tmp = *(ptr_img_rho + i_row_ncols_i_col);
+        if (img_rho_tmp == 0 || img_rho_tmp > rho_tmp) //(str_rhopts_->img_rho.at<float>(i_row,i_col) == 0)
         {   
-            *(ptr_img_rho + i_row_ncols_i_col) = ptr_rho[i];
+            img_rho_tmp = rho_tmp;
             *(ptr_img_index + i_row_ncols_i_col) = i;
         }
         // else if (*(ptr_img_rho + i_row_ncols_i_col) > ptr_rho[i])
@@ -325,8 +343,8 @@ void CloudFrame::makeRangeImageAndPtsPerPixel(bool cur_next)
         else{}
 
         // ptr_pts_per_pixel_n[i_row_ncols_i_col] += 1;
-        str_rhopts_->pts_per_pixel_index[i_row_ncols_i_col].push_back(i);
-        str_rhopts_->pts_per_pixel_rho[i_row_ncols_i_col].push_back(ptr_rho[i]);
+        str_rhopts_->pts_per_pixel_index[i_row_ncols_i_col].emplace_back(i);
+        str_rhopts_->pts_per_pixel_rho[i_row_ncols_i_col].emplace_back(rho_tmp);
     } // end for
                 
                 // if (cur_next == 1)
@@ -436,22 +454,24 @@ void CloudFrame::interpRangeImage(bool cur_next)
     int n_col = str_rhopts_->img_rho.cols;
     int n_row = str_rhopts_->img_rho.rows;
 
-    cv::Mat img_rho_new = str_rhopts_->img_rho.clone();
+    cv::Mat img_rho_new    = str_rhopts_->img_rho.clone();
     float* ptr_img_rho_new = img_rho_new.ptr<float>(0);
 
     float* ptr_img_rho          = str_rhopts_->img_rho.ptr<float>(0);
     int* ptr_img_index          = str_rhopts_->img_index.ptr<int>(0);
     int* ptr_img_restore_mask   = str_rhopts_->img_restore_mask.ptr<int>(0);
 
-    int i_ncols = 0;
+    int i_ncols       = 0;
     int i_minus_ncols = 0;
-    int i_plus_ncols = 0;
+    int i_plus_ncols  = 0;
 
-    for (int i = 27; i < 32; i++)
+    for (int i = 27; i < 32; ++i)
     {
         i_ncols = i * n_col;
-        i_minus_ncols = (i - 1) * n_col;
-        i_plus_ncols  = (i + 1) * n_col;
+        // i_minus_ncols = (i - 1) * n_col;
+        i_minus_ncols = i_ncols - n_col;
+        i_plus_ncols  = i_ncols + n_col;
+
         for (int j = 0 + 2; j < (n_radial_ - 2); ++j)
         {
 
