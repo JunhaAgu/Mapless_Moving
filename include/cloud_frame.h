@@ -5,6 +5,9 @@
 #include "user_param.h"
 #include "timer.h"
 
+#include "immintrin.h" // AVX, AVX2 ...
+
+
 class MaplessDynamic;
 class UserParam;
 
@@ -43,6 +46,8 @@ class CloudFrame
         void genRangeImages_noComp(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur_next);
 
         void calcuateRho(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur_next);
+        
+        void calcuateRho_SIMD(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur_next);
 
         void makeRangeImageAndPtsPerPixel(bool cur_next);
 
@@ -55,6 +60,9 @@ class CloudFrame
         void interpPts(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur_next);
 
         void reset();
+
+    private:
+        inline float acos_fast(float x);
 };
 
 

@@ -241,7 +241,59 @@ void CloudFrame::calcuateRho(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool c
     //     file.close();
     //     exit(0);
     // }
-}
+};
+
+
+void CloudFrame::calcuateRho_SIMD(
+    pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur_next)
+{
+    float twopi         = 2.0*M_PI;
+    float offset_theta  = M_PI;
+    __m256 __twopi        = _mm256_set1_ps(twopi);
+    __m256 __offset_theta = _mm256_set1_ps(offset_theta);
+
+    int n_pts = pcl_in->size();
+
+    float invrhocos = 0.0;
+    float cospsi    = 0.0;
+    float sinpsi    = 0.0;
+
+    // Resize (n_pts)
+    str_rhopts_->rho.resize(n_pts);
+    str_rhopts_->phi.resize(n_pts);
+    str_rhopts_->theta.resize(n_pts);
+
+    float* ptr_rho   = str_rhopts_->rho.data();
+    float* ptr_phi   = str_rhopts_->phi.data();
+    float* ptr_theta = str_rhopts_->theta.data();
+
+    float M_PI_plus_offset_theta  = M_PI + offset_theta;
+    float twopi_plus_offset_theta = twopi + offset_theta;
+    __m256 M_PI_offset  = _mm256_set1_ps(M_PI_plus_offset_theta);
+    __m256 twopi_offset = _mm256_set1_ps(twopi_plus_offset_theta);
+
+    int steps        = n_pts/8;
+    int n_pts_simd   = steps*8;
+    int n_pts_remain = n_pts - n_pts_simd;
+
+    std::cout << "steps: " << steps << std::endl;
+
+    for(int i = 0; i < steps; i += 8 ) 
+    {
+        const pcl::PointXYZI& pclpxyzi_tmp = pcl_in->points[i];
+        const float& x_tmp = pclpxyzi_tmp.x;
+        const float& y_tmp = pclpxyzi_tmp.y;
+        const float& z_tmp = pclpxyzi_tmp.z;
+        // pppp =  _mm_load_ps(points_array[i]);
+    }
+
+    for(int i = n_pts_simd; i < n_pts; ++i)
+    {
+
+    }
+
+};
+
 
 void CloudFrame::makeRangeImageAndPtsPerPixel(bool cur_next)
 {
@@ -887,3 +939,21 @@ void CloudFrame::reset()
         }
     }
 }
+
+
+
+
+inline float CloudFrame::acos_fast(float x){
+    float negate = float(x < 0);
+    x = abs(x);
+    float ret = -0.0187293;
+    ret = ret * x;
+    ret = ret + 0.0742610;
+    ret = ret * x;
+    ret = ret - 0.2121144;
+    ret = ret * x;
+    ret = ret + 1.5707288;
+    ret = ret * sqrt(1.0-x);
+    ret = ret - 2 * negate * ret;
+    return negate * 3.14159265358979 + ret;
+};
