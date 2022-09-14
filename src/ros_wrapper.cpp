@@ -227,7 +227,7 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
         }
 
         // 2. Solve the Mapless Dynamic algorithm.
-        timer::tic();
+        // timer::tic();
         Mask mask1;
 
         ROS_INFO_STREAM("Data is from rosbag");
@@ -239,11 +239,15 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
         // std::cout << msg->header.stamp.sec<<std::endl;
         // std::cout << msg->header.stamp.nsec<<std::endl;
         // exit(0);
+        timer::tic();
         solver_->CloudFrame_next_->genRangeImages(p1_pcl_, true);
-        
+        double dt1 = timer::toc(); // milliseconds
+        ROS_INFO_STREAM("elapsed time for 'genRangeImages' :" << dt1 << " [ms]");
+
         solver_->solve(p0_pcl_, p1_pcl_, T10_, mask1, cnt_data, cloudHeader_, p1_pcl_wtime_);
-        double dt_solver = timer::toc(); // milliseconds
-        ROS_INFO_STREAM("elapsed time for 'solver' :" << dt_solver << " [ms]");
+        // double dt_solver = timer::toc(); // milliseconds
+        // ROS_INFO_STREAM("elapsed time for 'solver' :" << dt_solver << " [ms]");
+
         // solver_->pub_static_pts_.publish(msg);
         ROS_INFO("pub msg: %d",cnt_data);
 

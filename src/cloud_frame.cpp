@@ -70,15 +70,15 @@ void CloudFrame::genRangeImages(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, boo
 {
     n_pts_ = pcl_in->size();
 
-    // timer::tic();
+    timer::tic();
     calcuateRho(pcl_in, cur_next);    
-    // double dt_calRho = timer::toc(); // milliseconds
-    // ROS_INFO_STREAM("elapsed time for 'calcuateRho' :" << dt_calRho << " [ms]");
+    double dt_calRho = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'calcuateRho' :" << dt_calRho << " [ms]");
 
-    // timer::tic();
+    timer::tic();
     makeRangeImageAndPtsPerPixel(cur_next);
-    // double dt_PPP = timer::toc(); // milliseconds
-    // ROS_INFO_STREAM("elapsed time for 'makeRangeImageAndPtsPerPixel' :" << dt_PPP << " [ms]");
+    double dt_PPP = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'makeRangeImageAndPtsPerPixel' :" << dt_PPP << " [ms]");
     
     // if (cur_next==0)
     // {
@@ -99,26 +99,35 @@ void CloudFrame::genRangeImages(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, boo
     // exit(0);
     // }
 
-    // timer::tic();
+    timer::tic();
     interpRangeImage(cur_next);
-    // double dt_interpRho = timer::toc(); // milliseconds
-    // ROS_INFO_STREAM("elapsed time for 'interpRangeImage' :" << dt_interpRho << " [ms]");
+    double dt_interpRho = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'interpRangeImage' :" << dt_interpRho << " [ms]");
 
-    // timer::tic();
+    timer::tic();
     interpPts(pcl_in, cur_next);
-    // double dt_interpPts = timer::toc(); // milliseconds
-    // ROS_INFO_STREAM("elapsed time for 'interpPts' :" << dt_interpPts << " [ms]");
+    double dt_interpPts = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'interpPts' :" << dt_interpPts << " [ms]");
 }
 
 void CloudFrame::genRangeImages_dR(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur_next)
 {
     n_pts_ = pcl_in->size();
 
-    calcuateRho(pcl_in, cur_next);    
+    timer::tic();
+    calcuateRho(pcl_in, cur_next);
+    double dt_1 = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'calcuateRho' :" << dt_1 << " [ms]");    
 
+    timer::tic();
     makeRangeImageAndPtsPerPixel_dR(cur_next);
+    double dt_2 = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'makeRangeImageAndPtsPerPixel_dR' :" << dt_2 << " [ms]");
 
+    timer::tic();
     interpRangeImage_dR(cur_next);
+    double dt_3 = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'interpRangeImage_dR' :" << dt_3 << " [ms]");
 }
 
 void CloudFrame::genRangeImages_noComp(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur_next)
@@ -740,35 +749,39 @@ void CloudFrame::interpPts(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur
             } // end if
             else{}
 
-            if (*(ptr_img_index + i_ncols_j) != 0)
+            int* ptr_img_index_i_ncols_j         = ptr_img_index + i_ncols_j;
+            int* ptr_img_index_i_ncols_j_n_col   = ptr_img_index_i_ncols_j + n_col;
+            int* ptr_img_index_i_ncols_j_m_n_col = ptr_img_index_i_ncols_j - n_col;
+
+            if (*(ptr_img_index_i_ncols_j) != 0)
             {
-                *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j)].x;
-                *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j)].y;
-                *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j)].z;
+                *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j)].x;
+                *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j)].y;
+                *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j)].z;
             }
             else{}
 
             switch(*(ptr_img_restore_mask + i_ncols_j))
             {
                 case 1:
-                    *(ptr_img_x + i_ncols_j) = 0.5 * ((*pcl_in)[*(ptr_img_index + i_ncols_j - n_col)].x + (*pcl_in)[*(ptr_img_index + i_ncols_j + n_col)].x);
-                    *(ptr_img_y + i_ncols_j) = 0.5 * ((*pcl_in)[*(ptr_img_index + i_ncols_j - n_col)].y + (*pcl_in)[*(ptr_img_index + i_ncols_j + n_col)].y);
-                    *(ptr_img_z + i_ncols_j) = 0.5 * ((*pcl_in)[*(ptr_img_index + i_ncols_j - n_col)].z + (*pcl_in)[*(ptr_img_index + i_ncols_j + n_col)].z);
+                    *(ptr_img_x + i_ncols_j) = 0.5 * ((*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col)].x + (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].x);
+                    *(ptr_img_y + i_ncols_j) = 0.5 * ((*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col)].y + (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].y);
+                    *(ptr_img_z + i_ncols_j) = 0.5 * ((*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col)].z + (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].z);
                     break;
                 case 10:
                     if (cur_next == false)
                     {
                         if ((*(ptr_img_rho + i_ncols_j - n_col) > *(ptr_img_rho + i_ncols_j + n_col)))
                         {
-                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j + n_col)].x;
-                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j + n_col)].y;
-                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j + n_col)].z;
+                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].x;
+                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].y;
+                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].z;
                         }
                         else
                         {
-                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j - n_col)].x;
-                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j - n_col)].y;
-                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j - n_col)].z;            
+                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col)].x;
+                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col)].y;
+                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col)].z;            
                         }
                         break;
                     }
@@ -776,38 +789,38 @@ void CloudFrame::interpPts(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur
                     {
                         if ((*(ptr_img_rho + i_ncols_j - n_col) < *(ptr_img_rho + i_ncols_j + n_col)))
                         {
-                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j + n_col)].x;
-                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j + n_col)].y;
-                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j + n_col)].z;
+                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].x;
+                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].y;
+                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].z;
                         }
                         else
                         {
-                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j - n_col)].x;
-                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j - n_col)].y;
-                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j - n_col)].z;            
+                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col)].x;
+                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col)].y;
+                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col)].z;            
                         }
                         break;
                     }
 
                 case 2:
-                    *(ptr_img_x + i_ncols_j) = (0.6666667) * (*pcl_in)[*(ptr_img_index + i_ncols_j - n_col)].x + (0.3333333) * (*pcl_in)[*(ptr_img_index + i_ncols_j + 2 * n_col)].x;
-                    *(ptr_img_y + i_ncols_j) = (0.6666667) * (*pcl_in)[*(ptr_img_index + i_ncols_j - n_col)].y + (0.3333333) * (*pcl_in)[*(ptr_img_index + i_ncols_j + 2 * n_col)].y;
-                    *(ptr_img_z + i_ncols_j) = (0.6666667) * (*pcl_in)[*(ptr_img_index + i_ncols_j - n_col)].z + (0.3333333) * (*pcl_in)[*(ptr_img_index + i_ncols_j + 2 * n_col)].z;
+                    *(ptr_img_x + i_ncols_j) = (0.6666667) * (*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col)].x + (0.3333333) * (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col + n_col)].x;
+                    *(ptr_img_y + i_ncols_j) = (0.6666667) * (*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col)].y + (0.3333333) * (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col + n_col)].y;
+                    *(ptr_img_z + i_ncols_j) = (0.6666667) * (*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col)].z + (0.3333333) * (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col + n_col)].z;
                     break;
                 case 20:
                     if (cur_next == false)
                     {
                         if ((*(ptr_img_rho + i_ncols_j - n_col) > *(ptr_img_rho + i_ncols_j + 2 * n_col)))
                         {                            
-                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j + 2 * n_col)].x;
-                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j + 2 * n_col)].y;
-                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j + 2 * n_col)].z;
+                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col + n_col)].x;
+                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col + n_col)].y;
+                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col + n_col)].z;
                         }
                         else
                         {
-                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j - n_col)].x;
-                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j - n_col)].y;
-                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j - n_col)].z;
+                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col)].x;
+                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col)].y;
+                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col)].z;
                         }
                         break;
                     }
@@ -815,38 +828,38 @@ void CloudFrame::interpPts(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur
                     {
                         if ((*(ptr_img_rho + i_ncols_j - n_col) < *(ptr_img_rho + i_ncols_j + 2 * n_col)))
                         {
-                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j + 2 * n_col)].x;
-                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j + 2 * n_col)].y;
-                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j + 2 * n_col)].z;
+                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col + n_col)].x;
+                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col + n_col)].y;
+                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col + n_col)].z;
                         }
                         else
                         {
-                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j - n_col)].x;
-                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j - n_col)].y;
-                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j - n_col)].z;
+                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col)].x;
+                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col)].y;
+                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col)].z;
                         }
                         break;
                     }
 
                 case 3:
-                    *(ptr_img_x + i_ncols_j) = (0.3333333) * (*pcl_in)[*(ptr_img_index + i_ncols_j - 2 * n_col)].x + (0.6666667) * (*pcl_in)[*(ptr_img_index + i_ncols_j + n_col)].x;
-                    *(ptr_img_y + i_ncols_j) = (0.3333333) * (*pcl_in)[*(ptr_img_index + i_ncols_j - 2 * n_col)].y + (0.6666667) * (*pcl_in)[*(ptr_img_index + i_ncols_j + n_col)].y;
-                    *(ptr_img_z + i_ncols_j) = (0.3333333) * (*pcl_in)[*(ptr_img_index + i_ncols_j - 2 * n_col)].z + (0.6666667) * (*pcl_in)[*(ptr_img_index + i_ncols_j + n_col)].z;
+                    *(ptr_img_x + i_ncols_j) = (0.3333333) * (*pcl_in)[*(ptr_img_index_i_ncols_j - 2 * n_col)].x + (0.6666667) * (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].x;
+                    *(ptr_img_y + i_ncols_j) = (0.3333333) * (*pcl_in)[*(ptr_img_index_i_ncols_j - 2 * n_col)].y + (0.6666667) * (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].y;
+                    *(ptr_img_z + i_ncols_j) = (0.3333333) * (*pcl_in)[*(ptr_img_index_i_ncols_j - 2 * n_col)].z + (0.6666667) * (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].z;
                     break;
                 case 30:
                     if(cur_next == false)
                     {
                         if ((*(ptr_img_rho + i_ncols_j - 2 * n_col) > *(ptr_img_rho + i_ncols_j + n_col)))
                         {
-                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j + n_col)].x;
-                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j + n_col)].y;
-                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j + n_col)].z;
+                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].x;
+                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].y;
+                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].z;
                         }
                         else
                         {
-                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j - 2 * n_col)].x;
-                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j - 2 * n_col)].y;
-                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j - 2 * n_col)].z;
+                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j - 2 * n_col)].x;
+                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j - 2 * n_col)].y;
+                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j - 2 * n_col)].z;
                         }
                         break;
                     }
@@ -854,33 +867,33 @@ void CloudFrame::interpPts(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur
                     {
                         if ((*(ptr_img_rho + i_ncols_j - 2 * n_col) < *(ptr_img_rho + i_ncols_j + n_col)))
                         {
-                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j + n_col)].x;
-                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j + n_col)].y;
-                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j + n_col)].z;
+                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].x;
+                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].y;
+                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].z;
                         }
                         else
                         {
-                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j - 2 * n_col)].x;
-                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j - 2 * n_col)].y;
-                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index + i_ncols_j - 2 * n_col)].z;
+                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j - 2 * n_col)].x;
+                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j - 2 * n_col)].y;
+                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j - 2 * n_col)].z;
                         }
                         break;
                     }
 
                 case 4:
-                    *(ptr_img_x + i_ncols_j) = 0.5 * ((*pcl_in)[*(ptr_img_index + i_ncols_j - 1)].x + (*pcl_in)[*(ptr_img_index + i_ncols_j + 1)].x);
-                    *(ptr_img_y + i_ncols_j) = 0.5 * ((*pcl_in)[*(ptr_img_index + i_ncols_j - 1)].y + (*pcl_in)[*(ptr_img_index + i_ncols_j + 1)].y);
-                    *(ptr_img_z + i_ncols_j) = 0.5 * ((*pcl_in)[*(ptr_img_index + i_ncols_j - 1)].z + (*pcl_in)[*(ptr_img_index + i_ncols_j + 1)].z);
+                    *(ptr_img_x + i_ncols_j) = 0.5 * ((*pcl_in)[*(ptr_img_index_i_ncols_j - 1)].x + (*pcl_in)[*(ptr_img_index_i_ncols_j + 1)].x);
+                    *(ptr_img_y + i_ncols_j) = 0.5 * ((*pcl_in)[*(ptr_img_index_i_ncols_j - 1)].y + (*pcl_in)[*(ptr_img_index_i_ncols_j + 1)].y);
+                    *(ptr_img_z + i_ncols_j) = 0.5 * ((*pcl_in)[*(ptr_img_index_i_ncols_j - 1)].z + (*pcl_in)[*(ptr_img_index_i_ncols_j + 1)].z);
                     break;
                 case 5:
-                    *(ptr_img_x + i_ncols_j) = (0.6666667) * (*pcl_in)[*(ptr_img_index + i_ncols_j - 1)].x + (0.3333333) * (*pcl_in)[*(ptr_img_index + i_ncols_j + 2)].x;
-                    *(ptr_img_y + i_ncols_j) = (0.6666667) * (*pcl_in)[*(ptr_img_index + i_ncols_j - 1)].y + (0.3333333) * (*pcl_in)[*(ptr_img_index + i_ncols_j + 2)].y;
-                    *(ptr_img_z + i_ncols_j) = (0.6666667) * (*pcl_in)[*(ptr_img_index + i_ncols_j - 1)].z + (0.3333333) * (*pcl_in)[*(ptr_img_index + i_ncols_j + 2)].z;
+                    *(ptr_img_x + i_ncols_j) = (0.6666667) * (*pcl_in)[*(ptr_img_index_i_ncols_j - 1)].x + (0.3333333) * (*pcl_in)[*(ptr_img_index_i_ncols_j + 2)].x;
+                    *(ptr_img_y + i_ncols_j) = (0.6666667) * (*pcl_in)[*(ptr_img_index_i_ncols_j - 1)].y + (0.3333333) * (*pcl_in)[*(ptr_img_index_i_ncols_j + 2)].y;
+                    *(ptr_img_z + i_ncols_j) = (0.6666667) * (*pcl_in)[*(ptr_img_index_i_ncols_j - 1)].z + (0.3333333) * (*pcl_in)[*(ptr_img_index_i_ncols_j + 2)].z;
                     break;
                 case 6:
-                    *(ptr_img_x + i_ncols_j) = (0.3333333) * (*pcl_in)[*(ptr_img_index + i_ncols_j - 2)].x + (0.6666667) * (*pcl_in)[*(ptr_img_index + i_ncols_j + 1)].x;
-                    *(ptr_img_y + i_ncols_j) = (0.3333333) * (*pcl_in)[*(ptr_img_index + i_ncols_j - 2)].y + (0.6666667) * (*pcl_in)[*(ptr_img_index + i_ncols_j + 1)].y;
-                    *(ptr_img_z + i_ncols_j) = (0.3333333) * (*pcl_in)[*(ptr_img_index + i_ncols_j - 2)].z + (0.6666667) * (*pcl_in)[*(ptr_img_index + i_ncols_j + 1)].z;
+                    *(ptr_img_x + i_ncols_j) = (0.3333333) * (*pcl_in)[*(ptr_img_index_i_ncols_j - 2)].x + (0.6666667) * (*pcl_in)[*(ptr_img_index_i_ncols_j + 1)].x;
+                    *(ptr_img_y + i_ncols_j) = (0.3333333) * (*pcl_in)[*(ptr_img_index_i_ncols_j - 2)].y + (0.6666667) * (*pcl_in)[*(ptr_img_index_i_ncols_j + 1)].y;
+                    *(ptr_img_z + i_ncols_j) = (0.3333333) * (*pcl_in)[*(ptr_img_index_i_ncols_j - 2)].z + (0.6666667) * (*pcl_in)[*(ptr_img_index_i_ncols_j + 1)].z;
                     break;
             }
         } // end for j    

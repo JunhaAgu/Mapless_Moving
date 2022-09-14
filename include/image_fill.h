@@ -30,10 +30,10 @@ public:
 
     std::vector<int> object_row_;
     std::vector<int> object_col_;
-    std::vector<float> object_rho_roi_;
+    // std::vector<float> object_rho_roi_;
 
-    std::vector<int> filled_object_row_;
-    std::vector<int> filled_object_col_;
+    // std::vector<int> filled_object_row_;
+    // std::vector<int> filled_object_col_;
     std::vector<float> filled_object_rho_roi_;
 
     std::vector<int> rho_zero_filled_row_;
@@ -42,8 +42,8 @@ public:
 
     std::vector<float> max_his_filled_object_rho_roi_;
 
-    std::vector<int> disconti_row_;
-    std::vector<int> disconti_col_;
+    // std::vector<int> disconti_row_;
+    // std::vector<int> disconti_col_;
 
     cv::MatND histogram_;
 

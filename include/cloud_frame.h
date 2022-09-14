@@ -60,9 +60,6 @@ class CloudFrame
         void interpPts(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur_next);
 
         void reset();
-
-    private:
-        inline float acos_fast(float x);
 };
 
 

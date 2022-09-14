@@ -481,32 +481,32 @@ void MaplessDynamic::solve(
     }
 
     // Segment ground
-    // timer::tic();
+    timer::tic();
     SegmentGround_->fastsegmentGround(CloudFrame_next_);
-    // double dt_toc2 = timer::toc(); // milliseconds
-    // ROS_INFO_STREAM("elapsed time for 'segmentSGround' :" << dt_toc2 << " [ms]");
+    double dt_toc2 = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'segmentSGround' :" << dt_toc2 << " [ms]");
     //// Occlusion accumulation ////
     // Compute the occlusion dRdt
 
         // cv::imshow("SegmentGround_", SegmentGround_->groundPtsIdx_next_);
 
     
-    // timer::tic();
+    timer::tic();
     dRCalc_->dR_warpPointcloud(CloudFrame_next_, CloudFrame_cur_, CloudFrame_cur_warped_, p0, T_next2cur_, cnt_data, dRdt_);
-    // double dt_toc3 = timer::toc(); // milliseconds
-    // ROS_INFO_STREAM("elapsed time for 'dR_warpPointcloud' :" << dt_toc3 << " [ms]");
+    double dt_toc3 = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'dR_warpPointcloud' :" << dt_toc3 << " [ms]");
     // str_next_->state();
     //     cv::imshow("residual_", residual_);
     // cv::waitKey(0);
     // exit(0);
 
-    // timer::tic();
+    timer::tic();
     // warp the occlusion accumulation map
     PclWarp_->warpPointcloud(CloudFrame_cur_, CloudFrame_warpPointcloud_, T_next2cur_, accumulated_dRdt_, cnt_data);
     PclWarp_->initializeStructAndPcl(CloudFrame_warpPointcloud_);
     PclWarp_->warpPointcloud(CloudFrame_cur_, CloudFrame_warpPointcloud_, T_next2cur_, accumulated_dRdt_score_, cnt_data);
-    // double dt_toc4 = timer::toc(); // milliseconds
-    // ROS_INFO_STREAM("elapsed time for 'warpPointcloud' :" << dt_toc4 << " [ms]");
+    double dt_toc4 = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'warpPointcloud' :" << dt_toc4 << " [ms]");
 
     // cv::imshow("after warpPointcloud", accumulated_dRdt_);
     
@@ -517,11 +517,11 @@ void MaplessDynamic::solve(
     //     cv::imshow("before  k", accumulated_dRdt_score_);
     //     countZerofloat(accumulated_dRdt_score_);
     // }
-    // timer::tic();
+    timer::tic();
     // filter out outliers
     ObjectExt_->filterOutAccumdR(CloudFrame_next_, CloudFrame_cur_warped_, accumulated_dRdt_, accumulated_dRdt_score_, dRdt_);
-    // double dt_toc5 = timer::toc(); // milliseconds
-    // ROS_INFO_STREAM("elapsed time for 'filterOutAccumdR' :" << dt_toc5 << " [ms]");
+    double dt_toc5 = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'filterOutAccumdR' :" << dt_toc5 << " [ms]");
 
     // cv::imshow("after filterOutAccumdR", accumulated_dRdt_);
 
@@ -534,41 +534,41 @@ void MaplessDynamic::solve(
     //     cv::waitKey(0);
     //     exit(0);
     // }
-    // timer::tic();
+    timer::tic();
     // Extract object candidate via connected components in 2-D binary image
     ObjectExt_->extractObjectCandidate(accumulated_dRdt_, CloudFrame_next_, object_factor);
-    // double dt_toc6 = timer::toc(); // milliseconds
-    // ROS_INFO_STREAM("elapsed time for 'extractObjectCandidate' :" <<  dt_toc6 << " [ms]");
+    double dt_toc6 = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'extractObjectCandidate' :" <<  dt_toc6 << " [ms]");
 
     // cv::imshow("after extractObjectCandidate", accumulated_dRdt_);
     //// update object_mask
     //object_mask = accumulated_dRdt>0;
-    // timer::tic();
+    timer::tic();
     // Fast Segment
     ObjectExt_->checkSegment(accumulated_dRdt_, CloudFrame_next_, SegmentGround_->groundPtsIdx_next_);
-    // double dt_toc7 = timer::toc(); // milliseconds
-    // ROS_INFO_STREAM("elapsed time for 'checkSegment' :" <<  dt_toc7 << " [ms]");
+    double dt_toc7 = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'checkSegment' :" <<  dt_toc7 << " [ms]");
     // cv::imshow("after checkSegment", accumulated_dRdt_);
     //// update object_mask
     //object_mask = accumulated_dRdt>0;
-    // timer::tic();
+    timer::tic();
     ObjectExt_->updateAccum(accumulated_dRdt_, accumulated_dRdt_score_);
-    // double dt_toc8 = timer::toc(); // milliseconds
-    // ROS_INFO_STREAM("elapsed time for 'updateAccum' :" <<  dt_toc8 << " [ms]");
+    double dt_toc8 = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'updateAccum' :" <<  dt_toc8 << " [ms]");
 
     // cv::imshow("after updateAccum", accumulated_dRdt_);
 
-    // timer::tic();
+    timer::tic();
     ImageFill_->plugImageZeroHoles(accumulated_dRdt_, accumulated_dRdt_score_, CloudFrame_next_, object_factor);
-    // double dt_toc9 = timer::toc(); // milliseconds
-    // ROS_INFO_STREAM("elapsed time for 'plugImageZeroHoles' :" <<  dt_toc9 << " [ms]");
+    double dt_toc9 = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'plugImageZeroHoles' :" <<  dt_toc9 << " [ms]");
 
     // cv::imshow("after plugImageZeroHoles", accumulated_dRdt_);
     
-    // timer::tic();
+    timer::tic();
     ObjectExt_->updateAccumdRdt(CloudFrame_next_, accumulated_dRdt_, accumulated_dRdt_score_, dRdt_, SegmentGround_->groundPtsIdx_next_);
-    // double dt_toc10 = timer::toc(); // milliseconds
-    // ROS_INFO_STREAM("elapsed time for 'updateAccumdRdt' :" <<  dt_toc10 << " [ms]");
+    double dt_toc10 = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'updateAccumdRdt' :" <<  dt_toc10 << " [ms]");
 
     float* ptr_accumulated_dRdt = accumulated_dRdt_.ptr<float>(0);
     float* ptr_accumulated_dRdt_score = accumulated_dRdt_score_.ptr<float>(0);
@@ -675,10 +675,10 @@ void MaplessDynamic::solve(
         }
     }
 
-    // double dt_toc11 = timer::toc(); // milliseconds
-    // ROS_INFO_STREAM("elapsed time for 'segmentWholePts' :" <<  dt_toc11 << " [ms]");
+    double dt_toc11 = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'segmentWholePts' :" <<  dt_toc11 << " [ms]");
 
-    // timer::tic();
+    timer::tic();
     //// visualization ////
     // dynamic //
     
@@ -708,10 +708,10 @@ void MaplessDynamic::solve(
     std::cout <<pub_num <<", "<< pcl_static_.size()<<std::endl;
     // if (cnt_data == 3)
     // {exit(0);}
-    // double dt_toc12 = timer::toc(); // milliseconds
-    // ROS_INFO_STREAM("elapsed time for 'publish' :" <<  dt_toc12 << " [ms]");
+    double dt_toc12 = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'publish' :" <<  dt_toc12 << " [ms]");
 
-    // timer::tic();
+    timer::tic();
     //// update for next iteration
     for (int i = 0; i < img_height_; ++i)
     {
@@ -726,11 +726,11 @@ void MaplessDynamic::solve(
     }
 
     copyStructAndinitialize(p1, p0, cnt_data);
-    // double dt_toc13 = timer::toc(); // milliseconds
-    // ROS_INFO_STREAM("elapsed time for 'copyRemove' :" <<  dt_toc13 << " [ms]");
+    double dt_toc13 = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'copyRemove' :" <<  dt_toc13 << " [ms]");
     
-    // double dt_toc_total = dt_toc1 + dt_toc2 + dt_toc3 + dt_toc4 + dt_toc5 + dt_toc6 + dt_toc7 + dt_toc8 + dt_toc9 + dt_toc10 + dt_toc11 + dt_toc12 + dt_toc13;
-    // ROS_INFO_STREAM("elapsed time for 'total' :" <<  dt_toc_total << " [ms]");
+    double dt_toc_total = dt_toc2 + dt_toc3 + dt_toc4 + dt_toc5 + dt_toc6 + dt_toc7 + dt_toc8 + dt_toc9 + dt_toc10 + dt_toc11 + dt_toc12 + dt_toc13;
+    ROS_INFO_STREAM("elapsed time for 'total' :" <<  dt_toc_total << " [ms]");
     ROS_INFO_STREAM("================== End of the solver ==================");
     // cv::imshow("final", accumulated_dRdt_);
     // cv::waitKey(0);
