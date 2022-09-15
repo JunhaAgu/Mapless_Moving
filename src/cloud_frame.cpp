@@ -56,7 +56,7 @@ CloudFrame::CloudFrame(const std::unique_ptr<UserParam>& user_param)
     {
         str_rhopts_->pts_per_pixel_index_valid[i].reserve(5000);
     }
-    str_rhopts_->pts        = boost::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
+    // str_rhopts_->pts        = boost::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
     str_rhopts_->img_restore_mask      = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
     str_rhopts_->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
 };
@@ -70,15 +70,15 @@ void CloudFrame::genRangeImages(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, boo
 {
     n_pts_ = pcl_in->size();
 
-    timer::tic();
+    // timer::tic();
     calcuateRho(pcl_in, cur_next);    
-    double dt_calRho = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'calcuateRho' :" << dt_calRho << " [ms]");
+    // double dt_calRho = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'calcuateRho' :" << dt_calRho << " [ms]");
 
-    timer::tic();
+    // timer::tic();
     makeRangeImageAndPtsPerPixel(cur_next);
-    double dt_PPP = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'makeRangeImageAndPtsPerPixel' :" << dt_PPP << " [ms]");
+    // double dt_PPP = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'makeRangeImageAndPtsPerPixel' :" << dt_PPP << " [ms]");
     
     // if (cur_next==0)
     // {
@@ -99,35 +99,35 @@ void CloudFrame::genRangeImages(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, boo
     // exit(0);
     // }
 
-    timer::tic();
+    // timer::tic();
     interpRangeImage(cur_next);
-    double dt_interpRho = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'interpRangeImage' :" << dt_interpRho << " [ms]");
+    // double dt_interpRho = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'interpRangeImage' :" << dt_interpRho << " [ms]");
 
-    timer::tic();
+    // timer::tic();
     interpPts(pcl_in, cur_next);
-    double dt_interpPts = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'interpPts' :" << dt_interpPts << " [ms]");
+    // double dt_interpPts = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'interpPts' :" << dt_interpPts << " [ms]");
 }
 
 void CloudFrame::genRangeImages_dR(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur_next)
 {
     n_pts_ = pcl_in->size();
 
-    timer::tic();
+    // timer::tic();
     calcuateRho(pcl_in, cur_next);
-    double dt_1 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'calcuateRho' :" << dt_1 << " [ms]");    
+    // double dt_1 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'calcuateRho' :" << dt_1 << " [ms]");    
 
-    timer::tic();
+    // timer::tic();
     makeRangeImageAndPtsPerPixel_dR(cur_next);
-    double dt_2 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'makeRangeImageAndPtsPerPixel_dR' :" << dt_2 << " [ms]");
+    // double dt_2 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'makeRangeImageAndPtsPerPixel_dR' :" << dt_2 << " [ms]");
 
-    timer::tic();
+    // timer::tic();
     interpRangeImage_dR(cur_next);
-    double dt_3 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'interpRangeImage_dR' :" << dt_3 << " [ms]");
+    // double dt_3 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'interpRangeImage_dR' :" << dt_3 << " [ms]");
 }
 
 void CloudFrame::genRangeImages_noComp(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur_next)
@@ -331,26 +331,39 @@ void CloudFrame::makeRangeImageAndPtsPerPixel(bool cur_next)
     int i_row_ncols_i_col = 0;
     // std::string line;
     // std::ofstream file("/home/junhakim/debug_rowcol.txt");
-    
-    for (int i = 0; i < n_pts_; ++i)
-    {
-        phi_R2D = (ptr_phi[i] * R2D);
 
-        if (phi_R2D > lidar_elevation_criteria_[0]) // 2.5[degree]
+    float& criteria0 = lidar_elevation_criteria_[0];
+    float& criteria1 = lidar_elevation_criteria_[1];
+    float& criteria2 = lidar_elevation_criteria_[2];
+    float& criteria3 = lidar_elevation_criteria_[3];
+    float& line0_a = lidar_elevation_line0_[0];
+    float& line0_b = lidar_elevation_line0_[1];
+    float& line1_a = lidar_elevation_line1_[0];
+    float& line1_b = lidar_elevation_line1_[1];
+    
+    
+    for (int i = 0; i < n_pts_; ++i, ++ptr_phi, ++ptr_theta, ++ptr_rho)
+    {
+        float& phi_tmp = *ptr_phi;
+        float& theta_tmp = *ptr_theta;
+        float& rho_tmp = *ptr_rho;
+        // phi_R2D = (ptr_phi[i] * R2D);
+
+        if (phi_tmp > criteria0) // 2.5[degree]
         {
             i_row = 0;
         }
-        else if (phi_R2D > lidar_elevation_criteria_[1]) // -8.0[degree]
+        else if (phi_tmp > criteria1) // -8.0[degree]
         {
-            i_row = (int)ceil((lidar_elevation_line0_[0] * phi_R2D + lidar_elevation_line0_[1]));
+            i_row = (int)ceil((line0_a * phi_tmp + line0_b));
         }
-        else if (phi_R2D > lidar_elevation_criteria_[2]) // -8.5[degree]
+        else if (phi_tmp > criteria2) // -8.5[degree]
         {
             i_row = 32;
         }
-        else if (phi_R2D > lidar_elevation_criteria_[3]) // -23.8[degree]
+        else if (phi_tmp > criteria3) // -23.8[degree]
         {
-            i_row = (int)ceil((lidar_elevation_line1_[0] * phi_R2D + lidar_elevation_line1_[1]));
+            i_row = (int)ceil((line1_a * phi_tmp + line1_b));
         }
         else
         {
@@ -368,7 +381,7 @@ void CloudFrame::makeRangeImageAndPtsPerPixel(bool cur_next)
         //     }
         // }
 
-        i_col = roundf(ptr_theta[i]*az_step_R2D);
+        i_col = roundf(theta_tmp*az_step_R2D);
 
         if ( (i_row > n_ring_minus_1) || (i_row < 0) )
         {
@@ -389,7 +402,7 @@ void CloudFrame::makeRangeImageAndPtsPerPixel(bool cur_next)
         
         i_row_ncols_i_col = i_row * n_col + i_col;
 
-        float& rho_tmp = ptr_rho[i];
+        // float& rho_tmp = ptr_rho[i];
         float& img_rho_tmp = *(ptr_img_rho + i_row_ncols_i_col);
         if (img_rho_tmp == 0 || img_rho_tmp > rho_tmp) //(str_rhopts_->img_rho.at<float>(i_row,i_col) == 0)
         {   
@@ -469,32 +482,44 @@ void CloudFrame::makeRangeImageAndPtsPerPixel_dR(bool cur_next)
 
     int n_ring_minus_1 = n_ring_-1;
 
-    for (int i = 0; i < n_pts_; ++i)
-    {
-        phi_R2D = (ptr_phi[i] * R2D);
+    float& criteria0 = lidar_elevation_criteria_[0];
+    float& criteria1 = lidar_elevation_criteria_[1];
+    float& criteria2 = lidar_elevation_criteria_[2];
+    float& criteria3 = lidar_elevation_criteria_[3];
+    float& line0_a = lidar_elevation_line0_[0];
+    float& line0_b = lidar_elevation_line0_[1];
+    float& line1_a = lidar_elevation_line1_[0];
+    float& line1_b = lidar_elevation_line1_[1];
 
-        if (phi_R2D > lidar_elevation_criteria_[0]) // 2.5[degree]
+    for (int i = 0; i < n_pts_; ++i, ++ptr_phi, ++ptr_theta, ++ptr_rho)
+    {
+        float& phi_tmp = *ptr_phi;
+        float& theta_tmp = *ptr_theta;
+        float& rho_tmp = *ptr_rho;
+        // phi_R2D = (ptr_phi[i] * R2D);
+        // std::cout << phi_tmp <<std::endl;
+        if (phi_tmp > criteria0) // 2.5[degree]
         {
             i_row = 0;
         }
-        else if (phi_R2D > lidar_elevation_criteria_[1]) // -8.0[degree]
+        else if (phi_tmp > criteria1) // -8.0[degree]
         {
-            i_row = (int)ceil((lidar_elevation_line0_[0] * phi_R2D + lidar_elevation_line0_[1]));
+            i_row = (int)ceil((line0_a * phi_tmp + line0_b));
         }
-        else if (phi_R2D > lidar_elevation_criteria_[2]) // -8.5[degree]
+        else if (phi_tmp > criteria2) // -8.5[degree]
         {
             i_row = 32;
         }
-        else if (phi_R2D > lidar_elevation_criteria_[3]) // -23.8[degree]
+        else if (phi_tmp > criteria3) // -23.8[degree]
         {
-            i_row = (int)ceil((lidar_elevation_line1_[0] * phi_R2D + lidar_elevation_line1_[1]));
+            i_row = (int)ceil((line1_a * phi_tmp + line1_b));
         }
         else
         {
             i_row = 63;
         }
 
-        i_col = roundf(ptr_theta[i]*az_step_R2D);
+        i_col = roundf(theta_tmp*az_step_R2D);
 
         if ( (i_row > n_ring_minus_1) || (i_row < 0) )
         {
@@ -502,9 +527,10 @@ void CloudFrame::makeRangeImageAndPtsPerPixel_dR(bool cur_next)
         }
         
         int i_row_ncols_i_col = i_row * n_col + i_col;
-        if (*(ptr_img_rho + i_row_ncols_i_col) == 0 || *(ptr_img_rho + i_row_ncols_i_col) > ptr_rho[i]) //(str_rhopts_->img_rho.at<float>(i_row,i_col) == 0)
+        float& img_rho_tmp = *(ptr_img_rho + i_row_ncols_i_col);
+        if (img_rho_tmp == 0 || img_rho_tmp > rho_tmp) //(str_rhopts_->img_rho.at<float>(i_row,i_col) == 0)
         {   
-            *(ptr_img_rho + i_row_ncols_i_col) = ptr_rho[i];
+            img_rho_tmp = rho_tmp;
         }
         else{}
     } // end for
@@ -576,12 +602,12 @@ void CloudFrame::interpRangeImage(bool cur_next)
                             if (cur_next == false)
                             {
                                 *(ptr_img_rho_new + i_ncols + j)        = std::min(*(ptr_img_rho + i_minus_ncols + j), *(ptr_img_rho + i_plus_ncols + n_col + j));
-                                *(ptr_img_rho_new + i_plus_ncols + j)   = std::min(*(ptr_img_rho + i_minus_ncols + j), *(ptr_img_rho + i_plus_ncols + n_col + j));
+                                *(ptr_img_rho_new + i_plus_ncols + j)   = *(ptr_img_rho_new + i_ncols + j);
                             }
                             else
                             {
                                 *(ptr_img_rho_new + i_ncols + j)        = std::max(*(ptr_img_rho + i_minus_ncols + j), *(ptr_img_rho + i_plus_ncols + n_col + j));
-                                *(ptr_img_rho_new + i_plus_ncols + j)   = std::max(*(ptr_img_rho + i_minus_ncols + j), *(ptr_img_rho + i_plus_ncols + n_col + j));
+                                *(ptr_img_rho_new + i_plus_ncols + j)   = *(ptr_img_rho_new + i_ncols + j);
                             }
                         }
                     }
@@ -674,12 +700,12 @@ void CloudFrame::interpRangeImage_dR(bool cur_next)
                             if (cur_next == false)
                             {
                                 *(ptr_img_rho_new + i_ncols + j)        = std::min(*(ptr_img_rho + i_minus_ncols + j), *(ptr_img_rho + i_plus_ncols + n_col + j));
-                                *(ptr_img_rho_new + i_plus_ncols + j)   = std::min(*(ptr_img_rho + i_minus_ncols + j), *(ptr_img_rho + i_plus_ncols + n_col + j));
+                                *(ptr_img_rho_new + i_plus_ncols + j)   = *(ptr_img_rho_new + i_ncols + j);
                             }
                             else
                             {
                                 *(ptr_img_rho_new + i_ncols + j)        = std::max(*(ptr_img_rho + i_minus_ncols + j), *(ptr_img_rho + i_plus_ncols + n_col + j));
-                                *(ptr_img_rho_new + i_plus_ncols + j)   = std::max(*(ptr_img_rho + i_minus_ncols + j), *(ptr_img_rho + i_plus_ncols + n_col + j));
+                                *(ptr_img_rho_new + i_plus_ncols + j)   = *(ptr_img_rho_new + i_ncols + j);
                             }
                         }
                     }
@@ -749,9 +775,9 @@ void CloudFrame::interpPts(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur
             } // end if
             else{}
 
-            int* ptr_img_index_i_ncols_j         = ptr_img_index + i_ncols_j;
-            int* ptr_img_index_i_ncols_j_n_col   = ptr_img_index_i_ncols_j + n_col;
-            int* ptr_img_index_i_ncols_j_m_n_col = ptr_img_index_i_ncols_j - n_col;
+            int* ptr_img_index_i_ncols_j            = ptr_img_index + i_ncols_j;
+            int* ptr_img_index_i_ncols_j_p_n_col    = ptr_img_index_i_ncols_j + n_col;
+            int* ptr_img_index_i_ncols_j_m_n_col    = ptr_img_index_i_ncols_j - n_col;
 
             if (*(ptr_img_index_i_ncols_j) != 0)
             {
@@ -764,18 +790,18 @@ void CloudFrame::interpPts(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur
             switch(*(ptr_img_restore_mask + i_ncols_j))
             {
                 case 1:
-                    *(ptr_img_x + i_ncols_j) = 0.5 * ((*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col)].x + (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].x);
-                    *(ptr_img_y + i_ncols_j) = 0.5 * ((*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col)].y + (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].y);
-                    *(ptr_img_z + i_ncols_j) = 0.5 * ((*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col)].z + (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].z);
+                    *(ptr_img_x + i_ncols_j) = 0.5 * ((*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col)].x + (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col)].x);
+                    *(ptr_img_y + i_ncols_j) = 0.5 * ((*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col)].y + (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col)].y);
+                    *(ptr_img_z + i_ncols_j) = 0.5 * ((*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col)].z + (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col)].z);
                     break;
                 case 10:
                     if (cur_next == false)
                     {
                         if ((*(ptr_img_rho + i_ncols_j - n_col) > *(ptr_img_rho + i_ncols_j + n_col)))
                         {
-                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].x;
-                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].y;
-                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].z;
+                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col)].x;
+                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col)].y;
+                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col)].z;
                         }
                         else
                         {
@@ -789,9 +815,9 @@ void CloudFrame::interpPts(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur
                     {
                         if ((*(ptr_img_rho + i_ncols_j - n_col) < *(ptr_img_rho + i_ncols_j + n_col)))
                         {
-                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].x;
-                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].y;
-                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].z;
+                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col)].x;
+                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col)].y;
+                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col)].z;
                         }
                         else
                         {
@@ -803,18 +829,18 @@ void CloudFrame::interpPts(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur
                     }
 
                 case 2:
-                    *(ptr_img_x + i_ncols_j) = (0.6666667) * (*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col)].x + (0.3333333) * (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col + n_col)].x;
-                    *(ptr_img_y + i_ncols_j) = (0.6666667) * (*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col)].y + (0.3333333) * (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col + n_col)].y;
-                    *(ptr_img_z + i_ncols_j) = (0.6666667) * (*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col)].z + (0.3333333) * (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col + n_col)].z;
+                    *(ptr_img_x + i_ncols_j) = (0.6666667) * (*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col)].x + (0.3333333) * (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col + n_col)].x;
+                    *(ptr_img_y + i_ncols_j) = (0.6666667) * (*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col)].y + (0.3333333) * (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col + n_col)].y;
+                    *(ptr_img_z + i_ncols_j) = (0.6666667) * (*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col)].z + (0.3333333) * (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col + n_col)].z;
                     break;
                 case 20:
                     if (cur_next == false)
                     {
                         if ((*(ptr_img_rho + i_ncols_j - n_col) > *(ptr_img_rho + i_ncols_j + 2 * n_col)))
                         {                            
-                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col + n_col)].x;
-                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col + n_col)].y;
-                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col + n_col)].z;
+                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col + n_col)].x;
+                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col + n_col)].y;
+                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col + n_col)].z;
                         }
                         else
                         {
@@ -828,9 +854,9 @@ void CloudFrame::interpPts(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur
                     {
                         if ((*(ptr_img_rho + i_ncols_j - n_col) < *(ptr_img_rho + i_ncols_j + 2 * n_col)))
                         {
-                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col + n_col)].x;
-                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col + n_col)].y;
-                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col + n_col)].z;
+                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col + n_col)].x;
+                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col + n_col)].y;
+                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col + n_col)].z;
                         }
                         else
                         {
@@ -842,18 +868,18 @@ void CloudFrame::interpPts(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur
                     }
 
                 case 3:
-                    *(ptr_img_x + i_ncols_j) = (0.3333333) * (*pcl_in)[*(ptr_img_index_i_ncols_j - 2 * n_col)].x + (0.6666667) * (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].x;
-                    *(ptr_img_y + i_ncols_j) = (0.3333333) * (*pcl_in)[*(ptr_img_index_i_ncols_j - 2 * n_col)].y + (0.6666667) * (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].y;
-                    *(ptr_img_z + i_ncols_j) = (0.3333333) * (*pcl_in)[*(ptr_img_index_i_ncols_j - 2 * n_col)].z + (0.6666667) * (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].z;
+                    *(ptr_img_x + i_ncols_j) = (0.3333333) * (*pcl_in)[*(ptr_img_index_i_ncols_j - 2 * n_col)].x + (0.6666667) * (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col)].x;
+                    *(ptr_img_y + i_ncols_j) = (0.3333333) * (*pcl_in)[*(ptr_img_index_i_ncols_j - 2 * n_col)].y + (0.6666667) * (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col)].y;
+                    *(ptr_img_z + i_ncols_j) = (0.3333333) * (*pcl_in)[*(ptr_img_index_i_ncols_j - 2 * n_col)].z + (0.6666667) * (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col)].z;
                     break;
                 case 30:
                     if(cur_next == false)
                     {
                         if ((*(ptr_img_rho + i_ncols_j - 2 * n_col) > *(ptr_img_rho + i_ncols_j + n_col)))
                         {
-                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].x;
-                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].y;
-                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].z;
+                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col)].x;
+                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col)].y;
+                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col)].z;
                         }
                         else
                         {
@@ -867,9 +893,9 @@ void CloudFrame::interpPts(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur
                     {
                         if ((*(ptr_img_rho + i_ncols_j - 2 * n_col) < *(ptr_img_rho + i_ncols_j + n_col)))
                         {
-                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].x;
-                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].y;
-                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_n_col)].z;
+                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col)].x;
+                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col)].y;
+                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col)].z;
                         }
                         else
                         {
@@ -912,43 +938,44 @@ void CloudFrame::interpPts(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur
 
 void CloudFrame::reset()
 {
-    this->str_rhopts_->rho.resize(0);
-    this->str_rhopts_->phi.resize(0);
-    this->str_rhopts_->theta.resize(0);
-    this->str_rhopts_->img_rho = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-    this->str_rhopts_->img_index = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
-    this->str_rhopts_->img_x = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-    this->str_rhopts_->img_y = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-    this->str_rhopts_->img_z = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
-    this->str_rhopts_->img_restore_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
-    this->str_rhopts_->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+    std::shared_ptr<StrRhoPts>& str_rhopts_tmp = this->str_rhopts_;
+    str_rhopts_tmp->rho.resize(0);
+    str_rhopts_tmp->phi.resize(0);
+    str_rhopts_tmp->theta.resize(0);
+    str_rhopts_tmp->img_rho = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    str_rhopts_tmp->img_index = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+    str_rhopts_tmp->img_x = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    str_rhopts_tmp->img_y = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    str_rhopts_tmp->img_z = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
+    str_rhopts_tmp->img_restore_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
+    str_rhopts_tmp->img_restore_warp_mask = cv::Mat::zeros(img_height_, img_width_, CV_32SC1);
 
     // for (int i = 0; i < img_height_ * img_width_; ++i)
     // {
-    //     this->str_rhopts_->pts_per_pixel_n[i] = 0;
+    //     str_rhopts_tmp->pts_per_pixel_n[i] = 0;
     // }
 
     for (int i = 0; i < img_height_ * img_width_; ++i)
     {
-        if (this->str_rhopts_->pts_per_pixel_index[i].size() != 0)
+        if (str_rhopts_tmp->pts_per_pixel_index[i].size() != 0)
         {
-            this->str_rhopts_->pts_per_pixel_index[i].resize(0);
+            str_rhopts_tmp->pts_per_pixel_index[i].resize(0);
         }
     }
 
     for (int i = 0; i < img_height_ * img_width_; ++i)
     {
-        if (this->str_rhopts_->pts_per_pixel_rho[i].size() != 0)
+        if (str_rhopts_tmp->pts_per_pixel_rho[i].size() != 0)
         {
-            this->str_rhopts_->pts_per_pixel_rho[i].resize(0);
+            str_rhopts_tmp->pts_per_pixel_rho[i].resize(0);
         }
     }
 
     for (int i = 0; i < img_height_ * img_width_; ++i)
     {
-        if (this->str_rhopts_->pts_per_pixel_index_valid[i].size() != 0)
+        if (str_rhopts_tmp->pts_per_pixel_index_valid[i].size() != 0)
         {
-            this->str_rhopts_->pts_per_pixel_index_valid[i].resize(0);
+            str_rhopts_tmp->pts_per_pixel_index_valid[i].resize(0);
         }
     }
 }

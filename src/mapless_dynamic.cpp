@@ -481,32 +481,32 @@ void MaplessDynamic::solve(
     }
 
     // Segment ground
-    timer::tic();
+    // timer::tic();
     SegmentGround_->fastsegmentGround(CloudFrame_next_);
-    double dt_toc2 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'segmentSGround' :" << dt_toc2 << " [ms]");
+    // double dt_toc2 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'segmentSGround' :" << dt_toc2 << " [ms]");
     //// Occlusion accumulation ////
     // Compute the occlusion dRdt
 
         // cv::imshow("SegmentGround_", SegmentGround_->groundPtsIdx_next_);
 
     
-    timer::tic();
+    // timer::tic();
     dRCalc_->dR_warpPointcloud(CloudFrame_next_, CloudFrame_cur_, CloudFrame_cur_warped_, p0, T_next2cur_, cnt_data, dRdt_);
-    double dt_toc3 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'dR_warpPointcloud' :" << dt_toc3 << " [ms]");
+    // double dt_toc3 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'dR_warpPointcloud' :" << dt_toc3 << " [ms]");
     // str_next_->state();
     //     cv::imshow("residual_", residual_);
     // cv::waitKey(0);
     // exit(0);
 
-    timer::tic();
+    // timer::tic();
     // warp the occlusion accumulation map
     PclWarp_->warpPointcloud(CloudFrame_cur_, CloudFrame_warpPointcloud_, T_next2cur_, accumulated_dRdt_, cnt_data);
     PclWarp_->initializeStructAndPcl(CloudFrame_warpPointcloud_);
     PclWarp_->warpPointcloud(CloudFrame_cur_, CloudFrame_warpPointcloud_, T_next2cur_, accumulated_dRdt_score_, cnt_data);
-    double dt_toc4 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'warpPointcloud' :" << dt_toc4 << " [ms]");
+    // double dt_toc4 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'warpPointcloud' :" << dt_toc4 << " [ms]");
 
     // cv::imshow("after warpPointcloud", accumulated_dRdt_);
     
@@ -517,11 +517,11 @@ void MaplessDynamic::solve(
     //     cv::imshow("before  k", accumulated_dRdt_score_);
     //     countZerofloat(accumulated_dRdt_score_);
     // }
-    timer::tic();
+    // timer::tic();
     // filter out outliers
     ObjectExt_->filterOutAccumdR(CloudFrame_next_, CloudFrame_cur_warped_, accumulated_dRdt_, accumulated_dRdt_score_, dRdt_);
-    double dt_toc5 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'filterOutAccumdR' :" << dt_toc5 << " [ms]");
+    // double dt_toc5 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'filterOutAccumdR' :" << dt_toc5 << " [ms]");
 
     // cv::imshow("after filterOutAccumdR", accumulated_dRdt_);
 
@@ -534,41 +534,41 @@ void MaplessDynamic::solve(
     //     cv::waitKey(0);
     //     exit(0);
     // }
-    timer::tic();
+    // timer::tic();
     // Extract object candidate via connected components in 2-D binary image
     ObjectExt_->extractObjectCandidate(accumulated_dRdt_, CloudFrame_next_, object_factor);
-    double dt_toc6 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'extractObjectCandidate' :" <<  dt_toc6 << " [ms]");
+    // double dt_toc6 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'extractObjectCandidate' :" <<  dt_toc6 << " [ms]");
 
     // cv::imshow("after extractObjectCandidate", accumulated_dRdt_);
     //// update object_mask
     //object_mask = accumulated_dRdt>0;
-    timer::tic();
+    // timer::tic();
     // Fast Segment
     ObjectExt_->checkSegment(accumulated_dRdt_, CloudFrame_next_, SegmentGround_->groundPtsIdx_next_);
-    double dt_toc7 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'checkSegment' :" <<  dt_toc7 << " [ms]");
+    // double dt_toc7 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'checkSegment' :" <<  dt_toc7 << " [ms]");
     // cv::imshow("after checkSegment", accumulated_dRdt_);
     //// update object_mask
     //object_mask = accumulated_dRdt>0;
-    timer::tic();
+    // timer::tic();
     ObjectExt_->updateAccum(accumulated_dRdt_, accumulated_dRdt_score_);
-    double dt_toc8 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'updateAccum' :" <<  dt_toc8 << " [ms]");
+    // double dt_toc8 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'updateAccum' :" <<  dt_toc8 << " [ms]");
 
     // cv::imshow("after updateAccum", accumulated_dRdt_);
 
-    timer::tic();
+    // timer::tic();
     ImageFill_->plugImageZeroHoles(accumulated_dRdt_, accumulated_dRdt_score_, CloudFrame_next_, object_factor);
-    double dt_toc9 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'plugImageZeroHoles' :" <<  dt_toc9 << " [ms]");
+    // double dt_toc9 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'plugImageZeroHoles' :" <<  dt_toc9 << " [ms]");
 
     // cv::imshow("after plugImageZeroHoles", accumulated_dRdt_);
     
-    timer::tic();
+    // timer::tic();
     ObjectExt_->updateAccumdRdt(CloudFrame_next_, accumulated_dRdt_, accumulated_dRdt_score_, dRdt_, SegmentGround_->groundPtsIdx_next_);
-    double dt_toc10 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'updateAccumdRdt' :" <<  dt_toc10 << " [ms]");
+    // double dt_toc10 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'updateAccumdRdt' :" <<  dt_toc10 << " [ms]");
 
     float* ptr_accumulated_dRdt = accumulated_dRdt_.ptr<float>(0);
     float* ptr_accumulated_dRdt_score = accumulated_dRdt_score_.ptr<float>(0);
@@ -576,7 +576,7 @@ void MaplessDynamic::solve(
     // cv::imshow("accumulated_dRdt", accumulated_dRdt_);
     // cv::waitKey(0);
     // exit(0);
-    timer::tic;
+
     // pcl::PointCloud<pcl::PointXYZI> pcl_dynamic;
     // pcl::PointCloud<pcl::PointXYZI> pcl_static;
     // CloudMessageT pcl_static_wtime;
@@ -635,50 +635,56 @@ void MaplessDynamic::solve(
     //     }
     // }
     
+    // timer::tic;
     // pcl_static_wtime.reserve(p1->size());
     slam::XYZTPoint new_pt;
+
+    std::vector<int>* ptr_vec_tmp = CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid.data();
 
     for (int i = 0; i < img_height_; ++i)
     {
         int i_ncols = i * img_width_;
         for (int j = 0; j < img_width_; ++j)
         {
-            if (*(ptr_accumulated_dRdt + i_ncols + j)!=0) // dynamic
+            const int i_ncols_j = i_ncols + j;
+            const std::vector<int>& vec_tmp = ptr_vec_tmp[i_ncols_j];
+            if (*(ptr_accumulated_dRdt + i_ncols_j) != 0) // dynamic
             {
-                if (CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j].size() != 0)
+                if (vec_tmp.size() != 0)
                 {
-                    for (int k = 0; k < CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j].size(); ++k)
+                    for (int k = 0; k < vec_tmp.size(); ++k)
                     {
-                        pcl_dynamic_.push_back(
-                            pcl::PointXYZI((*p1)[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]]));
+                        pcl_dynamic_.push_back((*p1)[vec_tmp[k]]);
                     }
                 }
             }
             else // static
             {
-                if (CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j].size() != 0)
+                if (vec_tmp.size() != 0)
                 {
-                    for (int k = 0; k < CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j].size(); ++k)
+                    for (int k = 0; k < vec_tmp.size(); ++k)
                     {
-                        pcl_static_.push_back(
-                            pcl::PointXYZI((*p1)[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]]));
+                        pcl_static_.push_back(pcl::PointXYZI((*p1)[vec_tmp[k]]));
 
-                        new_pt.x = (*p1)[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]].x;
-                        new_pt.y = (*p1)[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]].y;
-                        new_pt.z = (*p1)[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]].z;
-                        new_pt.timestamp = (*p1_w_time)[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]].timestamp;
-                            // std::cout <<CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k] << "      " <<new_pt.timestamp <<std::endl;
+                        const int& vec_value_tmp = vec_tmp[k];
+                        pcl::PointXYZI p1_point_tmp = (*p1)[vec_value_tmp];
+                        new_pt.x = p1_point_tmp.x;
+                        new_pt.y = p1_point_tmp.y;
+                        new_pt.z = p1_point_tmp.z;
+                        new_pt.timestamp = (*p1_w_time)[vec_value_tmp].timestamp;
+                            // std::cout <<vec_tmp[k] << "      " <<new_pt.timestamp <<std::endl;
                         pcl_static_wtime_.push_back(new_pt);
                     }
                 }
+                *(ptr_accumulated_dRdt_score + i_ncols + j) = 0; //// update for next iteration
             }
         }
     }
 
-    double dt_toc11 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'segmentWholePts' :" <<  dt_toc11 << " [ms]");
+    // double dt_toc11 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'segmentWholePts' :" <<  dt_toc11 << " [ms]");
 
-    timer::tic();
+    // timer::tic();
     //// visualization ////
     // dynamic //
     
@@ -708,29 +714,16 @@ void MaplessDynamic::solve(
     std::cout <<pub_num <<", "<< pcl_static_.size()<<std::endl;
     // if (cnt_data == 3)
     // {exit(0);}
-    double dt_toc12 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'publish' :" <<  dt_toc12 << " [ms]");
+    // double dt_toc12 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'publish' :" <<  dt_toc12 << " [ms]");
 
-    timer::tic();
-    //// update for next iteration
-    for (int i = 0; i < img_height_; ++i)
-    {
-        int i_ncols = i * img_width_;
-        for (int j = 0; j < img_width_; ++j)
-        {
-            if (*(ptr_accumulated_dRdt + i_ncols + j)==0)
-            {
-                *(ptr_accumulated_dRdt_score + i_ncols + j) = 0;
-            }
-        }
-    }
-
+    // timer::tic();
     copyStructAndinitialize(p1, p0, cnt_data);
-    double dt_toc13 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'copyRemove' :" <<  dt_toc13 << " [ms]");
+    // double dt_toc13 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'copyRemove' :" <<  dt_toc13 << " [ms]");
     
-    double dt_toc_total = dt_toc2 + dt_toc3 + dt_toc4 + dt_toc5 + dt_toc6 + dt_toc7 + dt_toc8 + dt_toc9 + dt_toc10 + dt_toc11 + dt_toc12 + dt_toc13;
-    ROS_INFO_STREAM("elapsed time for 'total' :" <<  dt_toc_total << " [ms]");
+    // double dt_toc_total = dt_toc2 + dt_toc3 + dt_toc4 + dt_toc5 + dt_toc6 + dt_toc7 + dt_toc8 + dt_toc9 + dt_toc10 + dt_toc11 + dt_toc12 + dt_toc13;
+    // ROS_INFO_STREAM("elapsed time for 'total' :" <<  dt_toc_total << " [ms]");
     ROS_INFO_STREAM("================== End of the solver ==================");
     // cv::imshow("final", accumulated_dRdt_);
     // cv::waitKey(0);
@@ -742,47 +735,51 @@ void MaplessDynamic::copyStructAndinitialize(pcl::PointCloud<pcl::PointXYZI>::Pt
     pcl_static_.resize(0);
     pcl_static_wtime_.resize(0);
     // copy Cur to Next
-    {   CloudFrame_cur_->str_rhopts_->pts        = CloudFrame_next_->str_rhopts_->pts;
+    std::shared_ptr<StrRhoPts> cur_tmp  = CloudFrame_cur_->str_rhopts_;
+    std::shared_ptr<StrRhoPts> next_tmp = CloudFrame_next_->str_rhopts_;
 
-        CloudFrame_cur_->str_rhopts_->rho.resize(0);
-        CloudFrame_cur_->str_rhopts_->phi.resize(0);
-        CloudFrame_cur_->str_rhopts_->theta.resize(0);
-        std::copy(CloudFrame_next_->str_rhopts_->rho.begin(),CloudFrame_next_->str_rhopts_->rho.end(), CloudFrame_cur_->str_rhopts_->rho.begin());
-        std::copy(CloudFrame_next_->str_rhopts_->phi.begin(),CloudFrame_next_->str_rhopts_->phi.end(), CloudFrame_cur_->str_rhopts_->phi.begin());
-        std::copy(CloudFrame_next_->str_rhopts_->theta.begin(),CloudFrame_next_->str_rhopts_->theta.end(), CloudFrame_cur_->str_rhopts_->theta.begin());
+    {   
+        // CloudFrame_cur_->str_rhopts_->pts        = CloudFrame_next_->str_rhopts_->pts;
 
-        CloudFrame_next_->str_rhopts_->img_rho.copyTo(CloudFrame_cur_->str_rhopts_->img_rho);
-        CloudFrame_next_->str_rhopts_->img_index.copyTo(CloudFrame_cur_->str_rhopts_->img_index);
-        CloudFrame_next_->str_rhopts_->img_x.copyTo(CloudFrame_cur_->str_rhopts_->img_x);
-        CloudFrame_next_->str_rhopts_->img_y.copyTo(CloudFrame_cur_->str_rhopts_->img_y);
-        CloudFrame_next_->str_rhopts_->img_z.copyTo(CloudFrame_cur_->str_rhopts_->img_z);
+        cur_tmp->rho.resize(0);
+        cur_tmp->phi.resize(0);
+        cur_tmp->theta.resize(0);
+        std::copy(next_tmp->rho.begin(),next_tmp->rho.end(), cur_tmp->rho.begin());
+        std::copy(next_tmp->phi.begin(),next_tmp->phi.end(), cur_tmp->phi.begin());
+        std::copy(next_tmp->theta.begin(),next_tmp->theta.end(), cur_tmp->theta.begin());
 
-        // CloudFrame_cur_->str_rhopts_->pts_per_pixel_n.resize(0);
-        // std::copy(CloudFrame_next_->str_rhopts_->pts_per_pixel_n.begin(), CloudFrame_next_->str_rhopts_->pts_per_pixel_n.end(), CloudFrame_cur_->str_rhopts_->pts_per_pixel_n.begin());
+        next_tmp->img_rho.copyTo(cur_tmp->img_rho);
+        next_tmp->img_index.copyTo(cur_tmp->img_index);
+        next_tmp->img_x.copyTo(cur_tmp->img_x);
+        next_tmp->img_y.copyTo(cur_tmp->img_y);
+        next_tmp->img_z.copyTo(cur_tmp->img_z);
+
+        // cur_tmp->pts_per_pixel_n.resize(0);
+        // std::copy(next_tmp->pts_per_pixel_n.begin(), next_tmp->pts_per_pixel_n.end(), cur_tmp->pts_per_pixel_n.begin());
 
         for (int i=0; i<img_height_*img_width_; ++i)
         {
-            if (CloudFrame_cur_->str_rhopts_->pts_per_pixel_index[i].size() != 0)
+            if (cur_tmp->pts_per_pixel_index[i].size() != 0)
             {
-                CloudFrame_cur_->str_rhopts_->pts_per_pixel_index[i].resize(0);
-                std::copy(CloudFrame_next_->str_rhopts_->pts_per_pixel_index[i].begin(), CloudFrame_next_->str_rhopts_->pts_per_pixel_index[i].end(), CloudFrame_cur_->str_rhopts_->pts_per_pixel_index[i].begin());
+                cur_tmp->pts_per_pixel_index[i].resize(0);
+                std::copy(next_tmp->pts_per_pixel_index[i].begin(), next_tmp->pts_per_pixel_index[i].end(), cur_tmp->pts_per_pixel_index[i].begin());
             }
 
-            if (CloudFrame_cur_->str_rhopts_->pts_per_pixel_rho[i].size() != 0)
+            if (cur_tmp->pts_per_pixel_rho[i].size() != 0)
             {
-                CloudFrame_cur_->str_rhopts_->pts_per_pixel_rho[i].resize(0);
-                std::copy(CloudFrame_next_->str_rhopts_->pts_per_pixel_rho[i].begin(), CloudFrame_next_->str_rhopts_->pts_per_pixel_rho[i].end(), CloudFrame_cur_->str_rhopts_->pts_per_pixel_rho[i].begin());
+                cur_tmp->pts_per_pixel_rho[i].resize(0);
+                std::copy(next_tmp->pts_per_pixel_rho[i].begin(), next_tmp->pts_per_pixel_rho[i].end(), cur_tmp->pts_per_pixel_rho[i].begin());
             }
 
-            if (CloudFrame_cur_->str_rhopts_->pts_per_pixel_index_valid[i].size() != 0)
+            if (cur_tmp->pts_per_pixel_index_valid[i].size() != 0)
             {
-                CloudFrame_cur_->str_rhopts_->pts_per_pixel_index_valid[i].resize(0);
-                std::copy(CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i].begin(), CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i].end(), CloudFrame_cur_->str_rhopts_->pts_per_pixel_index_valid[i].begin());
+                cur_tmp->pts_per_pixel_index_valid[i].resize(0);
+                std::copy(next_tmp->pts_per_pixel_index_valid[i].begin(), next_tmp->pts_per_pixel_index_valid[i].end(), cur_tmp->pts_per_pixel_index_valid[i].begin());
             }
         }
 
-        CloudFrame_next_->str_rhopts_->img_restore_mask.copyTo(CloudFrame_cur_->str_rhopts_->img_restore_mask);
-        CloudFrame_next_->str_rhopts_->img_restore_warp_mask.copyTo(CloudFrame_cur_->str_rhopts_->img_restore_warp_mask);
+        next_tmp->img_restore_mask.copyTo(cur_tmp->img_restore_mask);
+        next_tmp->img_restore_warp_mask.copyTo(cur_tmp->img_restore_warp_mask);
     }
 
     // only in test

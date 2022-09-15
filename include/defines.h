@@ -88,7 +88,7 @@ typedef pcl::PointCloud<slam::XYZTPoint> CloudMessageT;
 
 struct StrRhoPts
 {
-    pcl::PointCloud<pcl::PointXYZI>::Ptr pts;
+    // pcl::PointCloud<pcl::PointXYZI>::Ptr pts;
 
     std::vector<float> rho;
     std::vector<float> phi;
@@ -125,7 +125,7 @@ struct StrRhoPts
     };
 
     void state(){
-        std::cout << "(ptr) pts size: " << pts->size() << std::endl;
+        // std::cout << "(ptr) pts size: " << pts->size() << std::endl;
         std::cout << "(vector) rho size: " << rho.size() << std::endl;
         std::cout << "(vector) phi size: " << phi.size() << std::endl;
         std::cout << "(vector) theta size: " << theta.size() << std::endl;

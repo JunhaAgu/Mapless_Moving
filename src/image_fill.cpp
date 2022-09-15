@@ -54,12 +54,14 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
     cv::Mat input_img_mask = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
     uchar *ptr_input_img_mask = input_img_mask.ptr<uchar>(0);
 
+    bool det_func = false;
     // when i=0
     for (int j = 0; j < n_col; ++j)
     {
         if (*(ptr_accumulated_dRdt + j) != 0)
         {
             *(ptr_dRdt_bin + j) = 255;
+            det_func = true;
         }
 
         if (*(ptr_accumulated_dRdt_score + j) != 0)
@@ -78,6 +80,7 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
             {
                 *(ptr_dRdt_bin + i_ncols_j) = 255;
                 *(ptr_input_img_mask + i_ncols_j) = 255;
+                det_func = true;
             }
             else{}
 
@@ -93,6 +96,11 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
             }
             else{}
         }
+    }
+    
+    if (det_func == false)
+    {
+        return;
     }
 
     // imfill 
@@ -195,7 +203,7 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
     int obj_width = 0;
     int obj_height = 0;
 
-    timer::tic();
+    // timer::tic();
     for (int object_idx = 0; object_idx < n_label; ++object_idx)
     {
         if (object_idx==0) //0: background
@@ -456,8 +464,8 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
             // }
         }
     } // end for object_idx
-    double dt_obj = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'dt_obj' :" << dt_obj << " [ms]");
+    // double dt_obj = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'dt_obj' :" << dt_obj << " [ms]");
 }
 
 void ImageFill::interpAndfill_image(cv::Mat& input_img, cv::Mat& filled_bin)

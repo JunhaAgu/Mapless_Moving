@@ -259,9 +259,9 @@ void dRCalc::compensateCurRhoZeroWarp(std::unique_ptr<CloudFrame>& CloudFrame_cu
                     {
                         new_phi = v_angle_[i] * D2R;
                         new_theta = 0.4 * (j + 1) * D2R;
-                        for (int m = 0; m < 3; ++m)
+                        for (int m = 0; m < 5; ++m)
                         {
-                            new_phi_alpha = new_phi + ((float)m - 1.0) * 0.2 * D2R;
+                            new_phi_alpha = new_phi + ((float)m - 2.0) * 0.2 * D2R;
                             min_rho_cos = -min_rho_4_dir * cosf(new_phi_alpha);
                             for (int p = 0; p < 5; ++p)
                             {
@@ -329,7 +329,7 @@ void dRCalc::interpRangeImageMin(std::unique_ptr<CloudFrame>& CloudFrame_in)
                         *(ptr_img_restore_warp_mask + i_ncols_j)          = 20;
                         *(ptr_img_restore_warp_mask + i_ncols_j + n_col)  = 30;
                         *(ptr_img_rho_new + i_ncols_j)            = std::min(*(ptr_img_rho + i_ncols_j - n_col), *(ptr_img_rho + i_ncols_j + n_col_2));
-                        *(ptr_img_rho_new + i_ncols_j + n_col)    = std::min(*(ptr_img_rho + i_ncols_j - n_col), *(ptr_img_rho + i_ncols_j + n_col_2));
+                        *(ptr_img_rho_new + i_ncols_j + n_col)    = *(ptr_img_rho_new + i_ncols_j);
                     }
                 }
 
