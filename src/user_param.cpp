@@ -76,14 +76,14 @@ void UserParam::calVangle(std::string& data_type)
                 sensor_spec_.v_angle_.push_back(-8.50 - inter_bottom * i);
             }
         }
-        sensor_spec_.lidar_elevation_criteria_[0] = 0.043633231299858; //2.5;
-        sensor_spec_.lidar_elevation_criteria_[1] = -0.139626340159546; //-8.0;
-        sensor_spec_.lidar_elevation_criteria_[2] = -0.148352986419518; //-8.5;
-        sensor_spec_.lidar_elevation_criteria_[3] = -0.415388361974650; //-23.8;
-        sensor_spec_.lidar_elevation_line0_[0] = -1.691589680862436e+02; //-2.9523810; //(0-31)/(2.5-(-8.0))*(x-2.5)+0
-        sensor_spec_.lidar_elevation_line0_[1] = +7.380952380952365; //+7.3809524;  //(0-31)/(2.5-(-8.0))*(x-2.5)+0
-        sensor_spec_.lidar_elevation_line1_[0] = -1.160894879023238e+02; //-2.0261438;  //(32-63)/(-8.5-(-23.8))*(x-(-8.5))+32
-        sensor_spec_.lidar_elevation_line1_[1] = +14.777777777777754; //+14.7777778; //(32-63)/(-8.5-(-23.8))*(x-(-8.5))+32
+        sensor_spec_.lidar_elevation_criteria_[0] = 2.5; //0.043633231299858; //2.5;
+        sensor_spec_.lidar_elevation_criteria_[1] = -8.0; //-0.139626340159546; //-8.0;
+        sensor_spec_.lidar_elevation_criteria_[2] = -8.5; //-0.148352986419518; //-8.5;
+        sensor_spec_.lidar_elevation_criteria_[3] = -23.8; //-0.415388361974650; //-23.8;
+        sensor_spec_.lidar_elevation_line0_[0] = -2.9523810; //-1.691589680862436e+02; //-2.9523810; //(0-31)/(2.5-(-8.0))*(x-2.5)+0
+        sensor_spec_.lidar_elevation_line0_[1] = +7.3809524;  //+7.380952380952365; //+7.3809524;  //(0-31)/(2.5-(-8.0))*(x-2.5)+0
+        sensor_spec_.lidar_elevation_line1_[0] = -2.0261438; //-1.160894879023238e+02; //-2.0261438;  //(32-63)/(-8.5-(-23.8))*(x-(-8.5))+32
+        sensor_spec_.lidar_elevation_line1_[1] = +14.7777778; //+14.777777777777754; //+14.7777778; //(32-63)/(-8.5-(-23.8))*(x-(-8.5))+32
     }
     else if (data_type == "CARLA")
     {

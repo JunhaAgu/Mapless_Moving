@@ -345,6 +345,7 @@ void CloudFrame::makeRangeImageAndPtsPerPixel(bool cur_next)
     for (int i = 0; i < n_pts_; ++i, ++ptr_phi, ++ptr_theta, ++ptr_rho)
     {
         float& phi_tmp = *ptr_phi;
+        phi_tmp *= R2D;
         float& theta_tmp = *ptr_theta;
         float& rho_tmp = *ptr_rho;
         // phi_R2D = (ptr_phi[i] * R2D);
@@ -496,6 +497,7 @@ void CloudFrame::makeRangeImageAndPtsPerPixel_dR(bool cur_next)
         float& phi_tmp = *ptr_phi;
         float& theta_tmp = *ptr_theta;
         float& rho_tmp = *ptr_rho;
+        phi_tmp *= R2D;
         // phi_R2D = (ptr_phi[i] * R2D);
         // std::cout << phi_tmp <<std::endl;
         if (phi_tmp > criteria0) // 2.5[degree]

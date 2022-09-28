@@ -63,6 +63,8 @@ private:
     visualization_msgs::Marker marker_;
     visualization_msgs::Marker lidar_marker_;
 
+    sensor_msgs::PointCloud2 pcl_msg_;
+
     float transform_[6];
     
     std::string     topicname_lidar_;

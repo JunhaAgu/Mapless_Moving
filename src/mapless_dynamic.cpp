@@ -179,11 +179,13 @@ void MaplessDynamic::loadTestData(){
     std::string dataset_dir;
     if (dataset_name == "KITTI")
     {
-        dataset_dir = "/home/junhakim/KITTI_odometry/";
+        // dataset_dir = "/home/junhakim/KITTI_odometry/";
+        dataset_dir = "/mnt/g/reinstall_ubuntu/KITTI_odometry/";
     }
     else if (dataset_name == "CARLA")
     {
-        dataset_dir = "/home/junhakim/CARLA/";
+        // dataset_dir = "/home/junhakim/CARLA/";
+        dataset_dir = "/mnt/g/reinstall_ubuntu/CARLA/";
     }
     
     float pose_arr[12];
@@ -689,7 +691,7 @@ void MaplessDynamic::solve(
     // dynamic //
     
     pcl::toROSMsg(pcl_dynamic_, converted_msg_d_);
-    converted_msg_d_.header.frame_id = "/map";
+    converted_msg_d_.header.frame_id = "map";
     converted_msg_d_.header.stamp = cloudHeader.stamp;
     pub_dynamic_pts_.publish(converted_msg_d_);
 
@@ -706,7 +708,7 @@ void MaplessDynamic::solve(
     // pub_static_pts_.publish(converted_msg_s);
 
     pcl::toROSMsg(pcl_static_wtime_, converted_msg_s_);
-    converted_msg_s_.header.frame_id = "/map";
+    converted_msg_s_.header.frame_id = "map";
     converted_msg_s_.header.stamp = cloudHeader.stamp;
     pub_static_pts_.publish(converted_msg_s_);
 

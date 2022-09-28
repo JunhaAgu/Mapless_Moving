@@ -34,7 +34,7 @@ ROSWrapper::ROSWrapper(ros::NodeHandle& nh)
     
     //marker setting
     {
-        marker_.header.frame_id = "/map"; // map frame
+        marker_.header.frame_id = "map"; // map frame
         marker_.color.a = 1.0; // Don't forget to set the alpha!
         marker_.color.r = 0.0;
         marker_.color.g = 1.0;
@@ -52,7 +52,7 @@ ROSWrapper::ROSWrapper(ros::NodeHandle& nh)
     }
     //lidar marker setting
     {
-        lidar_marker_.header.frame_id = "/map"; // map frame
+        lidar_marker_.header.frame_id = "map"; // map frame
         lidar_marker_.color.a = 1.0; // Don't forget to set the alpha!
         lidar_marker_.color.r = 0.0;
         lidar_marker_.color.g = 1.0;
@@ -274,7 +274,7 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
 
         cnt_data += 1;
     }
-    else if (cnt_initial>130)  // If not initialized, 
+    else if (cnt_initial>130)  // If not initialized, 130
     {    is_initialized_ = true;
         
         // Initialize the first data.
@@ -288,13 +288,23 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
         }
         // mask0_test_.resize(p0_msg_test_.width, true);
         cnt_data += 1;
-        solver_->pub_static_pts_.publish(msg);
+
+        pcl::toROSMsg(*p0_pcl_, pcl_msg_);
+        pcl_msg_.header.frame_id = "map";
+        pcl_msg_.header.stamp = cloudHeader_.stamp;
+        solver_->pub_static_pts_.publish(pcl_msg_);
         ROS_INFO("pub msg: %d",cnt_data);
     }
     else
     {
-        solver_->pub_static_pts_.publish(msg);
+        p0_msg_ = *msg;
+        pcl::fromROSMsg(p0_msg_, *p0_pcl_);
+        pcl::toROSMsg(*p0_pcl_, pcl_msg_);
+        pcl_msg_.header.frame_id = "map";
+        pcl_msg_.header.stamp = cloudHeader_.stamp;
+        solver_->pub_static_pts_.publish(pcl_msg_);
         ROS_INFO("pub msg: %d",cnt_data);
+
         msg_pcl_input_time_ = 0;
     }
     cnt_initial += 1;
