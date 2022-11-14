@@ -185,7 +185,7 @@ void MaplessDynamic::loadTestData(){
     else if (dataset_name == "CARLA")
     {
         // dataset_dir = "/home/junhakim/CARLA/";
-        dataset_dir = "/mnt/g/reinstall_ubuntu/CARLA/";
+        dataset_dir = "/mnt/g/mapless_dataset/CARLA/";
     }
     
     float pose_arr[12];
@@ -243,7 +243,7 @@ void MaplessDynamic::loadTestData(){
     }
     else if (dataset_name == "CARLA")
     {
-        pose_dir = dataset_dir + "results/sequences/" + data_num + "/" + "poses.txt";
+        pose_dir = dataset_dir + "sequences/" + data_num + "/" + "poses.txt";
     }
     std::ifstream posefile;
     posefile.open(pose_dir.c_str());
@@ -350,7 +350,7 @@ void MaplessDynamic::loadTestData(){
     }
     else if (dataset_name == "CARLA")
     {
-        bin_path = dataset_dir + "results/sequences/" + data_num + "/velodyne/";
+        bin_path = dataset_dir + "sequences/" + data_num + "/velodyne/";
     }
     read_filelists(bin_path, file_lists_, "bin");
     sort_filelists(file_lists_, "bin");
@@ -422,6 +422,10 @@ void MaplessDynamic::solve(
 {
     float object_factor = 1.0;
     static int pub_num = 0;
+
+    static double avg_time = 0.0;
+    static double sum_time = 0.0;
+    static int iter_time = 1;
     // timer::tic();
     // icp_.setInputSource(p0);
     // icp_.setInputTarget(p1);
@@ -483,10 +487,14 @@ void MaplessDynamic::solve(
     }
 
     // Segment ground
-    // timer::tic();
+    timer::tic();
     SegmentGround_->fastsegmentGround(CloudFrame_next_);
-    // double dt_toc2 = timer::toc(); // milliseconds
-    // ROS_INFO_STREAM("elapsed time for 'segmentSGround' :" << dt_toc2 << " [ms]");
+    double dt_toc2 = timer::toc(); // milliseconds
+    ROS_INFO_STREAM("elapsed time for 'segmentSGround' :" << dt_toc2 << " [ms]");
+    sum_time += dt_toc2;
+    avg_time = sum_time/iter_time;
+    ROS_INFO_STREAM("elapsed avg time for 'segmentSGround' :" << avg_time << " [ms]");
+    iter_time++;
     //// Occlusion accumulation ////
     // Compute the occlusion dRdt
 
@@ -649,7 +657,37 @@ void MaplessDynamic::solve(
         for (int j = 0; j < img_width_; ++j)
         {
             const int i_ncols_j = i_ncols + j;
-            const std::vector<int>& vec_tmp = ptr_vec_tmp[i_ncols_j];
+            const std::vector<int> &vec_tmp = ptr_vec_tmp[i_ncols_j];
+            
+            // static
+            if (vec_tmp.size() != 0)
+            {
+                for (int k = 0; k < vec_tmp.size(); ++k)
+                {
+                    pcl_static_.push_back(pcl::PointXYZI((*p1)[vec_tmp[k]]));
+
+                    const int &vec_value_tmp = vec_tmp[k];
+                    pcl::PointXYZI p1_point_tmp = (*p1)[vec_value_tmp];
+                    if (*(ptr_accumulated_dRdt + i_ncols_j) != 0)
+                    {
+                        new_pt.x = 0.0;
+                        new_pt.y = 0.0;
+                        new_pt.z = 0.0;
+                        new_pt.timestamp = (*p1_w_time)[vec_value_tmp].timestamp;
+                    }
+                    else
+                    {
+                        new_pt.x = p1_point_tmp.x;
+                        new_pt.y = p1_point_tmp.y;
+                        new_pt.z = p1_point_tmp.z;
+                        new_pt.timestamp = (*p1_w_time)[vec_value_tmp].timestamp;
+                        *(ptr_accumulated_dRdt_score + i_ncols + j) = 0; //// update for next iteration
+                    }
+
+                    // std::cout <<vec_tmp[k] << "      " <<new_pt.timestamp <<std::endl;
+                    pcl_static_wtime_.push_back(new_pt);
+                }
+            }
             if (*(ptr_accumulated_dRdt + i_ncols_j) != 0) // dynamic
             {
                 if (vec_tmp.size() != 0)
@@ -660,28 +698,76 @@ void MaplessDynamic::solve(
                     }
                 }
             }
-            else // static
-            {
-                if (vec_tmp.size() != 0)
-                {
-                    for (int k = 0; k < vec_tmp.size(); ++k)
-                    {
-                        pcl_static_.push_back(pcl::PointXYZI((*p1)[vec_tmp[k]]));
-
-                        const int& vec_value_tmp = vec_tmp[k];
-                        pcl::PointXYZI p1_point_tmp = (*p1)[vec_value_tmp];
-                        new_pt.x = p1_point_tmp.x;
-                        new_pt.y = p1_point_tmp.y;
-                        new_pt.z = p1_point_tmp.z;
-                        new_pt.timestamp = (*p1_w_time)[vec_value_tmp].timestamp;
-                            // std::cout <<vec_tmp[k] << "      " <<new_pt.timestamp <<std::endl;
-                        pcl_static_wtime_.push_back(new_pt);
-                    }
-                }
-                *(ptr_accumulated_dRdt_score + i_ncols + j) = 0; //// update for next iteration
-            }
+            
         }
     }
+
+    // for (int i = 0; i < img_height_; ++i)
+    // {
+    //     int i_ncols = i * img_width_;
+    //     for (int j = 0; j < img_width_; ++j)
+    //     {
+    //         const int i_ncols_j = i_ncols + j;
+    //         const std::vector<int>& vec_tmp = ptr_vec_tmp[i_ncols_j];
+    //         if (*(ptr_accumulated_dRdt + i_ncols_j) != 0) // dynamic
+    //         {
+    //             if (vec_tmp.size() != 0)
+    //             {
+    //                 for (int k = 0; k < vec_tmp.size(); ++k)
+    //                 {
+    //                     pcl_dynamic_.push_back((*p1)[vec_tmp[k]]);
+    //                 }
+    //             }
+    //         }
+    //         else // static
+    //         {
+    //             if (vec_tmp.size() != 0)
+    //             {
+    //                 for (int k = 0; k < vec_tmp.size(); ++k)
+    //                 {
+    //                     pcl_static_.push_back(pcl::PointXYZI((*p1)[vec_tmp[k]]));
+
+    //                     const int& vec_value_tmp = vec_tmp[k];
+    //                     pcl::PointXYZI p1_point_tmp = (*p1)[vec_value_tmp];
+    //                     new_pt.x = p1_point_tmp.x;
+    //                     new_pt.y = p1_point_tmp.y;
+    //                     new_pt.z = p1_point_tmp.z;
+    //                     new_pt.timestamp = (*p1_w_time)[vec_value_tmp].timestamp;
+    //                         // std::cout <<vec_tmp[k] << "      " <<new_pt.timestamp <<std::endl;
+    //                     pcl_static_wtime_.push_back(new_pt);
+    //                 }
+    //             }
+    //             *(ptr_accumulated_dRdt_score + i_ncols + j) = 0; //// update for next iteration
+    //         }
+    //     }
+    // }
+
+    // for (int i = 0; i < img_height_; ++i)
+    // {
+    //     int i_ncols = i * img_width_;
+    //     for (int j = 0; j < img_width_; ++j)
+    //     {
+    //         const int i_ncols_j = i_ncols + j;
+    //         const std::vector<int> &vec_tmp = ptr_vec_tmp[i_ncols_j];
+    //         if (vec_tmp.size() != 0)
+    //         {
+    //             for (int k = 0; k < vec_tmp.size(); ++k)
+    //             {
+    //                 pcl_static_.push_back(pcl::PointXYZI((*p1)[vec_tmp[k]]));
+
+    //                 const int &vec_value_tmp = vec_tmp[k];
+    //                 pcl::PointXYZI p1_point_tmp = (*p1)[vec_value_tmp];
+    //                 new_pt.x = p1_point_tmp.x;
+    //                 new_pt.y = p1_point_tmp.y;
+    //                 new_pt.z = p1_point_tmp.z;
+    //                 new_pt.timestamp = (*p1_w_time)[vec_value_tmp].timestamp;
+    //                 // std::cout <<vec_tmp[k] << "      " <<new_pt.timestamp <<std::endl;
+    //                 pcl_static_wtime_.push_back(new_pt);
+    //             }
+    //         }
+    //         *(ptr_accumulated_dRdt_score + i_ncols + j) = 0; //// update for next iteration
+    //     }
+    // }
 
     // double dt_toc11 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'segmentWholePts' :" <<  dt_toc11 << " [ms]");

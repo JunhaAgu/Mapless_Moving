@@ -274,7 +274,7 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
 
         cnt_data += 1;
     }
-    else if (cnt_initial>130)  // If not initialized, 130
+    else if (cnt_initial>1)  // If not initialized, 130
     {    is_initialized_ = true;
         
         // Initialize the first data.
@@ -289,20 +289,24 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
         // mask0_test_.resize(p0_msg_test_.width, true);
         cnt_data += 1;
 
-        pcl::toROSMsg(*p0_pcl_, pcl_msg_);
-        pcl_msg_.header.frame_id = "map";
-        pcl_msg_.header.stamp = cloudHeader_.stamp;
-        solver_->pub_static_pts_.publish(pcl_msg_);
+        // pcl::toROSMsg(*p0_pcl_, pcl_msg_);
+        // pcl_msg_.header.frame_id = "map";
+        // pcl_msg_.header.stamp = cloudHeader_.stamp;
+        // solver_->pub_static_pts_.publish(pcl_msg_);
+        
+        solver_->pub_static_pts_.publish(msg);
         ROS_INFO("pub msg: %d",cnt_data);
     }
     else
     {
-        p0_msg_ = *msg;
-        pcl::fromROSMsg(p0_msg_, *p0_pcl_);
-        pcl::toROSMsg(*p0_pcl_, pcl_msg_);
-        pcl_msg_.header.frame_id = "map";
-        pcl_msg_.header.stamp = cloudHeader_.stamp;
-        solver_->pub_static_pts_.publish(pcl_msg_);
+        // p0_msg_ = *msg;
+        // pcl::fromROSMsg(p0_msg_, *p0_pcl_);
+        // pcl::toROSMsg(*p0_pcl_, pcl_msg_);
+        // pcl_msg_.header.frame_id = "map";
+        // pcl_msg_.header.stamp = cloudHeader_.stamp;
+        // solver_->pub_static_pts_.publish(pcl_msg_);
+        
+        solver_->pub_static_pts_.publish(msg);
         ROS_INFO("pub msg: %d",cnt_data);
 
         msg_pcl_input_time_ = 0;

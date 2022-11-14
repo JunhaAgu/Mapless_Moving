@@ -30,7 +30,9 @@ class SegmentGround
         
     public:
         cv::Mat groundPtsIdx_next_;
-        
+        std::random_device rd;
+        std::mt19937 gen_;
+
     public:
         SegmentGround(const std::unique_ptr<UserParam>& user_param);
         ~SegmentGround();

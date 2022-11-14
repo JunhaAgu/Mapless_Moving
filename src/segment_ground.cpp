@@ -17,6 +17,8 @@ SegmentGround::SegmentGround(const std::unique_ptr<UserParam>& user_param)
     n_sample_ = user_param->ransac_param_.n_sample_;
 
     groundPtsIdx_next_ = cv::Mat::zeros(img_height_, img_width_, CV_8UC1);
+
+    std::mt19937 gen_(rd());
 };
 
 SegmentGround::~SegmentGround()
@@ -75,7 +77,7 @@ void SegmentGround::fastsegmentGround(std::unique_ptr<CloudFrame>& CloudFrame_in
             // std::cout << j << " "<<*(ptr_rho_sample + i_ncols + j) << std::endl;
         }
     }
-
+    
     std::vector<float> points_rho;
     std::vector<float> points_z;
     bool mask_inlier[n_row];
@@ -89,19 +91,23 @@ void SegmentGround::fastsegmentGround(std::unique_ptr<CloudFrame>& CloudFrame_in
     {
         points_rho.resize(0);
         points_z.resize(0);
-        for (int i_mask = 0; i_mask < n_row; ++i_mask)
-        {
-            mask_inlier[i_mask] = false;
-        }
+        // for (int i_mask = 0; i_mask < n_row; ++i_mask)
+        // {
+        //     mask_inlier[i_mask] = false;
+        // }
         for (int i = 0; i < n_row; ++i)
         {
+            mask_inlier[i] = false;
             points_rho.push_back(*(ptr_rho_sample + i * n_col_sample + j));
             points_z.push_back(*(ptr_pts_z_sample + i * n_col_sample + j));
             // std::cout << (*(ptr_rho_sample + i * n_col_sample + j)) << " " << (*(ptr_pts_z_sample + i * n_col_sample + j)) <<std::endl;
         }
         
         // std::cout << j <<": "<<std::endl;;
+        // timer::tic();
         ransacLine(points_rho, points_z, /*output*/ mask_inlier, j);
+        // double tt = timer::toc();
+        // ROS_INFO_STREAM("AA :" << tt << " [ms]");
         // std::cout<< " " <<std::endl;
 
         for (int i=0; i<n_row; ++i)
@@ -112,6 +118,7 @@ void SegmentGround::fastsegmentGround(std::unique_ptr<CloudFrame>& CloudFrame_in
             }
         }
     }
+    
     // exit(0);
     // std::cout << mask_inlier_mat <<std::endl;
     // exit(0);
@@ -168,7 +175,7 @@ void SegmentGround::fastsegmentGround(std::unique_ptr<CloudFrame>& CloudFrame_in
 
 void SegmentGround::ransacLine(std::vector<float>& points_rho, std::vector<float>& points_z, /*output*/ bool mask_inlier[], int num_seg)
 {
-
+    // timer::tic();
     float* ptr_points_rho = points_rho.data();
     float* ptr_points_z = points_z.data();
 
@@ -241,15 +248,15 @@ void SegmentGround::ransacLine(std::vector<float>& points_rho, std::vector<float
         }
     }
 
-    bool non_zero_points_mask[n_bin_per_seg];
-    for (int i = 0; i < n_bin_per_seg; ++i)
-    {
-        non_zero_points_mask[i] = false;
-    }
-    for (int i = 0; i < valid_points_idx.size(); ++i)
-    {
-        non_zero_points_mask[ptr_valid_points_idx[i]] = true;
-    }
+    // bool non_zero_points_mask[n_bin_per_seg];
+    // for (int i = 0; i < n_bin_per_seg; ++i)
+    // {
+    //     non_zero_points_mask[i] = false;
+    // }
+    // for (int i = 0; i < valid_points_idx.size(); ++i)
+    // {
+    //     non_zero_points_mask[ptr_valid_points_idx[i]] = true;
+    // }
 
     std::vector<float> points_valid_rho;
     points_valid_rho.reserve(points_rho.size());
@@ -275,68 +282,96 @@ void SegmentGround::ransacLine(std::vector<float>& points_rho, std::vector<float
     int n_pts_valid = points_valid_rho.size();
 
     bool id_good_fit[iter_];
-    for (int i = 0; i < iter_; ++i)
-    {
-        id_good_fit[i] = false;
-    }
-
     bool ini_inlier[iter_][n_pts_valid];
-    for (int i = 0; i < iter_; ++i)
-    {
-        for (int j = 0; j < n_pts_valid; ++j)
-        {
-            ini_inlier[i][j] = false;
-        }
-    }
-
-    bool mask[iter_][n_pts_valid];
-    for (int i = 0; i < iter_; ++i)
-    {
-        for (int j = 0; j < n_pts_valid; ++j)
-        {
-            mask[i][j] = false;
-        }
-    }
-
+    // bool mask[iter_][n_pts_valid];
     float residual[iter_][n_pts_valid];
-    for (int i = 0; i < iter_; ++i)
-    {
-        for (int j = 0; j < n_pts_valid; ++j)
-        {
-            residual[i][j] = 0.0;
-        }
-    }
-
     int inlier_cnt[iter_];
-    for (int i = 0; i < iter_; ++i)
-    {
-        inlier_cnt[i] = 0;
-    }
 
     std::vector<pcl::PointCloud<pcl::PointXY>> inlier;
     inlier.resize(iter_);
-    for (int i=0; i<iter_; ++i)
-    {
-        inlier[i].reserve(points_rho.size());
-    }
 
     float line_A[iter_];
-    for (int i=0; i<iter_; ++i)
-    {
-        line_A[i] = 0.0;
-    }
     float line_B[iter_];
-    for (int i=0; i<iter_; ++i)
+
+    for (int i = 0; i < iter_; ++i)
     {
+        id_good_fit[i] = false;
+        inlier_cnt[i] = 0;
+        for (int j = 0; j < n_pts_valid; ++j)
+        {
+            ini_inlier[i][j] = false;
+            // mask[i][j] = false;
+            residual[i][j] = 0.0;
+        }
+
+        inlier[i].reserve(points_rho.size());
+        line_A[i] = 0.0;
         line_B[i] = 0.0;
+
     }
+
+    // bool id_good_fit[iter_];
+    // for (int i = 0; i < iter_; ++i)
+    // {
+    //     id_good_fit[i] = false;
+    // }
+
+    // bool ini_inlier[iter_][n_pts_valid];
+    // for (int i = 0; i < iter_; ++i)
+    // {
+    //     for (int j = 0; j < n_pts_valid; ++j)
+    //     {
+    //         ini_inlier[i][j] = false;
+    //     }
+    // }
+
+    // bool mask[iter_][n_pts_valid];
+    // for (int i = 0; i < iter_; ++i)
+    // {
+    //     for (int j = 0; j < n_pts_valid; ++j)
+    //     {
+    //         mask[i][j] = false;
+    //     }
+    // }
+
+    // float residual[iter_][n_pts_valid];
+    // for (int i = 0; i < iter_; ++i)
+    // {
+    //     for (int j = 0; j < n_pts_valid; ++j)
+    //     {
+    //         residual[i][j] = 0.0;
+    //     }
+    // }
+
+    // int inlier_cnt[iter_];
+    // for (int i = 0; i < iter_; ++i)
+    // {
+    //     inlier_cnt[i] = 0;
+    // }
+
+    
+    // for (int i=0; i<iter_; ++i)
+    // {
+    //     inlier[i].reserve(points_rho.size());
+    // }
+
+    // float line_A[iter_];
+    // for (int i=0; i<iter_; ++i)
+    // {
+    //     line_A[i] = 0.0;
+    // }
+    // float line_B[iter_];
+    // for (int i=0; i<iter_; ++i)
+    // {
+    //     line_B[i] = 0.0;
+    // }
 
     int n1 = 0;
     int n2 = 0;
     float x1 = 0.0, x2 = 0.0, y1 = 0.0, y2 = 0.0;
 
-    std::random_device rd;
-    std::mt19937 gen(rd());
+    // std::random_device rd;
+    // std::mt19937 gen_(rd());
     std::uniform_int_distribution<int> dis(0, n_pts_valid - 1);
 
     for (int m = 0; m < iter_; ++m)
@@ -345,8 +380,8 @@ void SegmentGround::ransacLine(std::vector<float>& points_rho, std::vector<float
 
         while(1)
         { 
-            n1 = dis(gen);
-            n2 = dis(gen);
+            n1 = dis(gen_);
+            n2 = dis(gen_);
             if (n1 != n2)
             {
                 // std::cout<< 0 << "~" <<n_pts_valid-1<<": "<<n1<<", "<<n2<<std::endl;
@@ -379,30 +414,35 @@ void SegmentGround::ransacLine(std::vector<float>& points_rho, std::vector<float
             else{}
         }
         else{}
+        double den = 1.0 / std::sqrt(line_A[m] * line_A[m] + 1.0);
+        pcl::PointXY point_xy;
 
         for (int i = 0; i < n_pts_valid; ++i)
         {
-            residual[m][i] = std::abs(line_A[m] * ptr_points_valid_rho[i] - ptr_points_valid_z[i] + line_B[m]) / std::sqrt(line_A[m] * line_A[m] + 1.0);
+            residual[m][i] = std::abs(line_A[m] * ptr_points_valid_rho[i] - ptr_points_valid_z[i] + line_B[m]) * den;
 
             if (residual[m][i] < thr_)
             {
                 ini_inlier[m][i] = true;
-                mask[m][i] = true;
-            }
-        }
-
-        pcl::PointXY point_xy;
-
-        for (int j=0; j<n_pts_valid; ++j)
-        {
-            if (ini_inlier[m][j]==true)
-            {
-                point_xy.x = ptr_points_valid_rho[j];
-                point_xy.y = ptr_points_valid_z[j];
+                // mask[m][i] = true;
+                point_xy.x = ptr_points_valid_rho[i];
+                point_xy.y = ptr_points_valid_z[i];
                 inlier[m].push_back(point_xy);
                 inlier_cnt[m] += 1;
+
             }
         }
+
+        // for (int j=0; j<n_pts_valid; ++j)
+        // {
+        //     if (ini_inlier[m][j]==true)
+        //     {
+        //         point_xy.x = ptr_points_valid_rho[j];
+        //         point_xy.y = ptr_points_valid_z[j];
+        //         inlier[m].push_back(point_xy);
+        //         inlier_cnt[m] += 1;
+        //     }
+        // }
 
         if ((inlier_cnt[m] - 1) > mini_inlier_)
         {
@@ -507,10 +547,10 @@ void SegmentGround::ransacLine(std::vector<float>& points_rho, std::vector<float
     float line_updown = 0.0;
     // int cnt_inlier = 0;
 
+    double den_ls = 1.0 / std::sqrt(t(0)*t(0)+t(1)*t(1));
     for (int i=0; i<points_rho_dup.size(); ++i)
     {
-        residual_leastsquare = std::abs(t(0)*ptr_points_rho_dup[i] + t(1)*ptr_points_z_dup[i] + t(2)) /
-                                std::sqrt(t(0)*t(0)+t(1)*t(1));
+        residual_leastsquare = std::abs(t(0)*ptr_points_rho_dup[i] + t(1)*ptr_points_z_dup[i] + t(2))* den_ls;
         line_updown = t(0)*ptr_points_rho_dup[i] + t(1)*ptr_points_z_dup[i] + t(2);
 
         if ((residual_leastsquare < thr_) || (line_updown > 0))
@@ -521,7 +561,8 @@ void SegmentGround::ransacLine(std::vector<float>& points_rho, std::vector<float
     }
     // output: mask_inlier
     // std::cout << t(0) << " " << t(2) << " # of inlier: " << cnt_inlier <<std::endl;
-    
+    // double dt_toc2 = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("AA :" << dt_toc2 << " [ms]");
 }
 
 void SegmentGround::reset()
