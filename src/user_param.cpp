@@ -29,7 +29,7 @@ void UserParam::getUserSettingParameters(std::string& data_type)
     ransac_param_.b_thr_[0] = -0.5;
     ransac_param_.b_thr_[1] = -1.2;
     ransac_param_.min_inlier_ = 5;
-    ransac_param_.n_sample_ = 2;
+    ransac_param_.n_sample_ = 2; // line y=ax+b
 
     sensor_spec_.channel_ = 64;
 

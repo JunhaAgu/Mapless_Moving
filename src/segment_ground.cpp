@@ -45,9 +45,14 @@ void SegmentGround::fastsegmentGround(std::unique_ptr<CloudFrame>& CloudFrame_in
     std::vector<float> pts_z_col_range;
     col_range.reserve(downsample_size_);
     pts_z_col_range.reserve(downsample_size_);
+
+    std::vector<float> rho_col_range;
+    rho_col_range.reserve(downsample_size_);
     
     float min_z = 0.0;
-    int min_idx = 0;
+    int min_z_idx = 0;
+
+    int cnt_z_zero = 0;
 
     for (int i=0; i<n_row; ++i)
     {
@@ -58,22 +63,30 @@ void SegmentGround::fastsegmentGround(std::unique_ptr<CloudFrame>& CloudFrame_in
         {   
             col_range.resize(0);
             pts_z_col_range.resize(0);
+            cnt_z_zero = 0;
 
             int j_downsample_size = j * downsample_size_;
             for (int k=0; k<downsample_size_; ++k)
             {
                 col_range.push_back(j_downsample_size + k);
                 pts_z_col_range.push_back(*(ptr_img_z + i_ncols + j_downsample_size + k));
+                if (pts_z_col_range[k] == 0)
+                {
+                    pts_z_col_range[k] = 1e2;
+                    cnt_z_zero += 1;
+                }
             }
-            min_z = *min_element(pts_z_col_range.begin(), pts_z_col_range.end());
-            min_idx = min_element(pts_z_col_range.begin(), pts_z_col_range.end()) - pts_z_col_range.begin();
 
-            if (min_z == 0)
+            if (cnt_z_zero == downsample_size_)
             {
                 continue;
             }
+
+            min_z = *min_element(pts_z_col_range.begin(), pts_z_col_range.end());
+            min_z_idx = min_element(pts_z_col_range.begin(), pts_z_col_range.end()) - pts_z_col_range.begin();
+
             *(ptr_pts_z_sample + i_ncols_sample + j)   = min_z;
-            *(ptr_rho_sample + i_ncols_sample + j)     = *(ptr_img_rho + i_ncols + col_range[0] + min_idx);
+            *(ptr_rho_sample + i_ncols_sample + j)     = *(ptr_img_rho + i_ncols + col_range[0] + min_z_idx);
             // std::cout << j << " "<<*(ptr_rho_sample + i_ncols + j) << std::endl;
         }
     }
@@ -83,6 +96,10 @@ void SegmentGround::fastsegmentGround(std::unique_ptr<CloudFrame>& CloudFrame_in
     bool mask_inlier[n_row];
     points_rho.reserve(n_row);
     points_z.reserve(n_row);
+    std::vector<float> line_a;
+    std::vector<float> line_b;
+    line_a.reserve(n_col_sample);
+    line_b.reserve(n_col_sample);
 
     cv::Mat mask_inlier_mat = cv::Mat::zeros(n_row, n_col_sample, CV_32FC1);
     float* ptr_mask_inlier_mat = mask_inlier_mat.ptr<float>(0);
@@ -91,10 +108,7 @@ void SegmentGround::fastsegmentGround(std::unique_ptr<CloudFrame>& CloudFrame_in
     {
         points_rho.resize(0);
         points_z.resize(0);
-        // for (int i_mask = 0; i_mask < n_row; ++i_mask)
-        // {
-        //     mask_inlier[i_mask] = false;
-        // }
+  
         for (int i = 0; i < n_row; ++i)
         {
             mask_inlier[i] = false;
@@ -105,7 +119,7 @@ void SegmentGround::fastsegmentGround(std::unique_ptr<CloudFrame>& CloudFrame_in
         
         // std::cout << j <<": "<<std::endl;;
         // timer::tic();
-        ransacLine(points_rho, points_z, /*output*/ mask_inlier, j);
+        ransacLine(points_rho, points_z, /*output*/ mask_inlier, line_a, line_b, j);
         // double tt = timer::toc();
         // ROS_INFO_STREAM("AA :" << tt << " [ms]");
         // std::cout<< " " <<std::endl;
@@ -131,7 +145,8 @@ void SegmentGround::fastsegmentGround(std::unique_ptr<CloudFrame>& CloudFrame_in
     // fs_w.release();
     // exit(0);
 
-    // upscale: sample size -> original image size
+    ////////////////////////////////////////////////////////
+    //////////////////////////// upscale: sample size -> original image size
     float rep_z_value = 0.0;
 
     for (int i = 0; i < n_row; ++i)
@@ -141,6 +156,7 @@ void SegmentGround::fastsegmentGround(std::unique_ptr<CloudFrame>& CloudFrame_in
         {
             col_range.resize(0);
             pts_z_col_range.resize(0);
+            rho_col_range. resize(0);
             int j_downsample_size = j * downsample_size_;
             if (*(ptr_mask_inlier_mat + i * n_col_sample + j) == 255)
             {
@@ -151,11 +167,24 @@ void SegmentGround::fastsegmentGround(std::unique_ptr<CloudFrame>& CloudFrame_in
                 }
                 else{}
 
+                double den_ls = 1.0 / std::sqrt(line_a[j]*line_a[j]+1);
+                float residual_leastsquare = 0.0;
+                float line_updown =0.0;
+
                 for (int k = 0; k < downsample_size_; ++k)
                 {
                     col_range.push_back(j_downsample_size + k);
                     pts_z_col_range.push_back(*(ptr_img_z + i_ncols + j_downsample_size + k));
-                    if ((pts_z_col_range[k] != 0) && (pts_z_col_range[k] < (rep_z_value + 0.05)))
+                    rho_col_range.push_back(*(ptr_img_rho + i_ncols + j_downsample_size + k));
+
+                    residual_leastsquare = std::abs(line_a[j]*rho_col_range[k] - pts_z_col_range[k] + line_b[j])* den_ls; //t(1)=-1
+                    line_updown = line_a[j]*rho_col_range[k] - pts_z_col_range[k] + line_b[j];
+
+                    if ((pts_z_col_range[k] != 0) && (residual_leastsquare < thr_))
+                    {
+                        *(ptr_groundPtsIdx_next + i_ncols + col_range[k]) = 255;
+                    }
+                    else if ((line_updown>0) && (line_updown<2))
                     {
                         *(ptr_groundPtsIdx_next + i_ncols + col_range[k]) = 255;
                     }
@@ -173,11 +202,14 @@ void SegmentGround::fastsegmentGround(std::unique_ptr<CloudFrame>& CloudFrame_in
     // cv::waitKey(0);
 }
 
-void SegmentGround::ransacLine(std::vector<float>& points_rho, std::vector<float>& points_z, /*output*/ bool mask_inlier[], int num_seg)
+void SegmentGround::ransacLine(std::vector<float>& points_rho, std::vector<float>& points_z, 
+/*output*/ bool mask_inlier[], std::vector<float>& line_a, std::vector<float>& line_b, int num_seg)
 {
     // timer::tic();
     float* ptr_points_rho = points_rho.data();
     float* ptr_points_z = points_z.data();
+    float* ptr_line_a = line_a.data();
+    float* ptr_line_b = line_b.data();
 
     // copy points_rho vector 
     std::vector<float> points_rho_dup;
@@ -194,12 +226,12 @@ void SegmentGround::ransacLine(std::vector<float>& points_rho, std::vector<float
     int max_range = 100;
     int n_bin_per_seg = points_rho.size();
 
-    bool mask_temp[n_bin_per_seg];
+    // bool mask_temp[n_bin_per_seg];
     bool flag_mask_temp = false;
 
-    std::vector<float> points_rho_sort_temp;
+    // std::vector<float> points_rho_sort_temp;
     std::vector<float> points_z_sort_temp;
-    points_rho_sort_temp.reserve(n_bin_per_seg);
+    // points_rho_sort_temp.reserve(n_bin_per_seg);
     points_z_sort_temp.reserve(n_bin_per_seg);
 
     std::vector<int> idx_non_zero_mask_temp;
@@ -210,27 +242,32 @@ void SegmentGround::ransacLine(std::vector<float>& points_rho, std::vector<float
     valid_points_idx.reserve(max_range);
     int* ptr_valid_points_idx = valid_points_idx.data();
     
+    int kk;
+    int dist_base = 40;
+    int dist_base_double = dist_base*2;
+    int dist_base_triple = dist_base*3;
+
     for (int i=0; i<max_range; ++i)
     {
-        for (int i_mask = 0; i_mask < n_bin_per_seg; ++i_mask)
-        {
-            mask_temp[i_mask] = false;
-        }
+        // for (int i_mask = 0; i_mask < n_bin_per_seg; ++i_mask)
+        // {
+        //     mask_temp[i_mask] = false;
+        // }
         flag_mask_temp = false;
-        points_rho_sort_temp.resize(0);
+        // points_rho_sort_temp.resize(0);
         points_z_sort_temp.resize(0);
         idx_non_zero_mask_temp.resize(0);
         float min_z = 0.0;
-        int min_idx = 0;
+        int min_z_idx = 0;
 
         for (int j=0; j<n_bin_per_seg; ++j)
         {
             if (ptr_points_rho[j] > i && ptr_points_rho[j] < i + 1.0)
             {
-                mask_temp[j] = true;
+                // mask_temp[j] = true;
                 flag_mask_temp = true;
 
-                points_rho_sort_temp.push_back(ptr_points_rho[j]);
+                // points_rho_sort_temp.push_back(ptr_points_rho[j]);
                 points_z_sort_temp.push_back(ptr_points_z[j]);
                 idx_non_zero_mask_temp.push_back(j);
             }
@@ -239,12 +276,12 @@ void SegmentGround::ransacLine(std::vector<float>& points_rho, std::vector<float
         if (flag_mask_temp == true)
         {
             min_z = *min_element(points_z_sort_temp.begin(), points_z_sort_temp.end());
-            min_idx = min_element(points_z_sort_temp.begin(), points_z_sort_temp.end()) - points_z_sort_temp.begin();
-            if (min_z > -1.0)
+            min_z_idx = min_element(points_z_sort_temp.begin(), points_z_sort_temp.end()) - points_z_sort_temp.begin();
+            if (min_z > -1.2)
             {
                 continue;
             }
-            valid_points_idx.push_back(ptr_idx_non_zero_mask_temp[min_idx]);
+            valid_points_idx.push_back(ptr_idx_non_zero_mask_temp[min_z_idx]);
         }
     }
 
@@ -281,7 +318,7 @@ void SegmentGround::ransacLine(std::vector<float>& points_rho, std::vector<float
 
     int n_pts_valid = points_valid_rho.size();
 
-    bool id_good_fit[iter_];
+    // bool id_good_fit[iter_];
     bool ini_inlier[iter_][n_pts_valid];
     // bool mask[iter_][n_pts_valid];
     float residual[iter_][n_pts_valid];
@@ -295,7 +332,7 @@ void SegmentGround::ransacLine(std::vector<float>& points_rho, std::vector<float
 
     for (int i = 0; i < iter_; ++i)
     {
-        id_good_fit[i] = false;
+        // id_good_fit[i] = false;
         inlier_cnt[i] = 0;
         for (int j = 0; j < n_pts_valid; ++j)
         {
@@ -429,7 +466,6 @@ void SegmentGround::ransacLine(std::vector<float>& points_rho, std::vector<float
                 point_xy.y = ptr_points_valid_z[i];
                 inlier[m].push_back(point_xy);
                 inlier_cnt[m] += 1;
-
             }
         }
 
@@ -444,10 +480,10 @@ void SegmentGround::ransacLine(std::vector<float>& points_rho, std::vector<float
         //     }
         // }
 
-        if ((inlier_cnt[m] - 1) > mini_inlier_)
-        {
-            id_good_fit[m] = true;
-        }
+        // if ((inlier_cnt[m] - 1) > mini_inlier_)
+        // {
+        //     id_good_fit[m] = true;
+        // }
     }
 
     int max_inlier_cnt = 0;
@@ -466,7 +502,6 @@ void SegmentGround::ransacLine(std::vector<float>& points_rho, std::vector<float
 
     float mini_pre = 1e3;
 
-
     if (max_inlier_cnt_index.size()==0)
     {
         return;
@@ -474,6 +509,7 @@ void SegmentGround::ransacLine(std::vector<float>& points_rho, std::vector<float
     
     int id_mini = 0;
     int max_inlier_cnt_index_1 = 0;
+    float inv_n_pts_valid = 1 / n_pts_valid;
     if (max_inlier_cnt_index.size() > 1)
     {
         int n_candi = max_inlier_cnt_index.size();
@@ -485,7 +521,7 @@ void SegmentGround::ransacLine(std::vector<float>& points_rho, std::vector<float
                 mean_residual += residual[max_inlier_cnt_index[i_candi]][k];
             }
 
-            mean_residual /= n_pts_valid;
+            mean_residual *= inv_n_pts_valid;
 
             float mini = std::min(mean_residual, mini_pre);
             
@@ -540,8 +576,11 @@ void SegmentGround::ransacLine(std::vector<float>& points_rho, std::vector<float
 
     t = -t/t(1,0);
 
-    Eigen::Vector2f line;
-    line << t(0), t(2); //y = ax + b
+    // Eigen::Vector2f line;
+    // line << t(0), t(2); //y = ax + b
+    
+    line_a[num_seg] = t(0);
+    line_b[num_seg] = t(2);
 
     float residual_leastsquare = 0.0;
     float line_updown = 0.0;
@@ -550,10 +589,10 @@ void SegmentGround::ransacLine(std::vector<float>& points_rho, std::vector<float
     double den_ls = 1.0 / std::sqrt(t(0)*t(0)+t(1)*t(1));
     for (int i=0; i<points_rho_dup.size(); ++i)
     {
-        residual_leastsquare = std::abs(t(0)*ptr_points_rho_dup[i] + t(1)*ptr_points_z_dup[i] + t(2))* den_ls;
-        line_updown = t(0)*ptr_points_rho_dup[i] + t(1)*ptr_points_z_dup[i] + t(2);
+        residual_leastsquare = std::abs(t(0)*ptr_points_rho_dup[i] - ptr_points_z_dup[i] + t(2))* den_ls; //t(1)=-1
+        line_updown = t(0)*ptr_points_rho_dup[i] - ptr_points_z_dup[i] + t(2);
 
-        if ((residual_leastsquare < thr_) || (line_updown > 0))
+        if ((residual_leastsquare < 2.0*thr_) || (line_updown > 0))
         {
             mask_inlier[i] = true;
             // cnt_inlier += 1;

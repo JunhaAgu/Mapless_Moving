@@ -777,6 +777,15 @@ void MaplessDynamic::solve(
     // dynamic //
     
     pcl::toROSMsg(pcl_dynamic_, converted_msg_d_);
+    // save pcl_dynamic points
+    std::string folder_name = "/home/junhakim/label_results/" + dataset_name_ + "/" + data_number_;
+    std::string cloud_name = folder_name + "/dynamic_" + WithLeadingZerosStr(cnt_data) + ".pcd";
+    if(pcl_dynamic_.size() > 0)
+    {
+        pcl::io::savePCDFileBinary(cloud_name, pcl_dynamic_);
+    }
+    
+
     converted_msg_d_.header.frame_id = "map";
     converted_msg_d_.header.stamp = cloudHeader.stamp;
     pub_dynamic_pts_.publish(converted_msg_d_);
@@ -816,6 +825,13 @@ void MaplessDynamic::solve(
     // cv::imshow("final", accumulated_dRdt_);
     // cv::waitKey(0);
 };
+
+std::string MaplessDynamic::WithLeadingZerosStr(int num) {
+  size_t leading_zeros_num = 6;
+  auto counter_str = std::to_string(num);
+  return std::string(leading_zeros_num - counter_str.size(), '0')
+      .append(counter_str);
+}
 
 void MaplessDynamic::copyStructAndinitialize(pcl::PointCloud<pcl::PointXYZI>::Ptr p1 ,pcl::PointCloud<pcl::PointXYZI>::Ptr p0, int cnt_data)
 {   

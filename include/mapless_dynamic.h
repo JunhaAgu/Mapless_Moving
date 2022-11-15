@@ -144,6 +144,8 @@ private:
     void countZeroint(cv::Mat& input_mat);
     void countZerouchar(cv::Mat& input_mat);
 
+    std::string WithLeadingZerosStr(int num);
+
 private:
     //test: load data
     void loadTestData();
