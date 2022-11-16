@@ -28,14 +28,15 @@ class ROSWrapper{
 // Previous variables
 private:
     Mask                     mask0;
-    sensor_msgs::PointCloud2 p0_msg_;
-    sensor_msgs::PointCloud2 p1_msg_;
+    // sensor_msgs::PointCloud2 p0_msg_;
+    // sensor_msgs::PointCloud2 p1_msg_;
     bool                     is_initialized_; // = default : false.
     bool                     is_initialized_pose_; // = default : false.
     bool                     is_pose_received_;
-    pcl::PointCloud<pcl::PointXYZI>::Ptr p0_pcl_;
-    pcl::PointCloud<pcl::PointXYZI>::Ptr p1_pcl_;
-    pcl::PointCloud<slam::XYZTPoint>::Ptr p1_pcl_wtime_;
+    // pcl::PointCloud<pcl::PointXYZI>::Ptr p0_pcl_;
+    // pcl::PointCloud<pcl::PointXYZI>::Ptr p1_pcl_;
+    pcl::PointCloud<slam::PointXYZT>::Ptr p0_pcl_wtime_;
+    pcl::PointCloud<slam::PointXYZT>::Ptr p1_pcl_wtime_;
 
     Pose pose_pre_;
     Pose pose_cur_;
@@ -50,7 +51,7 @@ private:
 
     double first_timestamp_pose_msg_ = 0.0;
     double first_timestamp_pcl_msg_ = 0.0;
-    double msg_pose_input_time_ = 0.0;
+    double timestamp_pose_msg_ = 0.0;
     double timestamp_pcl_msg_ = 0.0;
 
     // ROS nodehandle & subscriber for LiDAR data.
@@ -64,8 +65,6 @@ private:
     visualization_msgs::Marker lidar_marker_;
 
     sensor_msgs::PointCloud2 pcl_msg_;
-
-    float transform_[6];
     
     std::string     topicname_lidar_;
     std::string     topicname_pose_;
@@ -93,8 +92,7 @@ private:
     void getLaunchParameters();
     void callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg);
     void callbackPose(const nav_msgs::Odometry::ConstPtr& pose);
-    void updatePreviousVariables(pcl::PointCloud<pcl::PointXYZI>::Ptr p0_pcl, pcl::PointCloud<pcl::PointXYZI>::Ptr p1_pcl, const Mask& mask1,
-                                 CloudMessageT::Ptr p1_pcl_wtime);
+    void updatePreviousVariables(CloudMessageT::Ptr p0_pcl_wtime, CloudMessageT::Ptr p1_pcl_wtime, const Mask& mask1);
 };
 
 #endif

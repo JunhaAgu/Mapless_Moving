@@ -66,7 +66,7 @@ CloudFrame::~CloudFrame()
     // destructor
 };
 
-void CloudFrame::genRangeImages(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur_next)
+void CloudFrame::genRangeImages(pcl::PointCloud<slam::PointXYZT>::Ptr pcl_in, bool cur_next)
 {
     n_pts_ = pcl_in->size();
 
@@ -110,7 +110,7 @@ void CloudFrame::genRangeImages(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, boo
     // ROS_INFO_STREAM("elapsed time for 'interpPts' :" << dt_interpPts << " [ms]");
 }
 
-void CloudFrame::genRangeImages_dR(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur_next)
+void CloudFrame::genRangeImages_dR(pcl::PointCloud<slam::PointXYZT>::Ptr pcl_in, bool cur_next)
 {
     n_pts_ = pcl_in->size();
 
@@ -130,7 +130,7 @@ void CloudFrame::genRangeImages_dR(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, 
     // ROS_INFO_STREAM("elapsed time for 'interpRangeImage_dR' :" << dt_3 << " [ms]");
 }
 
-void CloudFrame::genRangeImages_noComp(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur_next)
+void CloudFrame::genRangeImages_noComp(pcl::PointCloud<slam::PointXYZT>::Ptr pcl_in, bool cur_next)
 {
     n_pts_ = pcl_in->size();
 
@@ -139,7 +139,7 @@ void CloudFrame::genRangeImages_noComp(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_
     makeRangeImageAndPtsPerPixel(cur_next);
 }
 
-void CloudFrame::calcuateRho(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur_next)
+void CloudFrame::calcuateRho(pcl::PointCloud<slam::PointXYZT>::Ptr pcl_in, bool cur_next)
 {
     // timer::tic();
 
@@ -168,7 +168,7 @@ void CloudFrame::calcuateRho(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool c
 
     for (int i = 0; i < n_pts; ++i, ++ptr_rho, ++ptr_phi, ++ptr_theta)
     {   
-        const pcl::PointXYZI& pclpxyzi_tmp = pcl_in->points[i];
+        const slam::PointXYZT& pclpxyzi_tmp = pcl_in->points[i];
         const float& x_tmp = pclpxyzi_tmp.x;
         const float& y_tmp = pclpxyzi_tmp.y;
         const float& z_tmp = pclpxyzi_tmp.z;
@@ -254,7 +254,7 @@ void CloudFrame::calcuateRho(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool c
 
 
 void CloudFrame::calcuateRho_SIMD(
-    pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur_next)
+    pcl::PointCloud<slam::PointXYZT>::Ptr pcl_in, bool cur_next)
 {
     float twopi         = 2.0*M_PI;
     float offset_theta  = M_PI;
@@ -289,7 +289,7 @@ void CloudFrame::calcuateRho_SIMD(
 
     for(int i = 0; i < steps; i += 8 ) 
     {
-        const pcl::PointXYZI& pclpxyzi_tmp = pcl_in->points[i];
+        const slam::PointXYZT& pclpxyzi_tmp = pcl_in->points[i];
         const float& x_tmp = pclpxyzi_tmp.x;
         const float& y_tmp = pclpxyzi_tmp.y;
         const float& z_tmp = pclpxyzi_tmp.z;
@@ -748,7 +748,7 @@ void CloudFrame::interpRangeImage_dR(bool cur_next)
     img_rho_new.copyTo(str_rhopts_->img_rho);
 }
 
-void CloudFrame::interpPts(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur_next)
+void CloudFrame::interpPts(pcl::PointCloud<slam::PointXYZT>::Ptr pcl_in, bool cur_next)
 {
     int n_row = str_rhopts_->img_rho.rows;
     int n_col = str_rhopts_->img_rho.cols;

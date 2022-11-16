@@ -32,16 +32,30 @@ typedef Eigen::Vector3f   Euler;
 #define R2D 180.0f/M_PI
 #define D2R M_PI/180.0f
 
+// struct PointXYZT
+// {
+//   PCL_ADD_POINT4D;                  // preferred way of adding a XYZ+padding
+//   double timestamp;
+//   PCL_MAKE_ALIGNED_OPERATOR_NEW     // make sure our new allocators are aligned
+// } EIGEN_ALIGN16;                    // enforce SSE padding for correct memory alignment
+
+// POINT_CLOUD_REGISTER_POINT_STRUCT (PointXYZT,           // here we assume a XYZ + "test" (as fields)
+//                                    (float, x, x)
+//                                    (float, y, y)
+//                                    (float, z, z)
+//                                    (double, timestamp, timestamp)
+// )
+
 namespace slam {
 
     // A XYZT point compatible with pcl
-    struct XYZTPoint {
+    struct PointXYZT {
 
-        inline XYZTPoint(const XYZTPoint &pt) : x(pt.x), y(pt.y), z(pt.z), timestamp(pt.timestamp) {
+        inline PointXYZT(const PointXYZT &pt) : x(pt.x), y(pt.y), z(pt.z), timestamp(pt.timestamp) {
             data[3] = 1.0f;
         }
 
-        inline XYZTPoint &operator=(const slam::XYZTPoint &pt) {
+        inline PointXYZT &operator=(const slam::PointXYZT &pt) {
             x = pt.x;
             y = pt.y;
             z = pt.z;
@@ -49,7 +63,7 @@ namespace slam {
             return *this;
         }
 
-        inline XYZTPoint() : x(0.f), y(0.f), z(0.f), timestamp(0.) {
+        inline PointXYZT() : x(0.f), y(0.f), z(0.f), timestamp(0.) {
             data[3] = 1.0f;
         }
 
@@ -63,13 +77,13 @@ namespace slam {
 
 } // namespace slam
 
-POINT_CLOUD_REGISTER_POINT_STRUCT (slam::XYZTPoint,
+POINT_CLOUD_REGISTER_POINT_STRUCT (slam::PointXYZT,
                                     (float, x, x)
                                     (float, y, y)
                                     (float, z, z)
                                     (double, timestamp, timestamp))
 
-typedef pcl::PointCloud<slam::XYZTPoint> CloudMessageT;
+typedef pcl::PointCloud<slam::PointXYZT> CloudMessageT;
 
 struct StrRhoPts
 {

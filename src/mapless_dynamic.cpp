@@ -21,8 +21,8 @@ MaplessDynamic::MaplessDynamic(ros::NodeHandle& nh, bool rosbag_play, std::strin
 
     // this->getUserSettingParameters();
 
-    p0_pcl_test_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
-    p1_pcl_test_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
+    p0_pcl_test_ = boost::make_shared<pcl::PointCloud<slam::PointXYZT>>();
+    p1_pcl_test_ = boost::make_shared<pcl::PointCloud<slam::PointXYZT>>();
     
 
     // Construct Class
@@ -266,7 +266,7 @@ void MaplessDynamic::loadTestData(){
         all_pose_[i].reserve(12);
         data_buf_.push_back(new TestData);
 
-        data_buf_[i]->pcl_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
+        data_buf_[i]->pcl_ = boost::make_shared<pcl::PointCloud<slam::PointXYZT>>();
         data_buf_[i]->pcl_msg_ = (new sensor_msgs::PointCloud2);
     }
     // read pose file
@@ -415,9 +415,9 @@ void MaplessDynamic::loadTestData(){
 
 void MaplessDynamic::solve(
     /* inputs */ //const sensor_msgs::PointCloud2& p1
-    pcl::PointCloud<pcl::PointXYZI>::Ptr p0, pcl::PointCloud<pcl::PointXYZI>::Ptr p1, const Pose& T10, 
+    CloudMessageT::Ptr p0, CloudMessageT::Ptr p1, const Pose& T10, 
     /* outputs */ 
-    Mask& mask1, int cnt_data, std_msgs::Header& cloudHeader, pcl::PointCloud<slam::XYZTPoint>::Ptr p1_w_time)
+    Mask& mask1, int cnt_data, std_msgs::Header& cloudHeader)
 {
     float object_factor = 1.0;
     static int pub_num = 0;
@@ -430,7 +430,7 @@ void MaplessDynamic::solve(
     // icp_.setInputTarget(p1);
     // // icp_.setMaxCorrespondenceDistance(0.05);
     // icp_.setMaximumIterations(1);
-    // pcl::PointCloud<pcl::PointXYZI> Final;
+    // pcl::PointCloud<slam::PointXYZT> Final;
     // icp_.align(Final);
     // Eigen::Matrix4f Tcn   = icp_.getFinalTransformation();
     // double dd = timer::toc(); // milliseconds
@@ -486,13 +486,13 @@ void MaplessDynamic::solve(
     }
 
     // Segment ground
-    timer::tic();
+    // timer::tic();
     SegmentGround_->fastsegmentGround(CloudFrame_next_);
     double dt_toc2 = timer::toc(); // milliseconds
-    ROS_INFO_STREAM("elapsed time for 'segmentSGround' :" << dt_toc2 << " [ms]");
+    // ROS_INFO_STREAM("elapsed time for 'segmentSGround' :" << dt_toc2 << " [ms]");
     sum_time += dt_toc2;
     avg_time = sum_time/iter_time;
-    ROS_INFO_STREAM("elapsed avg time for 'segmentSGround' :" << avg_time << " [ms]");
+    // ROS_INFO_STREAM("elapsed avg time for 'segmentSGround' :" << avg_time << " [ms]");
     iter_time++;
     //// Occlusion accumulation ////
     // Compute the occlusion dRdt
@@ -508,7 +508,7 @@ void MaplessDynamic::solve(
     //     cv::imshow("residual_", residual_);
     // cv::waitKey(0);
     // exit(0);
-
+    
     // timer::tic();
     // warp the occlusion accumulation map
     PclWarp_->warpPointcloud(CloudFrame_cur_, CloudFrame_warpPointcloud_, T_next2cur_, accumulated_dRdt_, cnt_data);
@@ -516,7 +516,7 @@ void MaplessDynamic::solve(
     PclWarp_->warpPointcloud(CloudFrame_cur_, CloudFrame_warpPointcloud_, T_next2cur_, accumulated_dRdt_score_, cnt_data);
     // double dt_toc4 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'warpPointcloud' :" << dt_toc4 << " [ms]");
-
+    
     // cv::imshow("after warpPointcloud", accumulated_dRdt_);
     
     //     if (cnt_data == 2)
@@ -548,7 +548,7 @@ void MaplessDynamic::solve(
     ObjectExt_->extractObjectCandidate(accumulated_dRdt_, CloudFrame_next_, object_factor);
     // double dt_toc6 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'extractObjectCandidate' :" <<  dt_toc6 << " [ms]");
-
+    
     // cv::imshow("after extractObjectCandidate", accumulated_dRdt_);
     //// update object_mask
     //object_mask = accumulated_dRdt>0;
@@ -578,7 +578,6 @@ void MaplessDynamic::solve(
     ObjectExt_->updateAccumdRdt(CloudFrame_next_, accumulated_dRdt_, accumulated_dRdt_score_, dRdt_, SegmentGround_->groundPtsIdx_next_);
     // double dt_toc10 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'updateAccumdRdt' :" <<  dt_toc10 << " [ms]");
-
     float* ptr_accumulated_dRdt = accumulated_dRdt_.ptr<float>(0);
     float* ptr_accumulated_dRdt_score = accumulated_dRdt_score_.ptr<float>(0);
 
@@ -586,8 +585,8 @@ void MaplessDynamic::solve(
     // cv::waitKey(0);
     // exit(0);
 
-    // pcl::PointCloud<pcl::PointXYZI> pcl_dynamic;
-    // pcl::PointCloud<pcl::PointXYZI> pcl_static;
+    // pcl::PointCloud<slam::PointXYZT> pcl_dynamic;
+    // pcl::PointCloud<slam::PointXYZT> pcl_static;
     // CloudMessageT pcl_static_wtime;
 
     // float* ptr_next_img_x = CloudFrame_next_->str_rhopts_->img_x.ptr<float>(0);
@@ -626,7 +625,7 @@ void MaplessDynamic::solve(
     //                 for (int k = 0; k < CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j].size(); ++k)
     //                 {
     //                     pcl_dynamic.push_back(
-    //                         pcl::PointXYZI((*p1)[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]]));
+    //                         slam::PointXYZT((*p1)[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]]));
     //                 }
     //             }
     //         }
@@ -637,7 +636,7 @@ void MaplessDynamic::solve(
     //                 for (int k = 0; k < CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j].size(); ++k)
     //                 {
     //                     pcl_static.push_back(
-    //                         pcl::PointXYZI((*p1)[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]]));
+    //                         slam::PointXYZT((*p1)[CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid[i_ncols + j][k]]));
     //                 }
     //             }
     //         }
@@ -646,7 +645,7 @@ void MaplessDynamic::solve(
     
     // timer::tic;
     // pcl_static_wtime.reserve(p1->size());
-    slam::XYZTPoint new_pt;
+    slam::PointXYZT new_pt;
 
     std::vector<int>* ptr_vec_tmp = CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid.data();
 
@@ -663,31 +662,26 @@ void MaplessDynamic::solve(
             {
                 for (int k = 0; k < vec_tmp.size(); ++k)
                 {
-                    pcl_static_.push_back(pcl::PointXYZI((*p1)[vec_tmp[k]]));
+                    pcl_static_.push_back((*p1)[vec_tmp[k]]);
 
                     const int &vec_value_tmp = vec_tmp[k];
-                    pcl::PointXYZI p1_point_tmp = (*p1)[vec_value_tmp];
                     if (*(ptr_accumulated_dRdt + i_ncols_j) != 0)
                     {
                         new_pt.x = 0.0;
                         new_pt.y = 0.0;
                         new_pt.z = 0.0;
-                        new_pt.timestamp = (*p1_w_time)[vec_value_tmp].timestamp;
+                        new_pt.timestamp = (*p1)[vec_value_tmp].timestamp;
+                        pcl_static_wtime_.push_back(new_pt);
                     }
                     else
                     {
-                        new_pt.x = p1_point_tmp.x;
-                        new_pt.y = p1_point_tmp.y;
-                        new_pt.z = p1_point_tmp.z;
-                        new_pt.timestamp = (*p1_w_time)[vec_value_tmp].timestamp;
+                        pcl_static_wtime_.push_back((*p1)[vec_value_tmp]);
                         *(ptr_accumulated_dRdt_score + i_ncols + j) = 0; //// update for next iteration
                     }
-
-                    // std::cout <<vec_tmp[k] << "      " <<new_pt.timestamp <<std::endl;
-                    pcl_static_wtime_.push_back(new_pt);
                 }
             }
-            if (*(ptr_accumulated_dRdt + i_ncols_j) != 0) // dynamic
+            // dynamic
+            if (*(ptr_accumulated_dRdt + i_ncols_j) != 0) 
             {
                 if (vec_tmp.size() != 0)
                 {
@@ -724,10 +718,10 @@ void MaplessDynamic::solve(
     //             {
     //                 for (int k = 0; k < vec_tmp.size(); ++k)
     //                 {
-    //                     pcl_static_.push_back(pcl::PointXYZI((*p1)[vec_tmp[k]]));
+    //                     pcl_static_.push_back(slam::PointXYZT((*p1)[vec_tmp[k]]));
 
     //                     const int& vec_value_tmp = vec_tmp[k];
-    //                     pcl::PointXYZI p1_point_tmp = (*p1)[vec_value_tmp];
+    //                     slam::PointXYZT p1_point_tmp = (*p1)[vec_value_tmp];
     //                     new_pt.x = p1_point_tmp.x;
     //                     new_pt.y = p1_point_tmp.y;
     //                     new_pt.z = p1_point_tmp.z;
@@ -752,10 +746,10 @@ void MaplessDynamic::solve(
     //         {
     //             for (int k = 0; k < vec_tmp.size(); ++k)
     //             {
-    //                 pcl_static_.push_back(pcl::PointXYZI((*p1)[vec_tmp[k]]));
+    //                 pcl_static_.push_back(slam::PointXYZT((*p1)[vec_tmp[k]]));
 
     //                 const int &vec_value_tmp = vec_tmp[k];
-    //                 pcl::PointXYZI p1_point_tmp = (*p1)[vec_value_tmp];
+    //                 slam::PointXYZT p1_point_tmp = (*p1)[vec_value_tmp];
     //                 new_pt.x = p1_point_tmp.x;
     //                 new_pt.y = p1_point_tmp.y;
     //                 new_pt.z = p1_point_tmp.z;
@@ -832,7 +826,7 @@ std::string MaplessDynamic::WithLeadingZerosStr(int num) {
       .append(counter_str);
 }
 
-void MaplessDynamic::copyStructAndinitialize(pcl::PointCloud<pcl::PointXYZI>::Ptr p1 ,pcl::PointCloud<pcl::PointXYZI>::Ptr p0, int cnt_data)
+void MaplessDynamic::copyStructAndinitialize(CloudMessageT::Ptr p1 ,CloudMessageT::Ptr p0, int cnt_data)
 {   
     pcl_dynamic_.resize(0);
     pcl_static_.resize(0);
@@ -1008,13 +1002,13 @@ void MaplessDynamic::readKittiPclBinData(std::string &in_file, int file_num)
     }
     input.seekg(0, std::ios::beg);
 
-    // pcl::PointCloud<pcl::PointXYZI>::Ptr points (new pcl::PointCloud<pcl::PointXYZI>);
+    // pcl::PointCloud<slam::PointXYZT>::Ptr points (new pcl::PointCloud<slam::PointXYZT>);
 
     int i;
     for (i=0; input.good() && !input.eof(); ++i) {
-        pcl::PointXYZI point;
+        slam::PointXYZT point;
         input.read((char *) &point.x, 3*sizeof(float));
-        input.read((char *) &point.intensity, sizeof(float));
+        input.read((char *) &point.timestamp, sizeof(float));
         data_buf_[valid_cnt]->pcl_->push_back(point);
     }
     
