@@ -554,8 +554,8 @@ void CloudFrame::interpRangeImage(bool cur_next)
     int i_minus_ncols = 0;
     int i_plus_ncols  = 0;
 
-    // for (int i = 27; i < 32; ++i)
-    for (int i = 35; i > 22; --i)
+    for (int i = 23; i < 36; ++i)
+    // for (int i = 35; i > 22; --i)
     {
         i_ncols = i * n_col;
         // i_minus_ncols = (i - 1) * n_col;
@@ -662,8 +662,8 @@ void CloudFrame::interpRangeImage_dR(bool cur_next)
 
     float* ptr_img_rho          = str_rhopts_->img_rho.ptr<float>(0);
 
-    // for (int i = 27; i < 32; i++)
-    for (int i = 35; i > 22; --i)
+    for (int i = 23; i < 36; i++)
+    // for (int i = 35; i > 22; --i)
     {
         int i_ncols = i * n_col;
         int i_minus_ncols = (i - 1) * n_col;
@@ -770,7 +770,7 @@ void CloudFrame::interpPts(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_in, bool cur
             {
                 for (int k = 0; k < (str_rhopts_->pts_per_pixel_rho[i_ncols_j].size()); ++k)
                 {
-                    if (std::abs((str_rhopts_->pts_per_pixel_rho[i_ncols_j][k] - *(ptr_img_rho + i_ncols_j))) < 0.5)
+                    if (std::abs((str_rhopts_->pts_per_pixel_rho[i_ncols_j][k] - *(ptr_img_rho + i_ncols_j))) < 2.0)
                     {
                         str_rhopts_->pts_per_pixel_index_valid[i_ncols_j].push_back(str_rhopts_->pts_per_pixel_index[i_ncols_j][k]);
                     }

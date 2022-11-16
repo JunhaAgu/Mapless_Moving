@@ -278,7 +278,7 @@ void ObjectExt::extractObjectCandidate(cv::Mat& accumulated_dRdt, std::unique_pt
                 std_diff_z += (diff_z_[i]-mean_diff_z) * (diff_z_[i]-mean_diff_z);
             }
             std_diff_z = sqrt(1.0/((float)diff_z_.size()-1.0)*std_diff_z);
-            if (std_diff_z < 0.07)
+            if (std_diff_z < 0.08)
             {
                 for (int i = 0; i < object_row_.size(); ++i)
                 {

@@ -294,8 +294,8 @@ void dRCalc::interpRangeImageMin(std::unique_ptr<CloudFrame>& CloudFrame_in)
     int i_ncols = 0;
     int i_ncols_j = 0;
 
-    // for (int i = 0 + 2; i < (n_ring_ - 2); ++i)
-    for (int i = n_ring_ -2; i > 1; --i)
+    for (int i = 0 + 2; i < (n_ring_ - 2); ++i)
+    // for (int i = n_ring_ -2; i > 1; --i)
     {
         i_ncols = i * n_col;
         for (int j = 0 + 2; j < (n_radial_ - 2); ++j)
