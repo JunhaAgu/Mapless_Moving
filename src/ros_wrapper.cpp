@@ -6,11 +6,9 @@ ROSWrapper::ROSWrapper(ros::NodeHandle& nh)
     // constructor
     ROS_INFO_STREAM("ROSWrapper - constructed.");
 
-    p0_pcl_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
-    p1_pcl_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
+    p0_pcl_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZI>>(); // current pointcloud
+    p1_pcl_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZI>>(); // next pointcloud
 
-    // p1_pcl_wtime_ = boost::make_shared<pcl::PointCloud<slam::XYZTPoint>>();
-    // std::shared_ptr<pcl::PointCloud<slam::XYZTPoint>> p1_pcl_wtime_ = nullptr;
     p1_pcl_wtime_ = boost::make_shared<pcl::PointCloud<slam::XYZTPoint>>();
 
     pose_pre_ = Eigen::Matrix4d::Identity();
@@ -23,14 +21,14 @@ ROSWrapper::ROSWrapper(ros::NodeHandle& nh)
     solver_ = std::make_unique<MaplessDynamic>(nh_, rosbag_play_, dataset_name_, data_number_);
 
     // subscriber
-    sub_lidar_ = nh_.subscribe<sensor_msgs::PointCloud2>(
+    sub_lidar_  = nh_.subscribe<sensor_msgs::PointCloud2>(
             topicname_lidar_, 100, &ROSWrapper::callbackLiDAR, this);
-    sub_pose_ = nh_.subscribe<nav_msgs::Odometry>(
+    sub_pose_   = nh_.subscribe<nav_msgs::Odometry>(
             topicname_pose_, 100, &ROSWrapper::callbackPose, this);
-// pubLaserOdometry2 = nh.advertise<> ("/integrated_to_init", 5);
-    // publish
-    marker_pub_ = nh_.advertise<visualization_msgs::Marker>("marker/node", 1);
-    lidar_marker_pub_ = nh_.advertise<visualization_msgs::Marker>("lidar_marker/node", 1);
+
+    // publisher
+    marker_pub_         = nh_.advertise<visualization_msgs::Marker>("marker/node", 1);
+    lidar_marker_pub_   = nh_.advertise<visualization_msgs::Marker>("lidar_marker/node", 1);
     
     //marker setting
     {
@@ -122,12 +120,12 @@ void ROSWrapper::callbackPose(const nav_msgs::Odometry::ConstPtr& pose_msg){
         static int cnt_pose = 0 ;
         ros::Time time;
         // double roll, pitch, yaw;
-        if (first_time_stamp_pose_ == 0.0)
+        if (first_timestamp_pose_msg_ == 0.0)
         {
-            first_time_stamp_pose_ = pose_msg->header.stamp.sec + pose_msg->header.stamp.nsec*1e-9;
+            first_timestamp_pose_msg_ = pose_msg->header.stamp.sec + pose_msg->header.stamp.nsec*1e-9;
         }
         ROS_INFO_STREAM("cnt pose: " << cnt_pose);
-        msg_pose_input_time_ = pose_msg->header.stamp.sec + pose_msg->header.stamp.nsec*1e-9 - first_time_stamp_pose_;
+        msg_pose_input_time_ = pose_msg->header.stamp.sec + pose_msg->header.stamp.nsec*1e-9 - first_timestamp_pose_msg_;
         std::cout << "pose time: " << msg_pose_input_time_ << std::endl;
         geoQuat_ = pose_msg->pose.pose.orientation;
         // tf::Matrix3x3(tf::Quaternion(geoQuat.z, geoQuat.x, geoQuat.y, geoQuat.w)).getRPY(roll, pitch, yaw);
@@ -178,34 +176,24 @@ void ROSWrapper::callbackPose(const nav_msgs::Odometry::ConstPtr& pose_msg){
 }
 
 void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
-    if (first_time_stamp_pcl_ == 0.0)
+    if (first_timestamp_pcl_msg_ == 0.0)
     {
-        first_time_stamp_pcl_ = msg->header.stamp.sec + msg->header.stamp.nsec*1e-9;
+        first_timestamp_pcl_msg_ = msg->header.stamp.sec + msg->header.stamp.nsec*1e-9;
     }
 
-    // if (is_initialized_)
-    // {
-    //     first_time_stamp_pcl_ = msg_pcl_input_time_;
-    //     std::cout << msg_pcl_input_time_ << std::endl;
-    //     std::cout << msg_pose_input_time_ << std::endl;
-    //     while (msg_pcl_input_time_ < msg_pose_input_time_)
-    //     {
-    //         // std::cout<< "wait for pose input" <<std::endl;
-    //     }
-    // }
-
-    static int cnt_data = 0;
+    static int cnt_pcl = 0;
     static int cnt_initial = 0;
     static double total_time = 0.0;
-    std::cout<< " =========================== START =========================== " << cnt_data << std::endl;
-    std::cout<< "Iter: "<< cnt_data << std::endl;
-    msg_pcl_input_time_ = msg->header.stamp.sec + msg->header.stamp.nsec*1e-9 - first_time_stamp_pcl_; 
-    std::cout << "debug/pc_raw time: " << msg_pcl_input_time_ << std::endl;
+    
+    std::cout<< " =========================== START =========================== " << cnt_pcl << std::endl;
+    std::cout<< "Iter: "<< cnt_pcl << std::endl;
+    timestamp_pcl_msg_ = msg->header.stamp.sec + msg->header.stamp.nsec*1e-9 - first_timestamp_pcl_msg_; 
+    std::cout << "pcl(debug/pc_raw) time: " << timestamp_pcl_msg_ << std::endl;
 
     cloudHeader_ = msg->header;
     if( is_initialized_ && is_initialized_pose_ ){ // If initialized, 
         // 0. Get the current LiDAR data
-        // p1_msg_ = *msg;
+        p1_msg_ = *msg;
         pcl::fromROSMsg(*msg, *p1_pcl_);
         pcl::fromROSMsg(*msg, *p1_pcl_wtime_);
         // std::cout << "size: p1_pcl_: "<< (*p1_pcl_).size() << ", " <<"size: p1_pcl_wtime_: " << (*p1_pcl_wtime_).size() <<std::endl;
@@ -220,7 +208,7 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
         }
         else
         {
-            T01_ = solver_->data_buf_[cnt_data]->T_gt_; //KITTI: cnt_data
+            T01_ = solver_->data_buf_[cnt_pcl]->T_gt_; //KITTI: cnt_pcl
             std::cout << T01_ << std::endl;
             T10_ = T01_.inverse();
             //"00": +3
@@ -246,20 +234,20 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
         // ROS_INFO_STREAM("elapsed time for 'genRangeImages' :" << dt1 << " [ms]");
 
         // timer::tic();
-        solver_->solve(p0_pcl_, p1_pcl_, T10_, mask1, cnt_data, cloudHeader_, p1_pcl_wtime_);
+        solver_->solve(p0_pcl_, p1_pcl_, T10_, mask1, cnt_pcl, cloudHeader_, p1_pcl_wtime_);
         double dt_solver = timer::toc(); // milliseconds
         ROS_INFO_STREAM("elapsed time for 'solver' :" << dt_solver << " [ms]");
         total_time += dt_solver;
-        ROS_INFO_STREAM("Average time for 'solver' :" << total_time/cnt_data << " [ms]" << " " << "window :"<<cnt_data);
+        ROS_INFO_STREAM("Average time for 'solver' :" << total_time/cnt_pcl << " [ms]" << " " << "window :"<<cnt_pcl);
 
         // solver_->pub_static_pts_.publish(msg);
-        ROS_INFO("pub msg: %d",cnt_data);
+        ROS_INFO("pub msg: %d",cnt_pcl);
 
         // // 3. Update the previous variables
         updatePreviousVariables(p0_pcl_, p1_pcl_, mask1, p1_pcl_wtime_);
         
         marker_.header.stamp = ros::Time::now();
-        marker_.text = std::to_string(cnt_data);
+        marker_.text = std::to_string(cnt_pcl);
         marker_.pose.position.x = 0; //T01_(0,3);     //x
         marker_.pose.position.y = 0; //T01_(1,3);     //y
         marker_.pose.position.z = 10; //T01_(2,3) + 10; //z
@@ -272,7 +260,7 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
         marker_pub_.publish(marker_);
         lidar_marker_pub_.publish(lidar_marker_);
 
-        cnt_data += 1;
+        cnt_pcl += 1;
     }
     else if (cnt_initial>1)  // If not initialized, 130
     {    is_initialized_ = true;
@@ -287,7 +275,7 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
             ROS_INFO_STREAM("p0_ size:" << p0_pcl_->size());
         }
         // mask0_test_.resize(p0_msg_test_.width, true);
-        cnt_data += 1;
+        cnt_pcl += 1;
 
         // pcl::toROSMsg(*p0_pcl_, pcl_msg_);
         // pcl_msg_.header.frame_id = "map";
@@ -295,7 +283,7 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
         // solver_->pub_static_pts_.publish(pcl_msg_);
         
         solver_->pub_static_pts_.publish(msg);
-        ROS_INFO("pub msg: %d",cnt_data);
+        ROS_INFO("pub msg: %d",cnt_pcl);
     }
     else
     {
@@ -307,9 +295,9 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
         // solver_->pub_static_pts_.publish(pcl_msg_);
         
         solver_->pub_static_pts_.publish(msg);
-        ROS_INFO("pub msg: %d",cnt_data);
+        ROS_INFO("pub msg: %d",cnt_pcl);
 
-        msg_pcl_input_time_ = 0;
+        timestamp_pcl_msg_ = 0;
     }
     cnt_initial += 1;
     if (T01_slam_== false)

@@ -32,21 +32,6 @@ typedef Eigen::Vector3f   Euler;
 #define R2D 180.0f/M_PI
 #define D2R M_PI/180.0f
 
-// #define PCL_NO_PRECOMPILE
-// struct PointXYZt
-// {
-//   PCL_ADD_POINT4D;                  // preferred way of adding a XYZ+padding
-//   float timestamp;
-//   EIGEN_MAKE_ALIGNED_OPERATOR_NEW     // make sure our new allocators are aligned
-// } EIGEN_ALIGN16;                    // enforce SSE padding for correct memory alignment
-
-// POINT_CLOUD_REGISTER_POINT_STRUCT (PointXYZt,           // here we assume a XYZ + "timestamp" (as fields)
-//                                    (float, x, x)
-//                                    (float, y, y)
-//                                    (float, z, z)
-//                                    (float, timestamp, timestamp)
-// )
-
 namespace slam {
 
     // A XYZT point compatible with pcl

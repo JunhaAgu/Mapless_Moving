@@ -9,7 +9,6 @@ MaplessDynamic::MaplessDynamic(ros::NodeHandle& nh, bool rosbag_play, std::strin
  {
     // constructor
     ROS_INFO_STREAM("MaplessDynamic - constructed.");
-    // IMPLEMENT YOUR CODE FROM THIS LINE.
 
     pub_dynamic_pts_ = nh_.advertise<sensor_msgs::PointCloud2>("/dynamic_pts",1);
     pub_static_pts_  = nh_.advertise<sensor_msgs::PointCloud2>("/static_pts",1); // /static_pts

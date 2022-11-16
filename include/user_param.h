@@ -64,7 +64,7 @@ class UserParam
     private:
 
     public:
-        std::string dataset_name_; //from roslaunch
+        std::string dataset_name_; //from roslaunch --> ros_wrapper --> mapless_dynamic
         CloudFilterParam cloud_filter_param_;
         SensorSpec sensor_spec_;
         RansacParam ransac_param_;

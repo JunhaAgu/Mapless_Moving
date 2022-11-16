@@ -13,7 +13,7 @@ UserParam::~UserParam()
 
 void UserParam::getUserSettingParameters(std::string& data_type)
 {
-    dataset_name_ = data_type;
+    this->dataset_name_ = data_type;
 
     cloud_filter_param_.h_factor_ = 5;
     cloud_filter_param_.v_factor_ = 1;
@@ -21,7 +21,6 @@ void UserParam::getUserSettingParameters(std::string& data_type)
 
     this->calVangle(data_type);
     
-
     ground_segment_param_.downsample_size = 10;
     ransac_param_.iter_ = 30;
     ransac_param_.thr_ = 0.1;
@@ -103,9 +102,9 @@ void UserParam::calVangle(std::string& data_type)
         sensor_spec_.lidar_elevation_criteria_[1] = -11.1873016;
         sensor_spec_.lidar_elevation_criteria_[2] = -11.6126984;
         sensor_spec_.lidar_elevation_criteria_[3] = -24.8;
-        sensor_spec_.lidar_elevation_line0_[0] = -2.3507463;  //(32-63)/(-8.5-(-23.8))*(x-(-8.5))+32
-        sensor_spec_.lidar_elevation_line0_[1] = +4.7014925; //(32-63)/(-8.5-(-23.8))*(x-(-8.5))+32
-        sensor_spec_.lidar_elevation_line1_[0] = -2.3507463;  //(32-63)/(-8.5-(-23.8))*(x-(-8.5))+32
-        sensor_spec_.lidar_elevation_line1_[1] = +4.7014925; //(32-63)/(-8.5-(-23.8))*(x-(-8.5))+32
+        sensor_spec_.lidar_elevation_line0_[0] = -2.3507463;    //(0-63)/(+2-(-24.8))*(x-2)+0
+        sensor_spec_.lidar_elevation_line0_[1] = +4.7014925;    //(0-63)/(+2-(-24.8))*(x-2)+0
+        sensor_spec_.lidar_elevation_line1_[0] = -2.3507463;    //(0-63)/(+2-(-24.8))*(x-2)+0
+        sensor_spec_.lidar_elevation_line1_[1] = +4.7014925;    //(0-63)/(+2-(-24.8))*(x-2)+0
     }
 };
