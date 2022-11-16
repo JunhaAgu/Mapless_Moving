@@ -9,8 +9,8 @@ dRCalc::dRCalc(const std::unique_ptr<UserParam>& user_param)
     n_ring_     = user_param->image_param_.height_;
     n_radial_   = user_param->image_param_.width_;
 
-    velo_cur_       = boost::make_shared<CloudMessageT>();
-    cur_pts_warped_ = boost::make_shared<CloudMessageT>();
+    velo_cur_       = boost::make_shared<PointCloudwithTime>();
+    cur_pts_warped_ = boost::make_shared<PointCloudwithTime>();
 };
 
 dRCalc::~dRCalc()
@@ -19,7 +19,7 @@ dRCalc::~dRCalc()
 };
 
 void dRCalc::dR_warpPointcloud(std::unique_ptr<CloudFrame>& CloudFrame_next, std::unique_ptr<CloudFrame>& CloudFrame_cur, std::unique_ptr<CloudFrame>& CloudFrame_cur_warped,
-                                CloudMessageT::Ptr p0, Pose& T10, int cnt_data, cv::Mat& dRdt)
+                                PointCloudwithTime::Ptr p0, Pose& T10, int cnt_data, cv::Mat& dRdt)
 {
     int n_row = CloudFrame_next->str_rhopts_->img_rho.rows;
     int n_col = CloudFrame_next->str_rhopts_->img_rho.cols; 

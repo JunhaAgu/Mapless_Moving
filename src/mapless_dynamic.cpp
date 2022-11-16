@@ -12,7 +12,7 @@ MaplessDynamic::MaplessDynamic(ros::NodeHandle& nh, bool rosbag_play, std::strin
 
     pub_dynamic_pts_ = nh_.advertise<sensor_msgs::PointCloud2>("/dynamic_pts",1);
     pub_static_pts_  = nh_.advertise<sensor_msgs::PointCloud2>("/static_pts",1); // /static_pts
-    // pub_static_pts_  = nh_.advertise<CloudMessageT>("/static_pts",1); // ct_icp
+    // pub_static_pts_  = nh_.advertise<PointCloudwithTime>("/static_pts",1); // ct_icp
 
     // Class UserParam
     std::unique_ptr<UserParam> UserParam_;
@@ -21,8 +21,8 @@ MaplessDynamic::MaplessDynamic(ros::NodeHandle& nh, bool rosbag_play, std::strin
 
     // this->getUserSettingParameters();
 
-    p0_pcl_test_ = boost::make_shared<pcl::PointCloud<slam::PointXYZT>>();
-    p1_pcl_test_ = boost::make_shared<pcl::PointCloud<slam::PointXYZT>>();
+    p0_pcl_test_ = boost::make_shared<PointCloudwithTime>();
+    p1_pcl_test_ = boost::make_shared<PointCloudwithTime>();
     
 
     // Construct Class
@@ -266,7 +266,7 @@ void MaplessDynamic::loadTestData(){
         all_pose_[i].reserve(12);
         data_buf_.push_back(new TestData);
 
-        data_buf_[i]->pcl_ = boost::make_shared<pcl::PointCloud<slam::PointXYZT>>();
+        data_buf_[i]->pcl_ = boost::make_shared<PointCloudwithTime>();
         data_buf_[i]->pcl_msg_ = (new sensor_msgs::PointCloud2);
     }
     // read pose file
@@ -415,7 +415,7 @@ void MaplessDynamic::loadTestData(){
 
 void MaplessDynamic::solve(
     /* inputs */ //const sensor_msgs::PointCloud2& p1
-    CloudMessageT::Ptr p0, CloudMessageT::Ptr p1, const Pose& T10, 
+    PointCloudwithTime::Ptr p0, PointCloudwithTime::Ptr p1, const Pose& T10, 
     /* outputs */ 
     Mask& mask1, int cnt_data, std_msgs::Header& cloudHeader)
 {
@@ -430,7 +430,7 @@ void MaplessDynamic::solve(
     // icp_.setInputTarget(p1);
     // // icp_.setMaxCorrespondenceDistance(0.05);
     // icp_.setMaximumIterations(1);
-    // pcl::PointCloud<slam::PointXYZT> Final;
+    // PointCloudwithTime Final;
     // icp_.align(Final);
     // Eigen::Matrix4f Tcn   = icp_.getFinalTransformation();
     // double dd = timer::toc(); // milliseconds
@@ -585,9 +585,9 @@ void MaplessDynamic::solve(
     // cv::waitKey(0);
     // exit(0);
 
-    // pcl::PointCloud<slam::PointXYZT> pcl_dynamic;
-    // pcl::PointCloud<slam::PointXYZT> pcl_static;
-    // CloudMessageT pcl_static_wtime;
+    // PointCloudwithTime pcl_dynamic;
+    // PointCloudwithTime pcl_static;
+    // PointCloudwithTime pcl_static_wtime;
 
     // float* ptr_next_img_x = CloudFrame_next_->str_rhopts_->img_x.ptr<float>(0);
     // float* ptr_next_img_y = CloudFrame_next_->str_rhopts_->img_y.ptr<float>(0);
@@ -826,7 +826,7 @@ std::string MaplessDynamic::WithLeadingZerosStr(int num) {
       .append(counter_str);
 }
 
-void MaplessDynamic::copyStructAndinitialize(CloudMessageT::Ptr p1 ,CloudMessageT::Ptr p0, int cnt_data)
+void MaplessDynamic::copyStructAndinitialize(PointCloudwithTime::Ptr p1 ,PointCloudwithTime::Ptr p0, int cnt_data)
 {   
     pcl_dynamic_.resize(0);
     pcl_static_.resize(0);
@@ -1002,7 +1002,7 @@ void MaplessDynamic::readKittiPclBinData(std::string &in_file, int file_num)
     }
     input.seekg(0, std::ios::beg);
 
-    // pcl::PointCloud<slam::PointXYZT>::Ptr points (new pcl::PointCloud<slam::PointXYZT>);
+    // PointCloudwithTime::Ptr points (new PointCloudwithTime);
 
     int i;
     for (i=0; input.good() && !input.eof(); ++i) {

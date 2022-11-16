@@ -9,8 +9,8 @@ ROSWrapper::ROSWrapper(ros::NodeHandle& nh)
     // p0_pcl_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZI>>(); // current pointcloud
     // p1_pcl_ = boost::make_shared<pcl::PointCloud<[pcl]::PointXYZI>>(); // next pointcloud
 
-    p0_pcl_wtime_ = boost::make_shared<pcl::PointCloud<slam::PointXYZT>>();
-    p1_pcl_wtime_ = boost::make_shared<pcl::PointCloud<slam::PointXYZT>>();
+    p0_pcl_wtime_ = boost::make_shared<PointCloudwithTime>();
+    p1_pcl_wtime_ = boost::make_shared<PointCloudwithTime>();
 
     pose_pre_ = Eigen::Matrix4d::Identity();
 
@@ -246,7 +246,6 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
         is_initialized_ = true;
 
         // Initialize the first data.
-        // p0_msg_ = *msg;
         pcl::fromROSMsg(*msg, *p0_pcl_wtime_);
 
         // mask0.resize(p0.width, true);
@@ -268,13 +267,7 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
     }
     else
     {
-        // p0_msg_ = *msg;
-        // pcl::fromROSMsg(p0_msg_, *p0_pcl_);
-        // pcl::toROSMsg(*p0_pcl_, pcl_msg_);
-        // pcl_msg_.header.frame_id = "map";
-        // pcl_msg_.header.stamp = cloudHeader_.stamp;
-        // solver_->pub_static_pts_.publish(pcl_msg_);
-        
+
         solver_->pub_static_pts_.publish(msg); // publish all pcl
         ROS_INFO("Mapless Dynamic: Not started yet");
         ROS_INFO("pub msg: %d",cnt_pcl);
@@ -288,7 +281,7 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
     }
 };
 
-void ROSWrapper::updatePreviousVariables(CloudMessageT::Ptr p0_pcl_wtime, CloudMessageT::Ptr p1_pcl_wtime, const Mask& mask1)
+void ROSWrapper::updatePreviousVariables(PointCloudwithTime::Ptr p0_pcl_wtime, PointCloudwithTime::Ptr p1_pcl_wtime, const Mask& mask1)
 {
     // p0_pcl_ = p1_pcl_;
 

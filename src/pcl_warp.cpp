@@ -5,8 +5,8 @@ PclWarp::PclWarp(const std::unique_ptr<UserParam>& user_param)
     img_height_ = user_param->image_param_.height_;
     img_width_  = user_param->image_param_.width_;
 
-    velo_xyz_       = boost::make_shared<CloudMessageT>();
-    pts_warpewd_    = boost::make_shared<CloudMessageT>();
+    velo_xyz_       = boost::make_shared<PointCloudwithTime>();
+    pts_warpewd_    = boost::make_shared<PointCloudwithTime>();
 
 };
 

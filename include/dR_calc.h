@@ -19,15 +19,15 @@ class dRCalc
         int n_radial_;
 
     public:
-        CloudMessageT::Ptr velo_cur_;
-        CloudMessageT::Ptr cur_pts_warped_;
+        PointCloudwithTime::Ptr velo_cur_;
+        PointCloudwithTime::Ptr cur_pts_warped_;
 
     public:
         dRCalc(const std::unique_ptr<UserParam> &user_param);
         ~dRCalc();
 
         void dR_warpPointcloud(std::unique_ptr<CloudFrame>& CloudFrame_next, std::unique_ptr<CloudFrame>& CloudFrame_cur, std::unique_ptr<CloudFrame>& CloudFrame_cur_warped,
-                                CloudMessageT::Ptr p0, Pose &T10, int cnt_data, cv::Mat &dRdt);
+                                PointCloudwithTime::Ptr p0, Pose &T10, int cnt_data, cv::Mat &dRdt);
         
         void compensateCurRhoZeroWarp(std::unique_ptr<CloudFrame>& CloudFrame_cur);
         

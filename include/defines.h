@@ -83,7 +83,7 @@ POINT_CLOUD_REGISTER_POINT_STRUCT (slam::PointXYZT,
                                     (float, z, z)
                                     (double, timestamp, timestamp))
 
-typedef pcl::PointCloud<slam::PointXYZT> CloudMessageT;
+typedef pcl::PointCloud<slam::PointXYZT> PointCloudwithTime;
 
 struct StrRhoPts
 {

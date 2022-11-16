@@ -39,15 +39,15 @@ class CloudFrame
         CloudFrame(const std::unique_ptr<UserParam>& user_param);
         ~CloudFrame();
 
-        void genRangeImages(pcl::PointCloud<slam::PointXYZT>::Ptr pcl_in, bool cur_next);
+        void genRangeImages(PointCloudwithTime::Ptr pcl_in, bool cur_next);
 
-        void genRangeImages_dR(pcl::PointCloud<slam::PointXYZT>::Ptr pcl_in, bool cur_next);
+        void genRangeImages_dR(PointCloudwithTime::Ptr pcl_in, bool cur_next);
 
-        void genRangeImages_noComp(pcl::PointCloud<slam::PointXYZT>::Ptr pcl_in, bool cur_next);
+        void genRangeImages_noComp(PointCloudwithTime::Ptr pcl_in, bool cur_next);
 
-        void calcuateRho(pcl::PointCloud<slam::PointXYZT>::Ptr pcl_in, bool cur_next);
+        void calcuateRho(PointCloudwithTime::Ptr pcl_in, bool cur_next);
         
-        void calcuateRho_SIMD(pcl::PointCloud<slam::PointXYZT>::Ptr pcl_in, bool cur_next);
+        void calcuateRho_SIMD(PointCloudwithTime::Ptr pcl_in, bool cur_next);
 
         void makeRangeImageAndPtsPerPixel(bool cur_next);
 
@@ -57,7 +57,7 @@ class CloudFrame
 
         void interpRangeImage_dR(bool cur_next);
 
-        void interpPts(pcl::PointCloud<slam::PointXYZT>::Ptr pcl_in, bool cur_next);
+        void interpPts(PointCloudwithTime::Ptr pcl_in, bool cur_next);
 
         void reset();
 };

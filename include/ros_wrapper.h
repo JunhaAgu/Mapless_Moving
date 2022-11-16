@@ -35,8 +35,8 @@ private:
     bool                     is_pose_received_;
     // pcl::PointCloud<pcl::PointXYZI>::Ptr p0_pcl_;
     // pcl::PointCloud<pcl::PointXYZI>::Ptr p1_pcl_;
-    pcl::PointCloud<slam::PointXYZT>::Ptr p0_pcl_wtime_;
-    pcl::PointCloud<slam::PointXYZT>::Ptr p1_pcl_wtime_;
+    PointCloudwithTime::Ptr p0_pcl_wtime_;
+    PointCloudwithTime::Ptr p1_pcl_wtime_;
 
     Pose pose_pre_;
     Pose pose_cur_;
@@ -92,7 +92,7 @@ private:
     void getLaunchParameters();
     void callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg);
     void callbackPose(const nav_msgs::Odometry::ConstPtr& pose);
-    void updatePreviousVariables(CloudMessageT::Ptr p0_pcl_wtime, CloudMessageT::Ptr p1_pcl_wtime, const Mask& mask1);
+    void updatePreviousVariables(PointCloudwithTime::Ptr p0_pcl_wtime, PointCloudwithTime::Ptr p1_pcl_wtime, const Mask& mask1);
 };
 
 #endif

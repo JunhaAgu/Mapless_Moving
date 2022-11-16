@@ -37,7 +37,7 @@
 struct TestData 
 {
     Pose T_gt_;
-    CloudMessageT::Ptr pcl_;
+    PointCloudwithTime::Ptr pcl_;
     sensor_msgs::PointCloud2* pcl_msg_;
 };
 
@@ -101,9 +101,9 @@ private:
     bool is_initialized_test_;
     Mask                     mask0_test_;
     sensor_msgs::PointCloud2 p0_msg_test_;
-    pcl::PointCloud<slam::PointXYZT>::Ptr p0_pcl_test_;
+    PointCloudwithTime::Ptr p0_pcl_test_;
     sensor_msgs::PointCloud2 p1_msg_test_;
-    pcl::PointCloud<slam::PointXYZT>::Ptr p1_pcl_test_;
+    PointCloudwithTime::Ptr p1_pcl_test_;
 
     std::vector<std::string> file_lists_;
 
@@ -115,9 +115,9 @@ public:
     // pcl::IterativeClosestPoint<pcl::PointXYZI, pcl::PointXYZI> icp_;
 
 public:
-    CloudMessageT pcl_dynamic_;
-    CloudMessageT pcl_static_;
-    CloudMessageT pcl_static_wtime_;
+    PointCloudwithTime pcl_dynamic_;
+    PointCloudwithTime pcl_static_;
+    PointCloudwithTime pcl_static_wtime_;
 
     sensor_msgs::PointCloud2 converted_msg_d_;
     sensor_msgs::PointCloud2 converted_msg_s_;
@@ -130,7 +130,7 @@ public:
 
     void solve(        
         /* inputs */ 
-        CloudMessageT::Ptr p0, CloudMessageT::Ptr p1, const Pose& T10, 
+        PointCloudwithTime::Ptr p0, PointCloudwithTime::Ptr p1, const Pose& T10, 
         /* outputs */
         Mask& mask1, int cnt, std_msgs::Header& cloudHeader);
 
@@ -138,7 +138,7 @@ public:
 private:
     void getUserSettingParameters();
 
-    void copyStructAndinitialize(CloudMessageT::Ptr p1, CloudMessageT::Ptr p0, int cnt_data);
+    void copyStructAndinitialize(PointCloudwithTime::Ptr p1, PointCloudwithTime::Ptr p0, int cnt_data);
 
     void countZerofloat(cv::Mat& input_mat);
     void countZeroint(cv::Mat& input_mat);

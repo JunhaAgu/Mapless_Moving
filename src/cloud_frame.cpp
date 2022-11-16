@@ -66,7 +66,7 @@ CloudFrame::~CloudFrame()
     // destructor
 };
 
-void CloudFrame::genRangeImages(pcl::PointCloud<slam::PointXYZT>::Ptr pcl_in, bool cur_next)
+void CloudFrame::genRangeImages(PointCloudwithTime::Ptr pcl_in, bool cur_next)
 {
     n_pts_ = pcl_in->size();
 
@@ -110,7 +110,7 @@ void CloudFrame::genRangeImages(pcl::PointCloud<slam::PointXYZT>::Ptr pcl_in, bo
     // ROS_INFO_STREAM("elapsed time for 'interpPts' :" << dt_interpPts << " [ms]");
 }
 
-void CloudFrame::genRangeImages_dR(pcl::PointCloud<slam::PointXYZT>::Ptr pcl_in, bool cur_next)
+void CloudFrame::genRangeImages_dR(PointCloudwithTime::Ptr pcl_in, bool cur_next)
 {
     n_pts_ = pcl_in->size();
 
@@ -130,7 +130,7 @@ void CloudFrame::genRangeImages_dR(pcl::PointCloud<slam::PointXYZT>::Ptr pcl_in,
     // ROS_INFO_STREAM("elapsed time for 'interpRangeImage_dR' :" << dt_3 << " [ms]");
 }
 
-void CloudFrame::genRangeImages_noComp(pcl::PointCloud<slam::PointXYZT>::Ptr pcl_in, bool cur_next)
+void CloudFrame::genRangeImages_noComp(PointCloudwithTime::Ptr pcl_in, bool cur_next)
 {
     n_pts_ = pcl_in->size();
 
@@ -139,7 +139,7 @@ void CloudFrame::genRangeImages_noComp(pcl::PointCloud<slam::PointXYZT>::Ptr pcl
     makeRangeImageAndPtsPerPixel(cur_next);
 }
 
-void CloudFrame::calcuateRho(pcl::PointCloud<slam::PointXYZT>::Ptr pcl_in, bool cur_next)
+void CloudFrame::calcuateRho(PointCloudwithTime::Ptr pcl_in, bool cur_next)
 {
     // timer::tic();
 
@@ -254,7 +254,7 @@ void CloudFrame::calcuateRho(pcl::PointCloud<slam::PointXYZT>::Ptr pcl_in, bool 
 
 
 void CloudFrame::calcuateRho_SIMD(
-    pcl::PointCloud<slam::PointXYZT>::Ptr pcl_in, bool cur_next)
+    PointCloudwithTime::Ptr pcl_in, bool cur_next)
 {
     float twopi         = 2.0*M_PI;
     float offset_theta  = M_PI;
@@ -748,7 +748,7 @@ void CloudFrame::interpRangeImage_dR(bool cur_next)
     img_rho_new.copyTo(str_rhopts_->img_rho);
 }
 
-void CloudFrame::interpPts(pcl::PointCloud<slam::PointXYZT>::Ptr pcl_in, bool cur_next)
+void CloudFrame::interpPts(PointCloudwithTime::Ptr pcl_in, bool cur_next)
 {
     int n_row = str_rhopts_->img_rho.rows;
     int n_col = str_rhopts_->img_rho.cols;

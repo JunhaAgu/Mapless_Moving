@@ -15,8 +15,8 @@ private:
     int img_width_;
 
 public:
-    CloudMessageT::Ptr velo_xyz_;
-    CloudMessageT::Ptr pts_warpewd_;
+    PointCloudwithTime::Ptr velo_xyz_;
+    PointCloudwithTime::Ptr pts_warpewd_;
 
 public:
     PclWarp(const std::unique_ptr<UserParam> &user_param);
