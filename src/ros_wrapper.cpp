@@ -6,9 +6,6 @@ ROSWrapper::ROSWrapper(ros::NodeHandle& nh)
     // constructor
     ROS_INFO_STREAM("ROSWrapper - constructed.");
 
-    // p0_pcl_ = boost::make_shared<pcl::PointCloud<pcl::PointXYZI>>(); // current pointcloud
-    // p1_pcl_ = boost::make_shared<pcl::PointCloud<[pcl]::PointXYZI>>(); // next pointcloud
-
     p0_pcl_wtime_ = boost::make_shared<PointCloudwithTime>();
     p1_pcl_wtime_ = boost::make_shared<PointCloudwithTime>();
 
@@ -164,26 +161,19 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
     static int cnt_initial = 0;
     static double total_time = 0.0;
     
-    std::cout<< " ====================== START ====================== " << cnt_pcl << std::endl;
+    std::cout<< " ====================== START ====================== " << std::endl;
     std::cout<< "Iter: "<< cnt_pcl << std::endl;
     timestamp_pcl_msg_ = msg->header.stamp.sec + msg->header.stamp.nsec*1e-9 - first_timestamp_pcl_msg_; 
     std::cout << "pcl(debug/pc_raw) time: " << timestamp_pcl_msg_ << std::endl;
 
     cloudHeader_ = msg->header;
     if( is_initialized_ && is_initialized_pose_ ){ // If initialized, 
-        // 0. Get the current LiDAR data
-        // p1_msg_ = *msg;
-        // pcl::fromROSMsg(*msg, *p1_pcl_);
+        // 0. Get the next LiDAR data
         pcl::fromROSMsg(*msg, *p1_pcl_wtime_);
-        // std::cout << "size: p1_pcl_: "<< (*p1_pcl_).size() << ", " <<"size: p1_pcl_wtime_: " << (*p1_pcl_wtime_).size() <<std::endl;
 
         // 1. Calculate T01 from the SLAM (or Odometry) algorithm
         if (T01_slam_==true)
         {
-            // timer::tic();
-            // T01 =  vo->solve();
-            // double dt_slam = timer::toc(); // milliseconds
-            // ROS_INFO_STREAM("elapsed time for 'SLAM' :" << dt_slam << " [ms]");
         }
         else
         {
@@ -195,31 +185,24 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
         }
 
         // 2. Solve the Mapless Dynamic algorithm.
-        // timer::tic();
+
         Mask mask1;
 
         ROS_INFO_STREAM("Data is from rosbag");
-        ROS_INFO_STREAM("p0_ size:" << p0_pcl_wtime_->size() << " // " << "p1_ size:" << p1_pcl_wtime_->size() << " ");
-        // for (int i=0; i<p1_pcl_wtime_->size() ; ++i)
-        // {
-        //     std::cout << p1_pcl_wtime_->points[i].timestamp<<std::endl;
-        // }
-        // std::cout << msg->header.stamp.sec<<std::endl;
-        // std::cout << msg->header.stamp.nsec<<std::endl;
-        // exit(0);
+        ROS_INFO_STREAM("p0_ size:" << p0_pcl_wtime_->size() );
+        ROS_INFO_STREAM("p1_ size:" << p1_pcl_wtime_->size() );
+        
         timer::tic();
         solver_->CloudFrame_next_->genRangeImages(p1_pcl_wtime_, true);
         // double dt1 = timer::toc(); // milliseconds
         // ROS_INFO_STREAM("elapsed time for 'genRangeImages' :" << dt1 << " [ms]");
 
-        // timer::tic();
         solver_->solve(p0_pcl_wtime_, p1_pcl_wtime_, T10_, mask1, cnt_pcl, cloudHeader_);
         double dt_solver = timer::toc(); // milliseconds
         ROS_INFO_STREAM("elapsed time for 'solver' :" << dt_solver << " [ms]");
         total_time += dt_solver;
         ROS_INFO_STREAM("Average time for 'solver' :" << total_time/cnt_pcl << " [ms]" << " " << "window :"<<cnt_pcl);
 
-        // solver_->pub_static_pts_.publish(msg);
         ROS_INFO("pub msg: %d",cnt_pcl);
 
         // // 3. Update the previous variables

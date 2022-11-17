@@ -28,13 +28,9 @@ class ROSWrapper{
 // Previous variables
 private:
     Mask                     mask0;
-    // sensor_msgs::PointCloud2 p0_msg_;
-    // sensor_msgs::PointCloud2 p1_msg_;
     bool                     is_initialized_; // = default : false.
     bool                     is_initialized_pose_; // = default : false.
     bool                     is_pose_received_;
-    // pcl::PointCloud<pcl::PointXYZI>::Ptr p0_pcl_;
-    // pcl::PointCloud<pcl::PointXYZI>::Ptr p1_pcl_;
     PointCloudwithTime::Ptr p0_pcl_wtime_;
     PointCloudwithTime::Ptr p1_pcl_wtime_;
 

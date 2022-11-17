@@ -770,13 +770,16 @@ void MaplessDynamic::solve(
     // dynamic //
     
     pcl::toROSMsg(pcl_dynamic_, converted_msg_d_);
+    
     // save pcl_dynamic points
+    /*
     std::string folder_name = "/home/junhakim/label_results/" + dataset_name_ + "/" + data_number_;
     std::string cloud_name = folder_name + "/dynamic_" + WithLeadingZerosStr(cnt_data) + ".pcd";
     if(pcl_dynamic_.size() > 0)
     {
         pcl::io::savePCDFileBinary(cloud_name, pcl_dynamic_);
     }
+    // */
     
 
     converted_msg_d_.header.frame_id = "map";
