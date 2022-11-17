@@ -248,26 +248,19 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
         // Initialize the first data.
         pcl::fromROSMsg(*msg, *p0_pcl_wtime_);
 
-        // mask0.resize(p0.width, true);
         if(is_initialized_pose_==true)
         {
             solver_->CloudFrame_cur_ ->genRangeImages(p0_pcl_wtime_, true);
             ROS_INFO_STREAM("p0_ size:" << p0_pcl_wtime_->size());
         }
-        // mask0_test_.resize(p0_msg_test_.width, true);
-        cnt_pcl += 1;
 
-        // pcl::toROSMsg(*p0_pcl_, pcl_msg_);
-        // pcl_msg_.header.frame_id = "map";
-        // pcl_msg_.header.stamp = cloudHeader_.stamp;
-        // solver_->pub_static_pts_.publish(pcl_msg_);
+        cnt_pcl += 1;
         
         solver_->pub_static_pts_.publish(msg);
         ROS_INFO("pub msg: %d",cnt_pcl);
     }
     else
     {
-
         solver_->pub_static_pts_.publish(msg); // publish all pcl
         ROS_INFO("Mapless Dynamic: Not started yet");
         ROS_INFO("pub msg: %d",cnt_pcl);
@@ -283,12 +276,9 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
 
 void ROSWrapper::updatePreviousVariables(PointCloudwithTime::Ptr p0_pcl_wtime, PointCloudwithTime::Ptr p1_pcl_wtime, const Mask& mask1)
 {
-    // p0_pcl_ = p1_pcl_;
 
     p0_pcl_wtime->resize(0);
     pcl::copyPointCloud(*p1_pcl_wtime, *p0_pcl_wtime);
     p1_pcl_wtime->resize(0);
     
-    mask0.resize(mask1.size());
-    std::copy(mask1.begin(), mask1.end(), mask0.begin());
 };

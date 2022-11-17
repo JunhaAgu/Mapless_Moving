@@ -63,8 +63,6 @@ private:
     ros::Publisher lidar_marker_pub_;
     visualization_msgs::Marker marker_;
     visualization_msgs::Marker lidar_marker_;
-
-    sensor_msgs::PointCloud2 pcl_msg_;
     
     std::string     topicname_lidar_;
     std::string     topicname_pose_;

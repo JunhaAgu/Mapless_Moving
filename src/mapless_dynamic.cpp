@@ -184,7 +184,7 @@ void MaplessDynamic::loadTestData(){
     else if (dataset_name == "CARLA")
     {
         // dataset_dir = "/home/junhakim/CARLA/";
-        dataset_dir = "/mnt/g/mapless_dataset/CARLA/";
+        dataset_dir = "/mnt/h/mapless_dataset/CARLA/";
     }
     
     float pose_arr[12];

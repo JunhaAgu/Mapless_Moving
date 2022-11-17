@@ -70,40 +70,25 @@ void CloudFrame::genRangeImages(PointCloudwithTime::Ptr pcl_in, bool cur_next)
 {
     n_pts_ = pcl_in->size();
 
+    ////////////////// calculate rho, phi, theta
     // timer::tic();
     calcuateRho(pcl_in, cur_next);    
     // double dt_calRho = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'calcuateRho' :" << dt_calRho << " [ms]");
 
+    ////////////////// make range image and Pts per pixel
     // timer::tic();
     makeRangeImageAndPtsPerPixel(cur_next);
-    // double dt_PPP = timer::toc(); // milliseconds
-    // ROS_INFO_STREAM("elapsed time for 'makeRangeImageAndPtsPerPixel' :" << dt_PPP << " [ms]");
+    // double dt_makeRangeImage = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'makeRangeImageAndPtsPerPixel' :" << dt_makeRangeImage << " [ms]");
     
-    // if (cur_next==0)
-    // {
-    // float* ptr_input_mat = this->str_rhopts_->img_rho.ptr<float>(0);
-    // int cnt = 0;
-    // for (int i = 0; i < 64; ++i)
-    // {
-    //     int i_ncols = i * 901;
-    //     for (int j = 0; j < 901; ++j)
-    //     {
-    //         if (*(ptr_input_mat + i_ncols + j) != 0)
-    //         {
-    //             cnt += 1;
-    //         }
-    //     }
-    // }
-    // std::cout<<"# of non zero: "<<cnt <<std::endl;
-    // exit(0);
-    // }
-
+    ////////////////// fill range image using interpolation
     // timer::tic();
     interpRangeImage(cur_next);
     // double dt_interpRho = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'interpRangeImage' :" << dt_interpRho << " [ms]");
 
+    ////////////////// fill pts corresponding to filled range image (no affect the original pts) 
     // timer::tic();
     interpPts(pcl_in, cur_next);
     // double dt_interpPts = timer::toc(); // milliseconds
@@ -306,14 +291,11 @@ void CloudFrame::calcuateRho_SIMD(
 
 void CloudFrame::makeRangeImageAndPtsPerPixel(bool cur_next)
 {
-    // timer::tic();
     int i_row = 0;
     int i_col = 0;
 
     float* ptr_img_rho = str_rhopts_->img_rho.ptr<float>(0);
     int* ptr_img_index = str_rhopts_->img_index.ptr<int>(0);
-
-    // int* ptr_pts_per_pixel_n = str_rhopts_->pts_per_pixel_n.data();
 
     int n_row = str_rhopts_->img_rho.rows;
     int n_col = str_rhopts_->img_rho.cols;
@@ -554,6 +536,8 @@ void CloudFrame::interpRangeImage(bool cur_next)
     int i_minus_ncols = 0;
     int i_plus_ncols  = 0;
 
+    int n_radial_minus_2 = (n_radial_ - 2);
+
     for (int i = 23; i < 36; ++i)
     // for (int i = 35; i > 22; --i)
     {
@@ -562,7 +546,7 @@ void CloudFrame::interpRangeImage(bool cur_next)
         i_minus_ncols = i_ncols - n_col;
         i_plus_ncols  = i_ncols + n_col;
 
-        for (int j = 0 + 2; j < (n_radial_ - 2); ++j)
+        for (int j = 2; j < n_radial_minus_2; ++j)
         {
 
             if (*(ptr_img_rho + i_ncols + j) == 0)
@@ -604,13 +588,15 @@ void CloudFrame::interpRangeImage(bool cur_next)
                             *(ptr_img_restore_mask + i_plus_ncols + j) = 30;
                             if (cur_next == false)
                             {
-                                *(ptr_img_rho_new + i_ncols + j)        = std::min(*(ptr_img_rho + i_minus_ncols + j), *(ptr_img_rho + i_plus_ncols + n_col + j));
-                                *(ptr_img_rho_new + i_plus_ncols + j)   = *(ptr_img_rho_new + i_ncols + j);
+                                float min_rho                           = std::min(*(ptr_img_rho + i_minus_ncols + j), *(ptr_img_rho + i_plus_ncols + n_col + j));
+                                *(ptr_img_rho_new + i_ncols + j)        = min_rho;
+                                *(ptr_img_rho_new + i_plus_ncols + j)   = min_rho;
                             }
                             else
                             {
-                                *(ptr_img_rho_new + i_ncols + j)        = std::max(*(ptr_img_rho + i_minus_ncols + j), *(ptr_img_rho + i_plus_ncols + n_col + j));
-                                *(ptr_img_rho_new + i_plus_ncols + j)   = *(ptr_img_rho_new + i_ncols + j);
+                                float max_rho                           = std::max(*(ptr_img_rho + i_minus_ncols + j), *(ptr_img_rho + i_plus_ncols + n_col + j));
+                                *(ptr_img_rho_new + i_ncols + j)        = max_rho;
+                                *(ptr_img_rho_new + i_plus_ncols + j)   = max_rho;
                             }
                         }
                     }
@@ -634,10 +620,10 @@ void CloudFrame::interpRangeImage(bool cur_next)
                 {
                     if (fabsf32(*(ptr_img_rho + i_ncols + (j - 1)) - *(ptr_img_rho + i_ncols + (j + 2))) < 0.05)
                     {
-                        *(ptr_img_restore_mask + i_ncols + j) = 5;
+                        *(ptr_img_restore_mask + i_ncols + j)       = 5;
                         *(ptr_img_restore_mask + i_ncols + (j + 1)) = 6;
-                        *(ptr_img_rho_new + i_ncols + j) = *(ptr_img_rho + i_ncols + (j - 1)) * (0.6666667) + *(ptr_img_rho + i_ncols + (j + 2)) * (0.3333333);
-                        *(ptr_img_rho_new + i_ncols + (j + 1)) = *(ptr_img_rho + i_ncols + (j - 1)) * (0.3333333) + *(ptr_img_rho + i_ncols + (j + 2)) * (0.6666667);
+                        *(ptr_img_rho_new + i_ncols + j)        = *(ptr_img_rho + i_ncols + (j - 1)) * (0.6666667) + *(ptr_img_rho + i_ncols + (j + 2)) * (0.3333333);
+                        *(ptr_img_rho_new + i_ncols + (j + 1))  = *(ptr_img_rho + i_ncols + (j - 1)) * (0.3333333) + *(ptr_img_rho + i_ncols + (j + 2)) * (0.6666667);
                     }
                     else{}
                 }
@@ -872,9 +858,9 @@ void CloudFrame::interpPts(PointCloudwithTime::Ptr pcl_in, bool cur_next)
                     }
 
                 case 3:
-                    *(ptr_img_x + i_ncols_j) = (0.3333333) * (*pcl_in)[*(ptr_img_index_i_ncols_j - 2 * n_col)].x + (0.6666667) * (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col)].x;
-                    *(ptr_img_y + i_ncols_j) = (0.3333333) * (*pcl_in)[*(ptr_img_index_i_ncols_j - 2 * n_col)].y + (0.6666667) * (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col)].y;
-                    *(ptr_img_z + i_ncols_j) = (0.3333333) * (*pcl_in)[*(ptr_img_index_i_ncols_j - 2 * n_col)].z + (0.6666667) * (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col)].z;
+                    *(ptr_img_x + i_ncols_j) = (0.3333333) * (*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col - n_col)].x + (0.6666667) * (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col)].x;
+                    *(ptr_img_y + i_ncols_j) = (0.3333333) * (*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col - n_col)].y + (0.6666667) * (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col)].y;
+                    *(ptr_img_z + i_ncols_j) = (0.3333333) * (*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col - n_col)].z + (0.6666667) * (*pcl_in)[*(ptr_img_index_i_ncols_j_p_n_col)].z;
                     break;
                 case 30:
                     if(cur_next == false)
@@ -887,9 +873,9 @@ void CloudFrame::interpPts(PointCloudwithTime::Ptr pcl_in, bool cur_next)
                         }
                         else
                         {
-                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j - 2 * n_col)].x;
-                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j - 2 * n_col)].y;
-                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j - 2 * n_col)].z;
+                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col - n_col)].x;
+                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col - n_col)].y;
+                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col - n_col)].z;
                         }
                         break;
                     }
@@ -903,9 +889,9 @@ void CloudFrame::interpPts(PointCloudwithTime::Ptr pcl_in, bool cur_next)
                         }
                         else
                         {
-                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j - 2 * n_col)].x;
-                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j - 2 * n_col)].y;
-                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j - 2 * n_col)].z;
+                            *(ptr_img_x + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col - n_col)].x;
+                            *(ptr_img_y + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col - n_col)].y;
+                            *(ptr_img_z + i_ncols_j) = (*pcl_in)[*(ptr_img_index_i_ncols_j_m_n_col - n_col)].z;
                         }
                         break;
                     }

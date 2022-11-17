@@ -252,7 +252,7 @@ void ImageFill::plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulat
         }
 
         // if (object_row_.size() < thr_object_ || *(ptr_object_area + 1*n_col+0) == 255)
-        if (object_row_.size() < thr_object_)
+        if (object_row_.size() < thr_object_ * object_factor)
         {
             for (int i = 0; i < object_row_.size(); ++i)
             {
