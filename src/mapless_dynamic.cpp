@@ -414,93 +414,61 @@ void MaplessDynamic::loadTestData(){
 }
 
 void MaplessDynamic::solve(
-    /* inputs */ //const sensor_msgs::PointCloud2& p1
     PointCloudwithTime::Ptr p0, PointCloudwithTime::Ptr p1, const Pose& T10, 
-    /* outputs */ 
     Mask& mask1, int cnt_data, std_msgs::Header& cloudHeader)
 {
-    float object_factor = 1.0;
     static int pub_num = 0;
 
-    static double avg_time = 0.0;
-    static double sum_time = 0.0;
-    static int iter_time = 1;
-    // timer::tic();
-    // icp_.setInputSource(p0);
-    // icp_.setInputTarget(p1);
-    // // icp_.setMaxCorrespondenceDistance(0.05);
-    // icp_.setMaximumIterations(1);
-    // PointCloudwithTime Final;
-    // icp_.align(Final);
-    // Eigen::Matrix4f Tcn   = icp_.getFinalTransformation();
-    // double dd = timer::toc(); // milliseconds
-    // ROS_INFO_STREAM("elapsed time for 'dd' :" << dd << " [ms]");
-    // exit(0);
-    // IMPLEMENT YOUR ALGORITHM FROM THIS LINE.
+    static double avg_time_C = 0.0;
+    static double sum_time_C = 0.0;
+    static int iter_time_C = 1;
 
-    // do something...
+    static double avg_time_D = 0.0;
+    static double sum_time_D = 0.0;
+    static int iter_time_D = 1;
 
-    // END YOUR ALGORITHM
+    static double avg_time_E = 0.0;
+    static double sum_time_E = 0.0;
+    static int iter_time_E = 1;
 
-    // if (cnt_data == 1)
-    // {
-    //     std::cout <<"p0 size: " << p0->size()<<std::endl;
-    //     sensor_msgs::PointCloud2 converted_msg_d;
-    //     pcl::toROSMsg(*p0, converted_msg_d);
-    //     converted_msg_d.header.frame_id = "map";
-    //     pub_dynamic_pts_.publish(converted_msg_d);
+    static double avg_time_F = 0.0;
+    static double sum_time_F = 0.0;
+    static int iter_time_F = 1;
 
-    //     std::cout <<"p1 size: " << p1->size()<<std::endl;
-    //     sensor_msgs::PointCloud2 converted_msg_s;
-    //     pcl::toROSMsg(*p1, converted_msg_s);
-    //     converted_msg_s.header.frame_id = "map";
-    //     pub_static_pts_.publish(converted_msg_s);
-    //     exit(0);
-    // }
-    // ROS_INFO_STREAM("# of p0' :" << p0->size() << " " << "# of p1' :" << p1->size() << " ");
-
-    // timer::tic();
-    // double dt_slam = timer::toc(); // milliseconds
-    // ROS_INFO_STREAM("elapsed time for 'compensateCurRhoZeroWarp' :" << dt_slam << " [ms]");
-
-    // pointcloud input, p1
-    // p0 is already processed in initial step
-    // timer::tic();
-    
-    // CloudFrame_next_->genRangeImages(p1, true);
-    
-    // double dt_toc1 = timer::toc(); // milliseconds
-    // ROS_INFO_STREAM("elapsed time for 'genRangeImages' :" << dt_toc1 << " [ms]");
+    static double avg_time_G = 0.0;
+    static double sum_time_G = 0.0;
+    static int iter_time_G = 1;
 
     // Warp pcl represented in current frame to next frame
+    float object_factor = 1.0;
     T_next2cur_ = T10;
-    // T_next2cur_ = Tcn;
     Euler euler;
     Rot rot = T10.block(0, 0, 3, 3);
     eulerAngles(rot, euler); // pitch roll yaw
     euler = euler * R2D;
-    std::cout << NORM(euler(0), euler(1), euler(2)) << std::endl;
+    std::cout << "Norm of euler angle: " << NORM(euler(0), euler(1), euler(2)) << std::endl;
     if (NORM(euler(0), euler(1), euler(2)) > 3.0)
     {
         object_factor = 1.5;
     }
 
     // Segment ground
-    // timer::tic();
+    timer::tic();
     SegmentGround_->fastsegmentGround(CloudFrame_next_);
     double dt_toc2 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'segmentSGround' :" << dt_toc2 << " [ms]");
-    sum_time += dt_toc2;
-    avg_time = sum_time/iter_time;
-    // ROS_INFO_STREAM("elapsed avg time for 'segmentSGround' :" << avg_time << " [ms]");
-    iter_time++;
+    sum_time_C += dt_toc2;
+    avg_time_C = sum_time_C/iter_time_C;
+    ROS_INFO_STREAM("Average time for 'C' :" << avg_time_C << " [ms]");
+    iter_time_C++;
+    
     //// Occlusion accumulation ////
     // Compute the occlusion dRdt
 
         // cv::imshow("SegmentGround_", SegmentGround_->groundPtsIdx_next_);
 
     
-    // timer::tic();
+    timer::tic();
     dRCalc_->dR_warpPointcloud(CloudFrame_next_, CloudFrame_cur_, CloudFrame_cur_warped_, p0, T_next2cur_, cnt_data, dRdt_);
     // double dt_toc3 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'dR_warpPointcloud' :" << dt_toc3 << " [ms]");
@@ -532,6 +500,12 @@ void MaplessDynamic::solve(
     // double dt_toc5 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'filterOutAccumdR' :" << dt_toc5 << " [ms]");
 
+    double dt_toc3 = timer::toc(); // milliseconds
+    sum_time_D += dt_toc3;
+    avg_time_D = sum_time_D/iter_time_D;
+    ROS_INFO_STREAM("Average time for 'D' :" << avg_time_D << " [ms]");
+    iter_time_D++;
+
     // cv::imshow("after filterOutAccumdR", accumulated_dRdt_);
 
     // if (cnt_data == 2)
@@ -543,7 +517,7 @@ void MaplessDynamic::solve(
     //     cv::waitKey(0);
     //     exit(0);
     // }
-    // timer::tic();
+    timer::tic();
     // Extract object candidate via connected components in 2-D binary image
     ObjectExt_->extractObjectCandidate(accumulated_dRdt_, CloudFrame_next_, object_factor);
     // double dt_toc6 = timer::toc(); // milliseconds
@@ -565,9 +539,15 @@ void MaplessDynamic::solve(
     // double dt_toc8 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'updateAccum' :" <<  dt_toc8 << " [ms]");
 
+    double dt_toc4 = timer::toc(); // milliseconds
+    sum_time_E += dt_toc4;
+    avg_time_E = sum_time_E/iter_time_E;
+    ROS_INFO_STREAM("Average time for 'E' :" << avg_time_E << " [ms]");
+    iter_time_E++;
+
     // cv::imshow("after updateAccum", accumulated_dRdt_);
 
-    // timer::tic();
+    timer::tic();
     ImageFill_->plugImageZeroHoles(accumulated_dRdt_, accumulated_dRdt_score_, CloudFrame_next_, object_factor);
     // double dt_toc9 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'plugImageZeroHoles' :" <<  dt_toc9 << " [ms]");
@@ -580,6 +560,12 @@ void MaplessDynamic::solve(
     // ROS_INFO_STREAM("elapsed time for 'updateAccumdRdt' :" <<  dt_toc10 << " [ms]");
     float* ptr_accumulated_dRdt = accumulated_dRdt_.ptr<float>(0);
     float* ptr_accumulated_dRdt_score = accumulated_dRdt_score_.ptr<float>(0);
+
+    double dt_toc5 = timer::toc(); // milliseconds
+    sum_time_F += dt_toc5;
+    avg_time_F = sum_time_F/iter_time_F;
+    ROS_INFO_STREAM("Average time for 'F' :" << avg_time_F << " [ms]");
+    iter_time_F++;
 
     // cv::imshow("accumulated_dRdt", accumulated_dRdt_);
     // cv::waitKey(0);
@@ -643,12 +629,18 @@ void MaplessDynamic::solve(
     //     }
     // }
     
-    // timer::tic;
+    timer::tic();
     // pcl_static_wtime.reserve(p1->size());
     slam::PointXYZT new_pt;
+    new_pt.x = 0.0;
+    new_pt.y = 0.0;
+    new_pt.z = 0.0;
 
     std::vector<int>* ptr_vec_tmp = CloudFrame_next_->str_rhopts_->pts_per_pixel_index_valid.data();
 
+    
+    ///////////////////////// for dynamic_pts /////////////////////////
+    // /*
     for (int i = 0; i < img_height_; ++i)
     {
         int i_ncols = i * img_width_;
@@ -662,38 +654,45 @@ void MaplessDynamic::solve(
             {
                 for (int k = 0; k < vec_tmp.size(); ++k)
                 {
-                    pcl_static_.push_back((*p1)[vec_tmp[k]]);
+                    // pcl_static_.push_back((*p1)[vec_tmp[k]]);
 
                     const int &vec_value_tmp = vec_tmp[k];
                     if (*(ptr_accumulated_dRdt + i_ncols_j) != 0)
                     {
-                        new_pt.x = 0.0;
-                        new_pt.y = 0.0;
-                        new_pt.z = 0.0;
                         new_pt.timestamp = (*p1)[vec_value_tmp].timestamp;
                         pcl_static_wtime_.push_back(new_pt);
+
+                        // dynamic
+                        for (int k = 0; k < vec_tmp.size(); ++k)
+                        {
+                            pcl_dynamic_.push_back((*p1)[vec_value_tmp]);
+                        }
                     }
                     else
                     {
                         pcl_static_wtime_.push_back((*p1)[vec_value_tmp]);
-                        *(ptr_accumulated_dRdt_score + i_ncols + j) = 0; //// update for next iteration
+                        *(ptr_accumulated_dRdt_score + i_ncols_j) = 0; //// update for next iteration
                     }
                 }
             }
             // dynamic
-            if (*(ptr_accumulated_dRdt + i_ncols_j) != 0) 
-            {
-                if (vec_tmp.size() != 0)
-                {
-                    for (int k = 0; k < vec_tmp.size(); ++k)
-                    {
-                        pcl_dynamic_.push_back((*p1)[vec_tmp[k]]);
-                    }
-                }
-            }
+            // if (*(ptr_accumulated_dRdt + i_ncols_j) != 0) 
+            // {
+            //     if (vec_tmp.size() != 0)
+            //     {
+            //         for (int k = 0; k < vec_tmp.size(); ++k)
+            //         {
+            //             pcl_dynamic_.push_back((*p1)[vec_tmp[k]]);
+            //         }
+            //     }
+            // }
             
         }
-    }
+    }/*
+    */
+    ///////////////////////// for dynamic_pts /////////////////////////
+    
+    
 
     // for (int i = 0; i < img_height_; ++i)
     // {
@@ -735,32 +734,36 @@ void MaplessDynamic::solve(
     //     }
     // }
 
-    // for (int i = 0; i < img_height_; ++i)
-    // {
-    //     int i_ncols = i * img_width_;
-    //     for (int j = 0; j < img_width_; ++j)
-    //     {
-    //         const int i_ncols_j = i_ncols + j;
-    //         const std::vector<int> &vec_tmp = ptr_vec_tmp[i_ncols_j];
-    //         if (vec_tmp.size() != 0)
-    //         {
-    //             for (int k = 0; k < vec_tmp.size(); ++k)
-    //             {
-    //                 pcl_static_.push_back(slam::PointXYZT((*p1)[vec_tmp[k]]));
+    ///////////////////////// for all_pts /////////////////////////
+    /*
+    for (int i = 0; i < img_height_; ++i)
+    {
+        int i_ncols = i * img_width_;
+        for (int j = 0; j < img_width_; ++j)
+        {
+            const int i_ncols_j = i_ncols + j;
+            const std::vector<int> &vec_tmp = ptr_vec_tmp[i_ncols_j];
+            if (vec_tmp.size() != 0)
+            {
+                for (int k = 0; k < vec_tmp.size(); ++k)
+                {
+                    pcl_static_.push_back(slam::PointXYZT((*p1)[vec_tmp[k]]));
 
-    //                 const int &vec_value_tmp = vec_tmp[k];
-    //                 slam::PointXYZT p1_point_tmp = (*p1)[vec_value_tmp];
-    //                 new_pt.x = p1_point_tmp.x;
-    //                 new_pt.y = p1_point_tmp.y;
-    //                 new_pt.z = p1_point_tmp.z;
-    //                 new_pt.timestamp = (*p1_w_time)[vec_value_tmp].timestamp;
-    //                 // std::cout <<vec_tmp[k] << "      " <<new_pt.timestamp <<std::endl;
-    //                 pcl_static_wtime_.push_back(new_pt);
-    //             }
-    //         }
-    //         *(ptr_accumulated_dRdt_score + i_ncols + j) = 0; //// update for next iteration
-    //     }
-    // }
+                    const int &vec_value_tmp = vec_tmp[k];
+                    slam::PointXYZT p1_point_tmp = (*p1)[vec_value_tmp];
+                    new_pt.x = p1_point_tmp.x;
+                    new_pt.y = p1_point_tmp.y;
+                    new_pt.z = p1_point_tmp.z;
+                    new_pt.timestamp = (*p1)[vec_value_tmp].timestamp;
+                    // std::cout <<vec_tmp[k] << "      " <<new_pt.timestamp <<std::endl;
+                    pcl_static_wtime_.push_back(new_pt);
+                }
+            }
+            *(ptr_accumulated_dRdt_score + i_ncols + j) = 0; //// update for next iteration
+        }
+    }/*
+    */
+    ///////////////////////// for all_pts /////////////////////////
 
     // double dt_toc11 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'segmentWholePts' :" <<  dt_toc11 << " [ms]");
@@ -778,9 +781,8 @@ void MaplessDynamic::solve(
     if(pcl_dynamic_.size() > 0)
     {
         pcl::io::savePCDFileBinary(cloud_name, pcl_dynamic_);
-    }
-    // */
-    
+    }/*
+    */
 
     converted_msg_d_.header.frame_id = "map";
     converted_msg_d_.header.stamp = cloudHeader.stamp;
@@ -814,12 +816,21 @@ void MaplessDynamic::solve(
     copyStructAndinitialize(p1, p0, cnt_data);
     // double dt_toc13 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'copyRemove' :" <<  dt_toc13 << " [ms]");
+
+    double dt_toc6 = timer::toc(); // milliseconds
+    sum_time_G += dt_toc6;
+    avg_time_G = sum_time_G/iter_time_G;
+    ROS_INFO_STREAM("Average time for 'G' :" << avg_time_G << " [ms]");
+    iter_time_G++;
     
     // double dt_toc_total = dt_toc2 + dt_toc3 + dt_toc4 + dt_toc5 + dt_toc6 + dt_toc7 + dt_toc8 + dt_toc9 + dt_toc10 + dt_toc11 + dt_toc12 + dt_toc13;
     // ROS_INFO_STREAM("elapsed time for 'total' :" <<  dt_toc_total << " [ms]");
+
     ROS_INFO_STREAM("================== End of the solver ==================");
     // cv::imshow("final", accumulated_dRdt_);
     // cv::waitKey(0);
+
+    
 };
 
 std::string MaplessDynamic::WithLeadingZerosStr(int num) {
@@ -832,7 +843,7 @@ std::string MaplessDynamic::WithLeadingZerosStr(int num) {
 void MaplessDynamic::copyStructAndinitialize(PointCloudwithTime::Ptr p1 ,PointCloudwithTime::Ptr p0, int cnt_data)
 {   
     pcl_dynamic_.resize(0);
-    pcl_static_.resize(0);
+    // pcl_static_.resize(0);
     pcl_static_wtime_.resize(0);
     // copy Cur to Next
     std::shared_ptr<StrRhoPts> cur_tmp  = CloudFrame_cur_->str_rhopts_;

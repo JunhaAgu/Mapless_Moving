@@ -22,7 +22,7 @@ void UserParam::getUserSettingParameters(std::string& data_type)
     this->calVangle(data_type);
     
     ground_segment_param_.downsample_size = 10;
-    ransac_param_.iter_ = 30;
+    ransac_param_.iter_ = 25;
     ransac_param_.thr_ = 0.1;
     ransac_param_.a_thr_ = 0.1;
     ransac_param_.b_thr_[0] = -0.5;

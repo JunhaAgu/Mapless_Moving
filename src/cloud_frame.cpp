@@ -944,28 +944,45 @@ void CloudFrame::reset()
     // {
     //     str_rhopts_tmp->pts_per_pixel_n[i] = 0;
     // }
-
+    
     for (int i = 0; i < img_height_ * img_width_; ++i)
     {
         if (str_rhopts_tmp->pts_per_pixel_index[i].size() != 0)
         {
             str_rhopts_tmp->pts_per_pixel_index[i].resize(0);
         }
-    }
 
-    for (int i = 0; i < img_height_ * img_width_; ++i)
-    {
         if (str_rhopts_tmp->pts_per_pixel_rho[i].size() != 0)
         {
             str_rhopts_tmp->pts_per_pixel_rho[i].resize(0);
         }
-    }
 
-    for (int i = 0; i < img_height_ * img_width_; ++i)
-    {
         if (str_rhopts_tmp->pts_per_pixel_index_valid[i].size() != 0)
         {
             str_rhopts_tmp->pts_per_pixel_index_valid[i].resize(0);
         }
     }
+    // for (int i = 0; i < img_height_ * img_width_; ++i)
+    // {
+    //     if (str_rhopts_tmp->pts_per_pixel_index[i].size() != 0)
+    //     {
+    //         str_rhopts_tmp->pts_per_pixel_index[i].resize(0);
+    //     }
+    // }
+
+    // for (int i = 0; i < img_height_ * img_width_; ++i)
+    // {
+    //     if (str_rhopts_tmp->pts_per_pixel_rho[i].size() != 0)
+    //     {
+    //         str_rhopts_tmp->pts_per_pixel_rho[i].resize(0);
+    //     }
+    // }
+
+    // for (int i = 0; i < img_height_ * img_width_; ++i)
+    // {
+    //     if (str_rhopts_tmp->pts_per_pixel_index_valid[i].size() != 0)
+    //     {
+    //         str_rhopts_tmp->pts_per_pixel_index_valid[i].resize(0);
+    //     }
+    // }
 }

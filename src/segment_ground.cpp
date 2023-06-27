@@ -66,7 +66,7 @@ void SegmentGround::fastsegmentGround(std::unique_ptr<CloudFrame>& CloudFrame_in
             cnt_z_zero = 0;
 
             int j_downsample_size = j * downsample_size_;
-            for (int k=0; k<downsample_size_; ++k)
+            for (int k = 0; k < downsample_size_; ++k)
             {
                 col_range.push_back(j_downsample_size + k);
                 pts_z_col_range.push_back(*(ptr_img_z + i_ncols + j_downsample_size + k));
@@ -82,12 +82,11 @@ void SegmentGround::fastsegmentGround(std::unique_ptr<CloudFrame>& CloudFrame_in
                 continue;
             }
 
-            min_z = *min_element(pts_z_col_range.begin(), pts_z_col_range.end());
-            min_z_idx = min_element(pts_z_col_range.begin(), pts_z_col_range.end()) - pts_z_col_range.begin();
+            min_z     = *min_element(pts_z_col_range.begin(), pts_z_col_range.end());
+            min_z_idx =  min_element(pts_z_col_range.begin(), pts_z_col_range.end()) - pts_z_col_range.begin();
 
             *(ptr_pts_z_sample + i_ncols_sample + j)   = min_z;
             *(ptr_rho_sample + i_ncols_sample + j)     = *(ptr_img_rho + i_ncols + col_range[0] + min_z_idx);
-            // std::cout << j << " "<<*(ptr_rho_sample + i_ncols + j) << std::endl;
         }
     }
     
@@ -114,10 +113,8 @@ void SegmentGround::fastsegmentGround(std::unique_ptr<CloudFrame>& CloudFrame_in
             mask_inlier[i] = false;
             points_rho.push_back(*(ptr_rho_sample + i * n_col_sample + j));
             points_z.push_back(*(ptr_pts_z_sample + i * n_col_sample + j));
-            // std::cout << (*(ptr_rho_sample + i * n_col_sample + j)) << " " << (*(ptr_pts_z_sample + i * n_col_sample + j)) <<std::endl;
         }
         
-        // std::cout << j <<": "<<std::endl;;
         // timer::tic();
         ransacLine(points_rho, points_z, /*output*/ mask_inlier, line_a, line_b, j);
         // double tt = timer::toc();
@@ -223,7 +220,7 @@ void SegmentGround::ransacLine(std::vector<float>& points_rho, std::vector<float
     std::copy(points_z.begin(), points_z.end(), points_z_dup.begin());
     float* ptr_points_z_dup = points_z_dup.data();
 
-    int max_range = 100;
+    int max_range = 80;
     int n_bin_per_seg = points_rho.size();
 
     // bool mask_temp[n_bin_per_seg];

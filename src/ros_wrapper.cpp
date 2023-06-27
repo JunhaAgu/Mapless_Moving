@@ -160,6 +160,8 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
     static int cnt_pcl = 0;
     static int cnt_initial = 0;
     static double total_time = 0.0;
+
+    static double total_time_B = 0.0;
     
     std::cout<< " ====================== START ====================== " << std::endl;
     std::cout<< "Iter: "<< cnt_pcl << std::endl;
@@ -194,14 +196,16 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
         
         timer::tic();
         solver_->CloudFrame_next_->genRangeImages(p1_pcl_wtime_, true);
-        // double dt1 = timer::toc(); // milliseconds
+        double dt1 = timer::toc(); // milliseconds
+        total_time_B += dt1;
+        ROS_INFO_STREAM("Average time for 'B' :" << total_time_B/cnt_pcl << " [ms]" << " " << "window :"<<cnt_pcl);
         // ROS_INFO_STREAM("elapsed time for 'genRangeImages' :" << dt1 << " [ms]");
 
         solver_->solve(p0_pcl_wtime_, p1_pcl_wtime_, T10_, mask1, cnt_pcl, cloudHeader_);
-        double dt_solver = timer::toc(); // milliseconds
-        ROS_INFO_STREAM("elapsed time for 'solver' :" << dt_solver << " [ms]");
-        total_time += dt_solver;
-        ROS_INFO_STREAM("Average time for 'solver' :" << total_time/cnt_pcl << " [ms]" << " " << "window :"<<cnt_pcl);
+        // double dt_solver = timer::toc(); // milliseconds
+        // ROS_INFO_STREAM("elapsed time for 'solver' :" << dt_solver << " [ms]");
+        // total_time += dt_solver;
+        // ROS_INFO_STREAM("Average time for 'solver' :" << total_time/cnt_pcl << " [ms]" << " " << "window :"<<cnt_pcl);
 
         ROS_INFO("pub msg: %d",cnt_pcl);
 
@@ -224,7 +228,7 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg){
 
         cnt_pcl += 1;
     }
-    else if (cnt_initial > 1) // If not initialized, 129
+    else if (cnt_initial > 1) // If not initialized, 129 or 1
     {
         is_initialized_ = true;
 

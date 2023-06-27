@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5.1)
 project(mapless_dynamic)
 set(CMAKE_BUILD_TYPE Release) # Debug, Release, RelWithDebInfo
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -pthread -pg -O2 -msse3 -flto -pg -march=native -mfpmath=sse") #O0,O2: optimize 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -pthread -pg -O4 -msse3 -flto -pg -march=native -mfpmath=sse") #O0,O2: optimize 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}) 
 find_package(catkin REQUIRED cmake_modules)
 find_package(Eigen3 REQUIRED)
