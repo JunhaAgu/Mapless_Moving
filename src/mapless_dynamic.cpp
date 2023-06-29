@@ -105,37 +105,23 @@ void eulerAngles(Rot& R, Euler& e) {
     }
 }
 
+// with pcd datasets
 void MaplessDynamic::TEST() {
     static int cnt_data = 0;
-    // std::cout << data_buf_.size() << std::endl;
-    std::cout << "Test iter: " << cnt_data << std::endl;
+    static double total_time_gen = 0.0;
+
+    ROS_INFO_STREAM("================= Test iter: " << cnt_data
+                                                    << " =================");
 
     if (is_initialized_test_) {  // If initialized,
         cloudHeader_test_ = data_buf_[cnt_data]->pcl_msg_->header;
-        // 0. Get the current LiDAR data
+
+        // 0. Get the next LiDAR data
         p1_msg_test_ = *(data_buf_[cnt_data]->pcl_msg_);
         pcl::fromROSMsg(p1_msg_test_, *p1_pcl_test_);
 
-        // if (cnt_data == 3)
-        // {
-        //     std::cout << p1_pcl_test_.size() << std::endl;
-        //     sensor_msgs::PointCloud2 converted_msg_d;
-        //     pcl::toROSMsg(p1_pcl_test_, converted_msg_d);
-        //     converted_msg_d.header.frame_id = "map";
-        //     pub_dynamic_pts_.publish(converted_msg_d);
-
-        //     std::cout << p0_pcl_test_.size() << std::endl;
-        //     sensor_msgs::PointCloud2 converted_msg_s;
-        //     pcl::toROSMsg(p0_pcl_test_, converted_msg_s);
-        //     converted_msg_s.header.frame_id = "map";
-        //     pub_static_pts_.publish(converted_msg_s);
-        //     exit(0);
-        // }
-
         // 1. Calculate T01 from the SLAM (or Odometry) algorithm
         Pose T10;
-        // timer::tic();
-        // T01 =  vo->solve();
         T10 =
             data_buf_[cnt_data]
                 ->T_gt_.inverse();  // KITTI: cnt_data / CARLA: cnt_data-1 ,,,,
@@ -143,20 +129,29 @@ void MaplessDynamic::TEST() {
         ROS_INFO_STREAM("size of p0_pcl_test_: " << p0_pcl_test_->size());
         ROS_INFO_STREAM("size of p1_pcl_test_: " << p1_pcl_test_->size());
 
-        // double dt_slam = timer::toc(); // milliseconds
-        // ROS_INFO_STREAM("elapsed time for 'SLAM' :" << dt_slam << " [ms]");
-
         // 2. Solve the Mapless Dynamic algorithm.
-        // timer::tic();
+        timer::tic();
         Mask mask1;
+
         CloudFrame_next_->genRangeImages(p1_pcl_test_, true);
+
+        double dt_gen = timer::toc();  // milliseconds
+        total_time_gen += dt_gen;
+        ROS_INFO_STREAM("Average time for 'genRangeImages' :"
+                        << total_time_gen / cnt_data << " [ms]"
+                        << " "
+                        << "window :" << cnt_data);
 
         this->solve(p0_pcl_test_, p1_pcl_test_, T10, mask1, cnt_data,
                     cloudHeader_test_);
-        // double dt_solver = timer::toc();  // milliseconds
-        // ROS_INFO_STREAM("elapsed time for 'solver' :" << dt_solver << "
-        // [ms]");
 
+        // 3. Update the previous variables
+        if (rosbag_play_ == false) {
+            p0_pcl_test_->resize(0);
+            pcl::copyPointCloud(*p1_pcl_test_, *p0_pcl_test_);
+        }
+
+        // End condition
         if (cnt_data == n_valid_data_ - 1)  // -1 -1
         {
             ROS_INFO_STREAM("All data is processed");
@@ -170,7 +165,7 @@ void MaplessDynamic::TEST() {
         pcl::fromROSMsg(p0_msg_test_, *p0_pcl_test_);
 
         CloudFrame_cur_->genRangeImages(p0_pcl_test_, true);
-        ROS_INFO_STREAM("p0_pcl_test_ size:" << p0_pcl_test_->size());
+        ROS_INFO_STREAM("size of p0_pcl_test_: " << p0_pcl_test_->size());
     }
     cnt_data += 1;
     // std::cout << cnt_data << std::endl;
@@ -371,6 +366,8 @@ void MaplessDynamic::solve(PointCloudwithTime::Ptr p0,
                            PointCloudwithTime::Ptr p1, const Pose& T10,
                            Mask& mask1, int cnt_data,
                            std_msgs::Header& cloudHeader) {
+    ROS_INFO_STREAM("================= Start of the solver =================");
+
     static int pub_num = 0;
 
     static double avg_time_C = 0.0;
@@ -400,8 +397,9 @@ void MaplessDynamic::solve(PointCloudwithTime::Ptr p0,
     Rot rot = T10.block(0, 0, 3, 3);
     eulerAngles(rot, euler);  // pitch roll yaw
     euler = euler * R2D;
-    std::cout << "Norm of euler angle: " << NORM(euler(0), euler(1), euler(2))
-              << std::endl;
+    ROS_INFO_STREAM(
+        "Norm of euler angle: " << NORM(euler(0), euler(1), euler(2)));
+
     if (NORM(euler(0), euler(1), euler(2)) > 3.0) {
         object_factor = 1.5;
     }
@@ -890,12 +888,12 @@ void MaplessDynamic::copyStructAndinitialize(PointCloudwithTime::Ptr p1,
         next_tmp->img_restore_warp_mask.copyTo(cur_tmp->img_restore_warp_mask);
     }
 
-    // only in test
-    if (rosbag_play_ == false) {
-        p0_pcl_test_->resize(0);
-        pcl::copyPointCloud(*p1, *p0_pcl_test_);
-        p1->resize(0);
-    }
+    // // only in test
+    // if (rosbag_play_ == false) {
+    //     p0_pcl_test_->resize(0);
+    //     pcl::copyPointCloud(*p1, *p0_pcl_test_);
+    //     p1->resize(0);
+    // }
 
     // Next -> reset();
     CloudFrame_next_->reset();

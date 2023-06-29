@@ -92,7 +92,10 @@ void ROSWrapper::run() {
     ROS_INFO_STREAM("Rosbag can be started");
     while (ros::ok()) {
         if (rosbag_play_ == false) {
-            ROS_INFO_STREAM("Data is from saved pcd");
+            std::cout << " " << std::endl;
+            ROS_INFO_STREAM("Data is from saved pcd"
+                            << " - "
+                            << "run at [" << freq_spin << "] Hz.");
             solver_->TEST();
         } else {
         }
