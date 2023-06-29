@@ -15,8 +15,8 @@ class dRCalc
 {
     private:
         std::vector<float> v_angle_;
-        int n_ring_;
-        int n_radial_;
+        int n_vertical_;
+        int n_horizontal_;
 
     public:
         PointCloudwithTime::Ptr velo_cur_;

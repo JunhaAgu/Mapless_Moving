@@ -7,8 +7,8 @@ CloudFrame::CloudFrame(const std::unique_ptr<UserParam>& user_param)
 
     azimuth_res_ = user_param->cloud_filter_param_.azimuth_res_ * (float)user_param->cloud_filter_param_.h_factor_;
     az_step_ = 1.0f/azimuth_res_;
-    n_radial_ = 360 * az_step_ + 1;
-    n_ring_ = 64 / user_param->cloud_filter_param_.v_factor_;
+    n_horizontal_ = 360 * az_step_ + 1;
+    n_vertical_ = 64 / user_param->cloud_filter_param_.v_factor_;
 
     for (int i=0; i<user_param->sensor_spec_.v_angle_.size(); ++i)
     {
@@ -41,18 +41,20 @@ CloudFrame::CloudFrame(const std::unique_ptr<UserParam>& user_param)
     str_rhopts_->img_z     = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
 
     // str_rhopts_->pts_per_pixel_n.resize(img_height_ * img_width_);
-    str_rhopts_->pts_per_pixel_index.resize(img_height_ * img_width_);
-    str_rhopts_->pts_per_pixel_rho.resize(img_height_ * img_width_);
-    str_rhopts_->pts_per_pixel_index_valid.resize(img_height_ * img_width_);
-    for (int i=0; i<img_height_*img_width_; ++i)
+    
+    int size_img_vector = img_height_ * img_width_;
+    str_rhopts_->pts_per_pixel_index.resize(size_img_vector);
+    str_rhopts_->pts_per_pixel_rho.resize(size_img_vector);
+    str_rhopts_->pts_per_pixel_index_valid.resize(size_img_vector);
+    for (int i=0; i<size_img_vector; ++i)
     {
         str_rhopts_->pts_per_pixel_index[i].reserve(5000);
     }
-    for (int i=0; i<img_height_*img_width_; ++i)
+    for (int i=0; i<size_img_vector; ++i)
     {
         str_rhopts_->pts_per_pixel_rho[i].reserve(5000);
     }
-    for (int i=0; i<img_height_*img_width_; ++i)
+    for (int i=0; i<size_img_vector; ++i)
     {
         str_rhopts_->pts_per_pixel_index_valid[i].reserve(5000);
     }
@@ -309,7 +311,7 @@ void CloudFrame::makeRangeImageAndPtsPerPixel(bool cur_next)
 
     float phi_R2D = 0.0f;
 
-    int n_ring_minus_1 = n_ring_-1;
+    int n_vertical_minus_1 = n_vertical_-1;
     int i_row_ncols_i_col = 0;
     // std::string line;
     // std::ofstream file("/home/junhakim/debug_rowcol.txt");
@@ -355,9 +357,9 @@ void CloudFrame::makeRangeImageAndPtsPerPixel(bool cur_next)
         
         // phi_R2D = (ptr_phi[i] * R2D);
 
-        // for (int kk = 0; kk < n_ring_; ++kk)
+        // for (int kk = 0; kk < n_vertical_; ++kk)
         // {
-        //     if (ptr_v_angle[kk] < phi_R2D || kk == n_ring_-1)
+        //     if (ptr_v_angle[kk] < phi_R2D || kk == n_vertical_-1)
         //     {
         //         i_row = kk;
         //         break;
@@ -366,7 +368,7 @@ void CloudFrame::makeRangeImageAndPtsPerPixel(bool cur_next)
 
         i_col = roundf(theta_tmp*az_step_R2D);
 
-        if ( (i_row > n_ring_minus_1) || (i_row < 0) )
+        if ( (i_row > n_vertical_minus_1) || (i_row < 0) )
         {
             continue;
         }
@@ -463,7 +465,7 @@ void CloudFrame::makeRangeImageAndPtsPerPixel_dR(bool cur_next)
 
     float phi_R2D = 0.0f;
 
-    int n_ring_minus_1 = n_ring_-1;
+    int n_vertical_minus_1 = n_vertical_-1;
 
     float& criteria0 = lidar_elevation_criteria_[0];
     float& criteria1 = lidar_elevation_criteria_[1];
@@ -505,7 +507,7 @@ void CloudFrame::makeRangeImageAndPtsPerPixel_dR(bool cur_next)
 
         i_col = roundf(theta_tmp*az_step_R2D);
 
-        if ( (i_row > n_ring_minus_1) || (i_row < 0) )
+        if ( (i_row > n_vertical_minus_1) || (i_row < 0) )
         {
             continue;
         }
@@ -536,7 +538,7 @@ void CloudFrame::interpRangeImage(bool cur_next)
     int i_minus_ncols = 0;
     int i_plus_ncols  = 0;
 
-    int n_radial_minus_2 = (n_radial_ - 2);
+    int n_horizontal_minus_2 = (n_horizontal_ - 2);
 
     for (int i = 23; i < 36; ++i)
     // for (int i = 35; i > 22; --i)
@@ -546,7 +548,7 @@ void CloudFrame::interpRangeImage(bool cur_next)
         i_minus_ncols = i_ncols - n_col;
         i_plus_ncols  = i_ncols + n_col;
 
-        for (int j = 2; j < n_radial_minus_2; ++j)
+        for (int j = 2; j < n_horizontal_minus_2; ++j)
         {
 
             if (*(ptr_img_rho + i_ncols + j) == 0)
@@ -654,7 +656,7 @@ void CloudFrame::interpRangeImage_dR(bool cur_next)
         int i_ncols = i * n_col;
         int i_minus_ncols = (i - 1) * n_col;
         int i_plus_ncols  = (i + 1) * n_col;
-        for (int j = 0 + 2; j < (n_radial_ - 2); ++j)
+        for (int j = 0 + 2; j < (n_horizontal_ - 2); ++j)
         {
             if (*(ptr_img_rho + i_ncols + j) == 0)
             {
@@ -746,10 +748,10 @@ void CloudFrame::interpPts(PointCloudwithTime::Ptr pcl_in, bool cur_next)
     float* ptr_img_z = str_rhopts_->img_z.ptr<float>(0);
     int* ptr_img_restore_mask = str_rhopts_->img_restore_mask.ptr<int>(0);
 
-    for (int i = 0; i < n_ring_; ++i)
+    for (int i = 0; i < n_vertical_; ++i)
     {
         int i_ncols = i * n_col;
-        for (int j = 0; j < n_radial_; ++j)
+        for (int j = 0; j < n_horizontal_; ++j)
         {
             int i_ncols_j = i_ncols + j;
             if (str_rhopts_->pts_per_pixel_rho[i_ncols_j].size() > 0)

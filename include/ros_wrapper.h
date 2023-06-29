@@ -6,9 +6,9 @@
 #include <vector>
 
 // ROS related headers
+#include <nav_msgs/Odometry.h>
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
-#include <nav_msgs/Odometry.h>
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_datatypes.h>
 
@@ -17,20 +17,20 @@
 #include "timer.h"
 
 // Mapless Dynamic header
-#include "mapless_dynamic.h"
-
 #include <visualization_msgs/Marker.h>
 
-class ROSWrapper{
-/* =========
-    MEMBERS
-   ========= */
-// Previous variables
-private:
-    Mask                     mask0;
-    bool                     is_initialized_; // = default : false.
-    bool                     is_initialized_pose_; // = default : false.
-    bool                     is_pose_received_;
+#include "mapless_dynamic.h"
+
+class ROSWrapper {
+    /* =========
+        MEMBERS
+       ========= */
+    // Previous variables
+   private:
+    Mask mask0;
+    bool is_initialized_;       // = default : false.
+    bool is_initialized_pose_;  // = default : false.
+    bool is_pose_received_;
     PointCloudwithTime::Ptr p0_pcl_wtime_;
     PointCloudwithTime::Ptr p1_pcl_wtime_;
 
@@ -51,42 +51,46 @@ private:
     double timestamp_pcl_msg_ = 0.0;
 
     // ROS nodehandle & subscriber for LiDAR data.
-private:
+   private:
     ros::NodeHandle nh_;
     ros::Subscriber sub_lidar_;
     ros::Subscriber sub_pose_;
-    ros::Publisher marker_pub_;
-    ros::Publisher lidar_marker_pub_;
+    ros::Publisher pub_marker_;
+    ros::Publisher pub_lidar_marker_;
     visualization_msgs::Marker marker_;
     visualization_msgs::Marker lidar_marker_;
-    
-    std::string     topicname_lidar_;
-    std::string     topicname_pose_;
-    bool            rosbag_play_;
-    bool            T01_slam_;
-    std::string     dataset_name_;
-    std::string     data_number_;
+
+    std::string topicname_lidar_;
+    std::string topicname_pose_;
+    bool rosbag_play_;
+    bool T01_slam_;
+    std::string dataset_name_;
+    std::string data_number_;
+    std::string dataset_kitti_dir_;
+    std::string dataset_carla_dir_;
 
     std_msgs::Header cloudHeader_;
 
-// Mapless Dynamic algorithm object. 
-private:
+    // Mapless Dynamic algorithm object.
+   private:
     std::unique_ptr<MaplessDynamic> solver_;
 
-/* =========
-    METHODS
-   ========= */
-public:
-    ROSWrapper(ros::NodeHandle& nh); // constructor
-    ~ROSWrapper(); // destructor
+    /* =========
+        METHODS
+       ========= */
+   public:
+    ROSWrapper(ros::NodeHandle& nh);  // constructor
+    ~ROSWrapper();                    // destructor
 
-private:
-    void run(); 
-    
+   private:
+    void run();
+
     void getLaunchParameters();
     void callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg);
     void callbackPose(const nav_msgs::Odometry::ConstPtr& pose);
-    void updatePreviousVariables(PointCloudwithTime::Ptr p0_pcl_wtime, PointCloudwithTime::Ptr p1_pcl_wtime, const Mask& mask1);
+    void updatePreviousVariables(PointCloudwithTime::Ptr p0_pcl_wtime,
+                                 PointCloudwithTime::Ptr p1_pcl_wtime,
+                                 const Mask& mask1);
 };
 
 #endif

@@ -6,8 +6,8 @@ dRCalc::dRCalc(const std::unique_ptr<UserParam>& user_param)
     {
         v_angle_.push_back(user_param->sensor_spec_.v_angle_[i]);
     }
-    n_ring_     = user_param->image_param_.height_;
-    n_radial_   = user_param->image_param_.width_;
+    n_vertical_     = user_param->image_param_.height_;
+    n_horizontal_   = user_param->image_param_.width_;
 
     velo_cur_       = boost::make_shared<PointCloudwithTime>();
     cur_pts_warped_ = boost::make_shared<PointCloudwithTime>();
@@ -82,8 +82,8 @@ void dRCalc::dR_warpPointcloud(std::unique_ptr<CloudFrame>& CloudFrame_next, std
 
 void dRCalc::compensateCurRhoZeroWarp(std::unique_ptr<CloudFrame>& CloudFrame_cur)
 {
-    int n_row = n_ring_;
-    int n_col = n_radial_;
+    int n_row = n_vertical_;
+    int n_col = n_horizontal_;
     float left_dir_rho  = 0;
     float right_dir_rho = 0;
     float up_dir_rho    = 0;
@@ -134,10 +134,10 @@ void dRCalc::compensateCurRhoZeroWarp(std::unique_ptr<CloudFrame>& CloudFrame_cu
     
     slam::PointXYZT pcl_xyzt;
 
-    for (int i = 0 + 1; i < n_ring_ - 1; ++i)
+    for (int i = 0 + 1; i < n_vertical_ - 1; ++i)
     {
         int i_ncols = i * n_col;
-        for (int j = 0 + 1; j < n_radial_ - 1; ++j)
+        for (int j = 0 + 1; j < n_horizontal_ - 1; ++j)
         {
             // initialization every iteration
             left_dir_rho = 0.0;
@@ -294,11 +294,11 @@ void dRCalc::interpRangeImageMin(std::unique_ptr<CloudFrame>& CloudFrame_in)
     int i_ncols = 0;
     int i_ncols_j = 0;
 
-    for (int i = 0 + 2; i < (n_ring_ - 2); ++i)
-    // for (int i = n_ring_ -2; i > 1; --i)
+    for (int i = 0 + 2; i < (n_vertical_ - 2); ++i)
+    // for (int i = n_vertical_ -2; i > 1; --i)
     {
         i_ncols = i * n_col;
-        for (int j = 0 + 2; j < (n_radial_ - 2); ++j)
+        for (int j = 0 + 2; j < (n_horizontal_ - 2); ++j)
         {
             i_ncols_j = i_ncols + j;            
             if (*(ptr_img_rho + i_ncols_j) == 0)
@@ -365,8 +365,8 @@ void dRCalc::interpRangeImageMin(std::unique_ptr<CloudFrame>& CloudFrame_in)
 
 void dRCalc::interpPtsWarp(std::unique_ptr<CloudFrame>& CloudFrame_in)
 {
-    int n_row = n_ring_;
-    int n_col = n_radial_;
+    int n_row = n_vertical_;
+    int n_col = n_horizontal_;
     int n_col_2 = 2*n_col;
     float* ptr_img_rho  = CloudFrame_in->str_rhopts_->img_rho.ptr<float>(0);
     float* ptr_img_x    = CloudFrame_in->str_rhopts_->img_x.ptr<float>(0);

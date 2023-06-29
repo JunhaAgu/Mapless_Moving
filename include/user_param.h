@@ -15,7 +15,9 @@ struct SensorSpec
 {
     std::vector<float> v_angle_;
     int channel_;
+    // 2.5 -8 -8.5 -23.8
     float lidar_elevation_criteria_[4];
+    
     float lidar_elevation_line0_[2];
     float lidar_elevation_line1_[2];
 };

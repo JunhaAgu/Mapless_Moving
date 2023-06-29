@@ -20,8 +20,8 @@ class CloudFrame
 
         float azimuth_res_;
         float az_step_;
-        int n_radial_;
-        int n_ring_;
+        int n_horizontal_;
+        int n_vertical_;
         int n_pts_;
         std::vector<float> v_angle_;
 
