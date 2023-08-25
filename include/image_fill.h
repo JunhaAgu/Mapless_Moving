@@ -1,30 +1,28 @@
 #ifndef _IMAGE_FILL_H_
 #define _IMAGE_FILL_H_
 
-#include "defines.h"
-#include "user_param.h"
-#include "cloud_frame.h"
+#include <algorithm>
+#include <opencv2/core.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/opencv.hpp>
 #include <vector>
 
-#include <opencv2/core.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/highgui.hpp>
-#include <opencv2/opencv.hpp>
-
-#include <algorithm>
+#include "cloud_frame.h"
+#include "defines.h"
+#include "user_param.h"
 
 class MaplessDynamic;
 class UserParam;
 class CloudFrame;
 
-class ImageFill
-{
-private:
+class ImageFill {
+   private:
     int img_height_;
     int img_width_;
     int thr_object_;
 
-public:
+   public:
     std::vector<int> row_;
     std::vector<int> col_;
 
@@ -47,11 +45,14 @@ public:
 
     cv::MatND histogram_;
 
-public:
-    ImageFill(const std::unique_ptr<UserParam> &user_param);
+   public:
+    ImageFill(const std::unique_ptr<UserParam>& user_param);
     ~ImageFill();
 
-    void plugImageZeroHoles(cv::Mat& accumulated_dRdt, cv::Mat& accumulated_dRdt_score, std::unique_ptr<CloudFrame>& CloudFrame_next, float object_factor);
+    void fillImageZeroHoles(cv::Mat& accumulated_dRdt,
+                            cv::Mat& accumulated_dRdt_score,
+                            std::unique_ptr<CloudFrame>& CloudFrame_next,
+                            cv::Mat& groundPtsIdx_next, float object_factor);
 
     void interpAndfill_image(cv::Mat& input_img, cv::Mat& filled_bin);
 };

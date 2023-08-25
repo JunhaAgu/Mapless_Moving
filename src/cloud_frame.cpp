@@ -396,22 +396,21 @@ void CloudFrame::makeRangeImageAndPtsPerPixel_dR(bool cur_next) {
 
     int n_vertical_minus_1 = n_vertical_ - 1;
 
-    float& criteria0 = lidar_elevation_criteria_[0];
-    float& criteria1 = lidar_elevation_criteria_[1];
-    float& criteria2 = lidar_elevation_criteria_[2];
-    float& criteria3 = lidar_elevation_criteria_[3];
-    float& line0_a = lidar_elevation_line0_[0];
-    float& line0_b = lidar_elevation_line0_[1];
-    float& line1_a = lidar_elevation_line1_[0];
-    float& line1_b = lidar_elevation_line1_[1];
+    const float& criteria0 = lidar_elevation_criteria_[0];
+    const float& criteria1 = lidar_elevation_criteria_[1];
+    const float& criteria2 = lidar_elevation_criteria_[2];
+    const float& criteria3 = lidar_elevation_criteria_[3];
+    const float& line0_a = lidar_elevation_line0_[0];
+    const float& line0_b = lidar_elevation_line0_[1];
+    const float& line1_a = lidar_elevation_line1_[0];
+    const float& line1_b = lidar_elevation_line1_[1];
 
     for (int i = 0; i < n_pts_; ++i, ++ptr_phi, ++ptr_theta, ++ptr_rho) {
         float& phi_tmp = *ptr_phi;
+        phi_tmp *= R2D;
         float& theta_tmp = *ptr_theta;
         float& rho_tmp = *ptr_rho;
-        phi_tmp *= R2D;
-        // phi_R2D = (ptr_phi[i] * R2D);
-        // std::cout << phi_tmp <<std::endl;
+
         if (phi_tmp > criteria0)  // 2.5[degree]
         {
             i_row = 0;
@@ -436,9 +435,8 @@ void CloudFrame::makeRangeImageAndPtsPerPixel_dR(bool cur_next) {
 
         int i_row_ncols_i_col = i_row * n_col + i_col;
         float& img_rho_tmp = *(ptr_img_rho + i_row_ncols_i_col);
-        if (img_rho_tmp == 0 ||
-            img_rho_tmp >
-                rho_tmp)  //(str_rhopts_->img_rho.at<float>(i_row,i_col) == 0)
+        if (img_rho_tmp == 0 || img_rho_tmp > rho_tmp)
+        //(str_rhopts_->img_rho.at<float>(i_row,i_col) == 0)
         {
             img_rho_tmp = rho_tmp;
         } else {
@@ -577,14 +575,20 @@ void CloudFrame::interpRangeImage_dR(bool cur_next) {
     float* ptr_img_rho_new = img_rho_new.ptr<float>(0);
 
     float* ptr_img_rho = str_rhopts_->img_rho.ptr<float>(0);
+    int i_ncols = 0;
+    int i_minus_ncols = 0;
+    int i_plus_ncols = 0;
 
-    for (int i = 23; i < 36; i++)
+    int n_horizontal_minus_2 = (n_horizontal_ - 2);
+
+    for (int i = 23; i < 36; ++i)
     // for (int i = 35; i > 22; --i)
     {
-        int i_ncols = i * n_col;
-        int i_minus_ncols = (i - 1) * n_col;
-        int i_plus_ncols = (i + 1) * n_col;
-        for (int j = 0 + 2; j < (n_horizontal_ - 2); ++j) {
+        i_ncols = i * n_col;
+        i_minus_ncols = i_ncols - n_col;  // i_minus_ncols = (i - 1) * n_col;
+        i_plus_ncols = i_ncols + n_col;   // i_plus_ncols = (i + 1) * n_col;
+
+        for (int j = 2; j < n_horizontal_minus_2; ++j) {
             if (*(ptr_img_rho + i_ncols + j) == 0) {
                 if ((*(ptr_img_rho + i_minus_ncols + j) != 0)) {
                     if ((*(ptr_img_rho + i_plus_ncols + j) != 0)) {

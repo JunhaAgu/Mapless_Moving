@@ -120,19 +120,23 @@ void MaplessDynamic::TEST() {
         p1_msg_test_ = *(data_buf_[cnt_data]->pcl_msg_);
         pcl::fromROSMsg(p1_msg_test_, *p1_pcl_test_);
 
-        // 1. Calculate T01 from the SLAM (or Odometry) algorithm
+        // 1. Get T01 from the gt poses
         Pose T10;
-        T10 =
-            data_buf_[cnt_data]
-                ->T_gt_.inverse();  // KITTI: cnt_data / CARLA: cnt_data-1 ,,,,
+        if (dataset_name_ == "KITTI") {
+            T10 = data_buf_[cnt_data]->T_gt_.inverse();  // KITTI: cnt_data
+        } else {
+            T10 =
+                data_buf_[cnt_data - 1]->T_gt_.inverse();  // CARLA: cnt_data-1
+        }
+
         std::cout << data_buf_[cnt_data]->T_gt_ << std::endl;
         ROS_INFO_STREAM("size of p0_pcl_test_: " << p0_pcl_test_->size());
         ROS_INFO_STREAM("size of p1_pcl_test_: " << p1_pcl_test_->size());
 
-        // 2. Solve the Mapless Dynamic algorithm.
         timer::tic();
         Mask mask1;
 
+        // 2. Generate range-image
         CloudFrame_next_->genRangeImages(p1_pcl_test_, true);
 
         double dt_gen = timer::toc();  // milliseconds
@@ -142,10 +146,11 @@ void MaplessDynamic::TEST() {
                         << " "
                         << "window :" << cnt_data);
 
+        // 3. Solve the Mapless Dynamic algorithm.
         this->solve(p0_pcl_test_, p1_pcl_test_, T10, mask1, cnt_data,
                     cloudHeader_test_);
 
-        // 3. Update the previous variables
+        // 4. p1_pcl_test_ <- p0_pcl_test_
         if (rosbag_play_ == false) {
             p0_pcl_test_->resize(0);
             pcl::copyPointCloud(*p1_pcl_test_, *p0_pcl_test_);
@@ -161,9 +166,11 @@ void MaplessDynamic::TEST() {
         is_initialized_test_ = true;
 
         // Initialize the first data.
+        // 0. Get the initial LiDAR data
         p0_msg_test_ = *(data_buf_[0]->pcl_msg_);
         pcl::fromROSMsg(p0_msg_test_, *p0_pcl_test_);
 
+        // 1. Generate range-image
         CloudFrame_cur_->genRangeImages(p0_pcl_test_, true);
         ROS_INFO_STREAM("size of p0_pcl_test_: " << p0_pcl_test_->size());
     }
@@ -370,22 +377,27 @@ void MaplessDynamic::solve(PointCloudwithTime::Ptr p0,
 
     static int pub_num = 0;
 
+    // time for fastsegmentGround
     static double avg_time_C = 0.0;
     static double sum_time_C = 0.0;
     static int iter_time_C = 1;
 
+    // time for
     static double avg_time_D = 0.0;
     static double sum_time_D = 0.0;
     static int iter_time_D = 1;
 
+    // time for object detection
     static double avg_time_E = 0.0;
     static double sum_time_E = 0.0;
     static int iter_time_E = 1;
 
+    // time for
     static double avg_time_F = 0.0;
     static double sum_time_F = 0.0;
     static int iter_time_F = 1;
 
+    // time for
     static double avg_time_G = 0.0;
     static double sum_time_G = 0.0;
     static int iter_time_G = 1;
@@ -512,13 +524,14 @@ void MaplessDynamic::solve(PointCloudwithTime::Ptr p0,
     // cv::imshow("after updateAccum", accumulated_dRdt_);
 
     timer::tic();
-    ImageFill_->plugImageZeroHoles(accumulated_dRdt_, accumulated_dRdt_score_,
-                                   CloudFrame_next_, object_factor);
+    ImageFill_->fillImageZeroHoles(
+        accumulated_dRdt_, accumulated_dRdt_score_, CloudFrame_next_,
+        SegmentGround_->groundPtsIdx_next_, object_factor);
     // double dt_toc9 = timer::toc(); // milliseconds
-    // ROS_INFO_STREAM("elapsed time for 'plugImageZeroHoles' :" <<  dt_toc9 <<
+    // ROS_INFO_STREAM("elapsed time for 'fillImageZeroHoles' :" <<  dt_toc9 <<
     // " [ms]");
 
-    // cv::imshow("after plugImageZeroHoles", accumulated_dRdt_);
+    // cv::imshow("after fillImageZeroHoles", accumulated_dRdt_);
 
     // timer::tic();
     ObjectExt_->updateAccumdRdt(CloudFrame_next_, accumulated_dRdt_,
