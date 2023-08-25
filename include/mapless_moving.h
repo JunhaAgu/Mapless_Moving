@@ -1,5 +1,5 @@
-#ifndef _MAPLESS_DYNAMIC_H_
-#define _MAPLESS_DYNAMIC_H_
+#ifndef _MAPLESS_MOVING_H_
+#define _MAPLESS_MOVING_H_
 
 #include <pcl/common/transforms.h>
 #include <pcl/point_cloud.h>

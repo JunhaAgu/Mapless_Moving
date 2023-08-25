@@ -19,7 +19,7 @@
 // Mapless Dynamic header
 #include <visualization_msgs/Marker.h>
 
-#include "mapless_dynamic.h"
+#include "mapless_moving.h"
 
 class ROSWrapper {
     /* =========

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5.1)
-project(mapless_dynamic)
+project(mapless_moving)
 set(CMAKE_BUILD_TYPE Release) # Debug, Release, RelWithDebInfo
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -pthread -pg -O4 -msse3 -flto -pg -march=native -mfpmath=sse") #O0,O2: optimize 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}) 
@@ -29,7 +29,7 @@ catkin_package(
 
 set(SRC ${SRC} 
   src/ros_wrapper.cpp
-  src/mapless_dynamic.cpp
+  src/mapless_moving.cpp
   src/timer.cpp
   src/user_param.cpp
   src/cloud_frame.cpp
@@ -46,11 +46,11 @@ include_directories( ${includeDirs} )
 include_directories( ${catkin_INCLUDE_DIRS} )
 include_directories( ${Eigen_INCLUDE_DIRS} )
 
-add_executable(mapless_dynamic_node src/main.cpp ${SRC})
-target_link_libraries (mapless_dynamic_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${Eigen_LIBRARIES})
+add_executable(mapless_moving_node src/main.cpp ${SRC})
+target_link_libraries (mapless_moving_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${Eigen_LIBRARIES})
 
 # install
-install(TARGETS mapless_dynamic_node RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+install(TARGETS mapless_moving_node RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 install(DIRECTORY launch/
     DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
 )

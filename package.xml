@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>mapless_dynamic</name>
+  <name>mapless_moving</name>
   <version>0.0.0</version>
-  <description>The Mapless_dynamic package</description>
+  <description>The Mapless_Moving package</description>
 
   <maintainer email="wnsgk02@snu.ac.kr">junhakim</maintainer>
 

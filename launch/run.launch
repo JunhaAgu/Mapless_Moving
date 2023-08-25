@@ -1,17 +1,19 @@
 <launch>
+    <!-- if rosbag_play == true -->
     <arg name="topicname_lidar"     default="/debug/pc_raw"/> <!-- "/velodyne_points/lidar0"/> -->
     <arg name="topicname_pose"      default="/aft_mapped_to_init"/> 
     <!--ALOAM: /aft_mapped_to_init-->
     <!--CT-ICP /ct_icp/pose/odom-->
+
     <arg name="dataset_name"        default="KITTI"/>   <!-- KITTI or CARLA -->
     <arg name="rosbag_play"         default="false"/>    <!-- true: rosbag / false: pcd data -->
     <arg name="T01_slam"            default="false"/>   <!-- true: T01 from slam / false: T01 from GT -->
-    <arg name="data_number"         default="00"/>      <!-- KITTI data: 00 01 02 05 07 / CARLA data: 01 01_001 01_002 03 03_001 03_002--> 
+    <arg name="data_number"         default="02"/>      <!-- KITTI data: 00 01 02 05 07 / CARLA data: 01 01_001 01_002 03 03_001 03_002--> 
 
     <arg name="dataset_kitti_dir"         default="/mnt/g/reinstall_ubuntu/KITTI_odometry/"/>
     <arg name="dataset_carla_dir"         default="/mnt/g/mapless_dataset/CARLA/"/>
 
-    <node pkg="mapless_dynamic" name="mapless_dynamic_node" type="mapless_dynamic_node" output="screen">
+    <node pkg="mapless_moving" name="mapless_moving_node" type="mapless_moving_node" output="screen">
         <param name="topicname_lidar" type="string" value="$(arg topicname_lidar)"/>
         <param name="topicname_pose" type="string" value="$(arg topicname_pose)"/>
         <param name="dataset_name" type="string" value="$(arg dataset_name)"/>
@@ -25,7 +27,7 @@
 
     <arg name="rviz" default="true" />
     <group if="$(arg rviz)">
-        <node launch-prefix="nice" pkg="rviz" type="rviz" name="rviz" args="-d $(find mapless_dynamic)/rviz_cfg/mapless_dynamic_base.rviz" />
+        <node launch-prefix="nice" pkg="rviz" type="rviz" name="rviz" args="-d $(find mapless_moving)/rviz_cfg/mapless_moving_base.rviz" />
     </group>
     
 </launch>
