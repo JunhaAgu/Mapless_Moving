@@ -13,6 +13,8 @@
 Left two: <b>KITTI</b> <i>05</i> (left) and <b>CARLA</b> <i>town01_002</i> (right) with <b><a href="https://github.com/HKUST-Aerial-Robotics/A-LOAM">A-LOAM</a></b>
 <p align = "center">
 Right two: <b>KITTI</b> <i>01</i> (left) and <b>CARLA</b> <i>town03_002</i> (right) with <b><a href="https://github.com/jedeschaud/ct_icp">CT-ICP</a></b>
+  
+  <I>The subscript 002 of the town01 and town03 means 3D points have zero mean Gaussian noise whose std. is 0.02 m.</i>
 </p>
 
 ## 1. Descriptions
