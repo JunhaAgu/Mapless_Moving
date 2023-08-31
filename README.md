@@ -4,11 +4,11 @@
 </p> 
 
 <p align = "center">
-<img src= "https://github.com/JunhaAgu/Mapless_Moving/blob/main/video/loam/KITTI_07.gif" alt="aligned four lidars via the AutoL2LCalib" width="350" height="395">
-<img src= "https://github.com/JunhaAgu/Mapless_Moving_matlab/blob/main/video/CARLA_town01.gif" alt="aligned four lidars via the AutoL2LCalib" width="405" height="315">
+<img src= "https://github.com/JunhaAgu/Mapless_Moving/blob/main/video/loam/loam_kitti_05.gif" alt="aligned four lidars via the AutoL2LCalib" width="175" height="197.5">
+<img src= "https://github.com/JunhaAgu/Mapless_Moving/blob/main/video/loam/loam_carla_town01_002.gif" alt="aligned four lidars via the AutoL2LCalib" width="175" height="197.5">
 </p>
 <p align = "center">
-<b>KITTI</b> <i>07</i> (left) and <b>CARLA</b> <i>town01</i> (right)
+<b>KITTI</b> <i>05</i> (left) and <b>CARLA</b> <i>town01_002</i> (right) with <b><a href="https://github.com/HKUST-Aerial-Robotics/A-LOAM">A-LOAM</a></b>
 </p>
 
 ## 1. Descriptions
