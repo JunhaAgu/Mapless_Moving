@@ -34,7 +34,7 @@ Three main features of the **OMMOCAR** are like;
 
 We demonstrate that the proposed method improves the existing 3D LiDAR odometry algorithms' performance with **KITTI odometry** and **synthetic datasets** (CARLA).
 
-- Maintainers: Junha Kim (wnsgk02@snu.ac.kr) and Changhyeon Kim (rlackd93@snu.ac.kr)
+- Maintainers: Junha Kim (wnsgk02@snu.ac.kr), Changhyeon Kim (rlackd93@snu.ac.kr), and Haram Kim (rlgkfka614@snu.ac.kr)
 
 ### Datasets used in the paper
 The datasets used in our submission are **KITTI odometry (with SemanticKITTI)** and **synthetic datasets** obtained from **CARLA**
