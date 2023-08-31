@@ -30,6 +30,9 @@
 #include "segment_ground.h"
 #include "user_param.h"
 
+// Mapless Dynamic header
+#include <visualization_msgs/Marker.h>
+
 struct TestData {
     Pose T_gt_;
     PointCloudwithTime::Ptr pcl_;
@@ -116,6 +119,13 @@ class MaplessDynamic {
 
     sensor_msgs::PointCloud2 converted_msg_d_;
     sensor_msgs::PointCloud2 converted_msg_s_;
+
+    ros::Publisher pub_marker_;
+    ros::Publisher pub_lidar_marker_;
+    visualization_msgs::Marker marker_;
+    visualization_msgs::Marker lidar_marker_;
+
+    int data_start_num_;
 
    public:
     MaplessDynamic(ros::NodeHandle& nh, bool rosbag_play,

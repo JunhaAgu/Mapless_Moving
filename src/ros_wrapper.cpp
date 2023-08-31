@@ -26,9 +26,8 @@ ROSWrapper::ROSWrapper(ros::NodeHandle& nh) : is_initialized_(false), nh_(nh) {
         topicname_pose_, 100, &ROSWrapper::callbackPose, this);
 
     // publisher
-    pub_marker_ = nh_.advertise<visualization_msgs::Marker>("marker/node", 1);
-    pub_lidar_marker_ =
-        nh_.advertise<visualization_msgs::Marker>("lidar_marker/node", 1);
+    pub_marker_         = nh_.advertise<visualization_msgs::Marker>("marker/node", 1);
+    pub_lidar_marker_   = nh_.advertise<visualization_msgs::Marker>("lidar_marker/node", 1);
 
     // marker setting
     {
@@ -233,7 +232,10 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg) {
         updatePreviousVariables(p0_pcl_wtime_, p1_pcl_wtime_, mask1);
 
         marker_.header.stamp = ros::Time::now();
-        marker_.text = std::to_string(cnt_pcl);
+        std::string marker_title;
+        marker_title = "Iteration: " + std::to_string(cnt_pcl); 
+        marker_.text = marker_title;
+        marker_.scale.z = 1.0;
         marker_.pose.position.x = 0;   // T01_(0,3);     //x
         marker_.pose.position.y = 0;   // T01_(1,3);     //y
         marker_.pose.position.z = 10;  // T01_(2,3) + 10; //z

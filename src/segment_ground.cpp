@@ -3,6 +3,7 @@
 SegmentGround::SegmentGround(const std::unique_ptr<UserParam>& user_param) {
     img_height_ = user_param->image_param_.height_;
     img_width_ = user_param->image_param_.width_;
+    dataset_name_ = user_param->dataset_name_;
 
     downsample_size_ = user_param->ground_segment_param_.downsample_size;
 
@@ -140,6 +141,13 @@ void SegmentGround::fastsegmentGround(
     ////////////////////////////////////////////////////////
     //////////////////////////// upscale: sample size -> original image size
     float rep_z_value = 0.0;
+    float thr_dist = 0.1;
+    float thr_z = 2.0;
+    if (dataset_name_ =="CARLA")
+    {
+        thr_dist = 0.2;
+        thr_z = 3.0;
+    }
 
     for (int i = 0; i < n_row; ++i) {
         int i_ncols = i * n_col;
@@ -174,9 +182,9 @@ void SegmentGround::fastsegmentGround(
                                   pts_z_col_range[k] + line_b[j];
 
                     if ((pts_z_col_range[k] != 0) &&
-                        (residual_leastsquare < thr_)) {
+                        (residual_leastsquare < thr_dist)) {
                         *(ptr_groundPtsIdx_next + i_ncols + col_range[k]) = 255;
-                    } else if ((line_updown > 0) && (line_updown < 2)) {
+                    } else if ((line_updown > 0) && (line_updown < thr_z)) {
                         *(ptr_groundPtsIdx_next + i_ncols + col_range[k]) = 255;
                     } else {
                         *(ptr_groundPtsIdx_next + i_ncols + col_range[k]) = 0;

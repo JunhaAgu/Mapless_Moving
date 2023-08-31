@@ -55,7 +55,56 @@ MaplessDynamic::MaplessDynamic(ros::NodeHandle& nh, bool rosbag_play,
     accumulated_dRdt_score_ = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
     dRdt_ = cv::Mat::zeros(img_height_, img_width_, CV_32FC1);
 
-    this->loadTestData();
+    // read pcd
+    if (rosbag_play == false)
+    {
+        this->loadTestData();
+    }
+    
+    // publisher
+    pub_marker_         = nh_.advertise<visualization_msgs::Marker>("marker/node", 1);
+    pub_lidar_marker_   = nh_.advertise<visualization_msgs::Marker>("lidar_marker/node", 1);
+
+    // marker setting
+    {
+        marker_.header.frame_id = "map";  // map frame
+        marker_.color.a = 1.0;            // Don't forget to set the alpha!
+        marker_.color.r = 0.0;
+        marker_.color.g = 1.0;
+        marker_.color.b = 0.0;
+        marker_.scale.x = 0.1;
+        marker_.scale.y = 0.1;
+        marker_.scale.z = 3.0;
+        marker_.type =
+            visualization_msgs::Marker::TEXT_VIEW_FACING;  // TEXT_VIEW_FACING;
+                                                           // SPHERE;
+        marker_.id = 0;
+        marker_.action = visualization_msgs::Marker::ADD;
+        marker_.pose.orientation.x = 0.0;
+        marker_.pose.orientation.y = 0.0;
+        marker_.pose.orientation.z = 0.0;
+        marker_.pose.orientation.w = 1.0;
+    }
+    // lidar marker setting
+    {
+        lidar_marker_.header.frame_id = "map";  // map frame
+        lidar_marker_.color.a = 1.0;  // Don't forget to set the alpha!
+        lidar_marker_.color.r = 0.0;
+        lidar_marker_.color.g = 1.0;
+        lidar_marker_.color.b = 0.0;
+        lidar_marker_.scale.x = 1.0;
+        lidar_marker_.scale.y = 1.0;
+        lidar_marker_.scale.z = 1.0;
+        lidar_marker_.type =
+            visualization_msgs::Marker::CYLINDER;  // TEXT_VIEW_FACING; SPHERE;
+        lidar_marker_.id = 0;
+        lidar_marker_.action = visualization_msgs::Marker::ADD;
+        lidar_marker_.pose.orientation.x = 0.0;
+        lidar_marker_.pose.orientation.y = 0.0;
+        lidar_marker_.pose.orientation.z = 0.0;
+        lidar_marker_.pose.orientation.w = 1.0;
+    }
+
     // END YOUR CODE
 };
 
@@ -124,12 +173,13 @@ void MaplessDynamic::TEST() {
         Pose T10;
         if (dataset_name_ == "KITTI") {
             T10 = data_buf_[cnt_data]->T_gt_.inverse();  // KITTI: cnt_data
-        } else {
+            std::cout << data_buf_[cnt_data]->T_gt_ << std::endl;
+        } else if (dataset_name_ == "CARLA") {
             T10 =
                 data_buf_[cnt_data - 1]->T_gt_.inverse();  // CARLA: cnt_data-1
+                std::cout << data_buf_[cnt_data - 1]->T_gt_ << std::endl;
         }
 
-        std::cout << data_buf_[cnt_data]->T_gt_ << std::endl;
         ROS_INFO_STREAM("size of p0_pcl_test_: " << p0_pcl_test_->size());
         ROS_INFO_STREAM("size of p1_pcl_test_: " << p1_pcl_test_->size());
 
@@ -155,6 +205,23 @@ void MaplessDynamic::TEST() {
             p0_pcl_test_->resize(0);
             pcl::copyPointCloud(*p1_pcl_test_, *p0_pcl_test_);
         }
+
+        marker_.header.stamp = ros::Time::now();
+        std::string marker_title;
+        marker_title = "Iteration: " + std::to_string(cnt_data) + ", " + "Frame: " + std::to_string(data_start_num_ + cnt_data - 1); 
+        marker_.text = marker_title;
+        marker_.scale.z = 1.0;
+        marker_.pose.position.x = 0;   // T01_(0,3);     //x
+        marker_.pose.position.y = 0;   // T01_(1,3);     //y
+        marker_.pose.position.z = 10;  // T01_(2,3) + 10; //z
+
+        lidar_marker_.header.stamp = ros::Time::now();
+        lidar_marker_.pose.position.x = 0;  // T01_(0,3);     //x
+        lidar_marker_.pose.position.y = 0;  // T01_(1,3);     //y
+        lidar_marker_.pose.position.z = 0;  // T01_(2,3); //z
+
+        pub_marker_.publish(marker_);
+        pub_lidar_marker_.publish(lidar_marker_);
 
         // End condition
         if (cnt_data == n_valid_data_ - 1)  // -1 -1
@@ -220,13 +287,15 @@ void MaplessDynamic::loadTestData() {
         // final_num = final_num - 1;
     } else if (dataset_name == "CARLA") {
         if (data_num == "01") {
-            start_num = 10 + 00;
+            start_num = 12 + 00;
             final_num = 370 + 1;  // 1 ~ 141+2 75
         } else if (data_num == "03") {
-            start_num = 10 + 00;  // 94;
+            start_num = 12 + 00;  // 94;
             final_num = 400 + 1;  // 1 ~ 101+2
         }
     }
+
+    data_start_num_ = start_num;
 
     // read Association --> n_data_
     std::string pose_dir;
@@ -412,39 +481,41 @@ void MaplessDynamic::solve(PointCloudwithTime::Ptr p0,
     ROS_INFO_STREAM(
         "Norm of euler angle: " << NORM(euler(0), euler(1), euler(2)));
 
-    if (NORM(euler(0), euler(1), euler(2)) > 3.0) {
-        object_factor = 1.5;
+    if (NORM(euler(0), euler(1), euler(2)) > 2.0) {
+        object_factor = 2.0;
     }
 
     // Segment ground
-    timer::tic();
+    // timer::tic();
     SegmentGround_->fastsegmentGround(CloudFrame_next_);
-    double dt_toc2 = timer::toc();  // milliseconds
+    // double dt_toc2 = timer::toc();  // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'segmentSGround' :" << dt_toc2 << "
     // [ms]");
-    sum_time_C += dt_toc2;
-    avg_time_C = sum_time_C / iter_time_C;
-    ROS_INFO_STREAM("Average time for 'C' :" << avg_time_C << " [ms]");
-    iter_time_C++;
 
-    //// Occlusion accumulation ////
-    // Compute the occlusion dRdt
+    // sum_time_C += dt_toc2;
+    // avg_time_C = sum_time_C / iter_time_C;
+    // ROS_INFO_STREAM("Average time for 'C' :" << avg_time_C << " [ms]");
+    // iter_time_C++;
 
     // cv::imshow("SegmentGround_", SegmentGround_->groundPtsIdx_next_);
 
-    timer::tic();
+    //// Occlusion accumulation ////
+
+    // Compute the occlusion dRdt
+    // timer::tic();
     dRCalc_->dR_warpPointcloud(CloudFrame_next_, CloudFrame_cur_,
                                CloudFrame_cur_warped_, p0, T_next2cur_,
                                cnt_data, dRdt_);
     // double dt_toc3 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'dR_warpPointcloud' :" << dt_toc3 << "
-    // [ms]"); str_next_->state();
+    // [ms]");
+    // CloudFrame_cur_->str_rhopts_->state();
     // cv::imshow("dRdt_", dRdt_);
     // cv::waitKey(0);
     // exit(0);
 
-    // timer::tic();
     // warp the occlusion accumulation map
+    // timer::tic();
     PclWarp_->warpPointcloud(CloudFrame_cur_, CloudFrame_warpPointcloud_,
                              T_next2cur_, accumulated_dRdt_, cnt_data);
     PclWarp_->initializeStructAndPcl(CloudFrame_warpPointcloud_);
@@ -453,7 +524,6 @@ void MaplessDynamic::solve(PointCloudwithTime::Ptr p0,
     // double dt_toc4 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'warpPointcloud' :" << dt_toc4 << "
     // [ms]");
-
     // cv::imshow("after warpPointcloud", accumulated_dRdt_);
 
     //     if (cnt_data == 2)
@@ -463,20 +533,20 @@ void MaplessDynamic::solve(PointCloudwithTime::Ptr p0,
     //     cv::imshow("before  k", accumulated_dRdt_score_);
     //     countZerofloat(accumulated_dRdt_score_);
     // }
+
+    //// filter out outliers ////
     // timer::tic();
-    // filter out outliers
     ObjectExt_->filterOutAccumdR(CloudFrame_next_, CloudFrame_cur_warped_,
                                  accumulated_dRdt_, accumulated_dRdt_score_,
                                  dRdt_);
     // double dt_toc5 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'filterOutAccumdR' :" << dt_toc5 << "
     // [ms]");
-
-    double dt_toc3 = timer::toc();  // milliseconds
-    sum_time_D += dt_toc3;
-    avg_time_D = sum_time_D / iter_time_D;
-    ROS_INFO_STREAM("Average time for 'D' :" << avg_time_D << " [ms]");
-    iter_time_D++;
+    // double dt_toc3 = timer::toc();  // milliseconds
+    // sum_time_D += dt_toc3;
+    // avg_time_D = sum_time_D / iter_time_D;
+    // ROS_INFO_STREAM("Average time for 'D' :" << avg_time_D << " [ms]");
+    // iter_time_D++;
 
     // cv::imshow("after filterOutAccumdR", accumulated_dRdt_);
 
@@ -489,8 +559,9 @@ void MaplessDynamic::solve(PointCloudwithTime::Ptr p0,
     //     cv::waitKey(0);
     //     exit(0);
     // }
-    timer::tic();
-    // Extract object candidate via connected components in 2-D binary image
+
+    //// Extract object candidate via connected components in 2-D binary image
+    // timer::tic();
     ObjectExt_->extractObjectCandidate(accumulated_dRdt_, CloudFrame_next_,
                                        object_factor);
     // double dt_toc6 = timer::toc(); // milliseconds
@@ -498,31 +569,30 @@ void MaplessDynamic::solve(PointCloudwithTime::Ptr p0,
     // << " [ms]");
 
     // cv::imshow("after extractObjectCandidate", accumulated_dRdt_);
-    //// update object_mask
-    // object_mask = accumulated_dRdt>0;
+
+    //// Fast Segment ////
     //  timer::tic();
-    //  Fast Segment
     ObjectExt_->checkSegment(accumulated_dRdt_, CloudFrame_next_,
                              SegmentGround_->groundPtsIdx_next_);
     // double dt_toc7 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'checkSegment' :" <<  dt_toc7 << "
     // [ms]"); cv::imshow("after checkSegment", accumulated_dRdt_);
-    //// update object_mask
-    // object_mask = accumulated_dRdt>0;
+
+    //// update accumulated_dRdt & accumulated_dRdt_score after checkSegment
     //  timer::tic();
     ObjectExt_->updateAccum(accumulated_dRdt_, accumulated_dRdt_score_);
     // double dt_toc8 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'updateAccum' :" <<  dt_toc8 << "
     // [ms]");
-
-    double dt_toc4 = timer::toc();  // milliseconds
-    sum_time_E += dt_toc4;
-    avg_time_E = sum_time_E / iter_time_E;
-    ROS_INFO_STREAM("Average time for 'E' :" << avg_time_E << " [ms]");
-    iter_time_E++;
+    // double dt_toc4 = timer::toc();  // milliseconds
+    // sum_time_E += dt_toc4;
+    // avg_time_E = sum_time_E / iter_time_E;
+    // ROS_INFO_STREAM("Average time for 'E' :" << avg_time_E << " [ms]");
+    // iter_time_E++;
 
     // cv::imshow("after updateAccum", accumulated_dRdt_);
 
+    //// Fill zero holes of image /////
     timer::tic();
     ImageFill_->fillImageZeroHoles(
         accumulated_dRdt_, accumulated_dRdt_score_, CloudFrame_next_,
@@ -530,9 +600,9 @@ void MaplessDynamic::solve(PointCloudwithTime::Ptr p0,
     // double dt_toc9 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'fillImageZeroHoles' :" <<  dt_toc9 <<
     // " [ms]");
-
     // cv::imshow("after fillImageZeroHoles", accumulated_dRdt_);
 
+    //// update accumulated_dRdt & accumulated_dRdt_score after checkSegment
     // timer::tic();
     ObjectExt_->updateAccumdRdt(CloudFrame_next_, accumulated_dRdt_,
                                 accumulated_dRdt_score_, dRdt_,
@@ -540,14 +610,14 @@ void MaplessDynamic::solve(PointCloudwithTime::Ptr p0,
     // double dt_toc10 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'updateAccumdRdt' :" <<  dt_toc10 << "
     // [ms]");
+    // double dt_toc5 = timer::toc();  // milliseconds
+    // sum_time_F += dt_toc5;
+    // avg_time_F = sum_time_F / iter_time_F;
+    // ROS_INFO_STREAM("Average time for 'F' :" << avg_time_F << " [ms]");
+    // iter_time_F++;
+
     float* ptr_accumulated_dRdt = accumulated_dRdt_.ptr<float>(0);
     float* ptr_accumulated_dRdt_score = accumulated_dRdt_score_.ptr<float>(0);
-
-    double dt_toc5 = timer::toc();  // milliseconds
-    sum_time_F += dt_toc5;
-    avg_time_F = sum_time_F / iter_time_F;
-    ROS_INFO_STREAM("Average time for 'F' :" << avg_time_F << " [ms]");
-    iter_time_F++;
 
     // cv::imshow("accumulated_dRdt", accumulated_dRdt_);
     // cv::waitKey(0);

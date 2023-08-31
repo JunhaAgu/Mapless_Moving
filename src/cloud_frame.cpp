@@ -461,9 +461,8 @@ void CloudFrame::interpRangeImage(bool cur_next) {
 
     int n_horizontal_minus_2 = (n_horizontal_ - 2);
 
-    for (int i = 23; i < 36; ++i)
-    // for (int i = 35; i > 22; --i)
-    {
+    // for (int i = 23; i < 36; ++i){
+    for (int i = 35; i > 22; --i) {
         i_ncols = i * n_col;
         i_minus_ncols = i_ncols - n_col;  // i_minus_ncols = (i - 1) * n_col;
         i_plus_ncols = i_ncols + n_col;   // i_plus_ncols = (i + 1) * n_col;

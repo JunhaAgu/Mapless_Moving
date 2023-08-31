@@ -27,6 +27,8 @@ class SegmentGround {
     int img_height_;
     int img_width_;
 
+    std::string dataset_name_;
+
    public:
     cv::Mat groundPtsIdx_next_;
     std::random_device rd;
