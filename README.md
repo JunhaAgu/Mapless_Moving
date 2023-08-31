@@ -4,7 +4,7 @@
 </p> 
 
 <p align = "center">
-<img src= "https://github.com/JunhaAgu/Mapless_Moving_matlab/blob/main/video/KITTI_07.gif" alt="aligned four lidars via the AutoL2LCalib" width="405" height="315">
+<img src= "https://github.com/JunhaAgu/Mapless_Moving/blob/main/video/loam/KITTI_07.gif" alt="aligned four lidars via the AutoL2LCalib" width="350" height="395">
 <img src= "https://github.com/JunhaAgu/Mapless_Moving_matlab/blob/main/video/CARLA_town01.gif" alt="aligned four lidars via the AutoL2LCalib" width="405" height="315">
 </p>
 <p align = "center">
