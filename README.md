@@ -18,7 +18,7 @@ Right two: <b>KITTI</b> <i>01</i> (left) and <b>CARLA</b> <i>town03_002</i> (rig
 </p>
 
 ## 1. Descriptions
-**Note:** This software is based on our paper **(IEEE T-IM)**:
+**Note:** This software is based on our paper **(IEEE T-IV)**:
 
 The **OMMOCAR** is a program to detect moving objects for 3D LiDAR using occlusion accumulation in range image.
 
