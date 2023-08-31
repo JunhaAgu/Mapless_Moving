@@ -23,11 +23,11 @@ Right two: <b>KITTI</b> <i>01</i> (left) and <b>CARLA</b> <i>town03_002</i> (rig
 The **OMMOCAR** is a program to detect moving objects for 3D LiDAR using occlusion accumulation in range image.
 
 The source code is written in two languages: MATLAB and C++.
-(This source code is MATLAB ver.)
+(This source code is C++ ROS ver.)
 
-*The C++ version of the code is uploaded in [OMMOCAR C++ ver](https://github.com/JunhaAgu/mapless_dynamic).*
+*The Matlab version of the code is uploaded in [OMMOCAR Matlab ver](https://github.com/JunhaAgu/Mapless_Moving_matlab).*
 
-Four main features of the **OMMOCAR** are like;
+Three main features of the **OMMOCAR** are like;
 - The proposed method **does not require prior information** about objects or maps, and outputs are at the **point level**.
 - By **accumulating occlusion in the range image domain** and using bitwise operations, the computational speed of the proposed method is about 20 Hz or faster, suitable to run in real-time.
 - Because the proposed method is **not coupled with a pose estimation module**, it can be used as the front-end of other 3D LiDAR odometry algorithms.
