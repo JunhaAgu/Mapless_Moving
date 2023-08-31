@@ -61,14 +61,46 @@ We evaluate with *00*, *01*, *02*, *05* and *07* of **KITTI odometry**, and *tow
 
 Download datasets - [Download link](https://larr.snu.ac.kr/drive/d/s/uulKtWN4b41HXBNk92QigruwP2eBMqhY/4-Lw2fCmp5F_xCIgcX2TNC_qzBnMwVFd-HbYgiTNDsQo)
 
-## 2) How to run OMMOCAR MATLAB ver.?
+## 2) How to run OMMOCAR C++ ROS ver.?
 ### (a) Dependencies
-Recommend: MATLAB version >= 2021b with Windows 10.
+Recommend: Ubuntu 20.04 Noetic
 
-In versions under 2021b, some functions in the code could not be supported. Please notify us if you have problems when using the program.
+*We tested only in 20.04*
 
-### (2) Installation
-Just download this repository.
+### (b) Build
+Clone the repository and catkin build
 
-### (3) Run
-Modify the directory of datasets in **load_Dataset.m** file and run **main.m**.
+```
+    cd ~/catkin_ws/src
+    git clone https://github.com/JunhaAgu/Mapless_Moving.git
+    catkin build mapless_moving
+    source ~/catkin_ws/devel/setup.bash
+```
+
+### (c) Run
+#### (I) with pcd files and gt-pose
+In run.launch file, modify **"dataset_name"** and **"data_number"**
+, and set 
+```
+<arg name="rosbag_play"         default="false"/>
+<arg name="T01_slam"            default="false"/>
+```
+and then,
+```
+  roslaunch mapless_moving run.launch
+```
+
+#### (II) with rosbag files and estimated pose from Odometry algorithm
+(1) In run.launch file, set 
+```
+<arg name="rosbag_play"         default="true"/>
+<arg name="T01_slam"            default="true"/>
+```
+(2) launch an odometry algorithm (A-LOAM and CT-ICP in this paper) 
+
+(3) launch OMMOCAR
+```
+  roslaunch mapless_moving run.launch
+```
+
+(4) rosbag play
