@@ -38,6 +38,7 @@ set(SRC ${SRC}
   src/pcl_warp.cpp
   src/object_ext.cpp
   src/image_fill.cpp
+  src/thread_pool.cpp
 )
 
 set(includeDirs ${includeDirs} ${CMAKE_CURRENT_BINARY_DIR} include)

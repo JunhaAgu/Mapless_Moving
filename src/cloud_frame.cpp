@@ -120,14 +120,12 @@ void CloudFrame::genRangeImages_dR(PointCloudwithTime::Ptr pcl_in,
     // timer::tic();
     makeRangeImageAndPtsPerPixel_dR(cur_next);
     // double dt_2 = timer::toc(); // milliseconds
-    // ROS_INFO_STREAM("elapsed time for 'makeRangeImageAndPtsPerPixel_dR' :" <<
-    // dt_2 << " [ms]");
+    // ROS_INFO_STREAM("elapsed time for 'makeRangeImageAndPtsPerPixel_dR' :" << dt_2 << " [ms]");
 
     // timer::tic();
     interpRangeImage_dR(cur_next);
     // double dt_3 = timer::toc(); // milliseconds
-    // ROS_INFO_STREAM("elapsed time for 'interpRangeImage_dR' :" << dt_3 << "
-    // [ms]");
+    // ROS_INFO_STREAM("elapsed time for 'interpRangeImage_dR' :" << dt_3 << " [ms]");
 }
 
 void CloudFrame::genRangeImages_noComp(PointCloudwithTime::Ptr pcl_in,
@@ -140,10 +138,13 @@ void CloudFrame::genRangeImages_noComp(PointCloudwithTime::Ptr pcl_in,
 }
 
 void CloudFrame::calcuateRho(PointCloudwithTime::Ptr pcl_in, bool cur_next) {
-    float twopi = 2.0 * M_PI;
-    float offset_theta = M_PI;
+    const float twopi = 2.0 * M_PI;
+    const float offset_theta = M_PI;
+    const int  n_pts = pcl_in->size();
 
-    int n_pts = pcl_in->size();
+    const float M_PI_plus_offset_theta = M_PI + offset_theta;
+    const float twopi_plus_offset_theta = twopi + offset_theta;
+
     float invrhocos = 0.0;
     float cospsi = 0.0;
     float sinpsi = 0.0;
@@ -157,9 +158,6 @@ void CloudFrame::calcuateRho(PointCloudwithTime::Ptr pcl_in, bool cur_next) {
     float* ptr_phi = str_rhopts_->phi.data();
     float* ptr_theta = str_rhopts_->theta.data();
 
-    float M_PI_plus_offset_theta = M_PI + offset_theta;
-    float twopi_plus_offset_theta = twopi + offset_theta;
-
     for (int i = 0; i < n_pts; ++i, ++ptr_rho, ++ptr_phi, ++ptr_theta) {
         const slam::PointXYZT& pclpxyzi_tmp = pcl_in->points[i];
         const float& x_tmp = pclpxyzi_tmp.x;
@@ -171,42 +169,49 @@ void CloudFrame::calcuateRho(PointCloudwithTime::Ptr pcl_in, bool cur_next) {
         float& theta_tmp = *ptr_theta;
 
         rho_tmp = NORM(x_tmp, y_tmp, z_tmp);
-        phi_tmp = asinf32(z_tmp / rho_tmp);
-        invrhocos = 1.0f / (rho_tmp * cosf32(phi_tmp));
+        phi_tmp = asinf(z_tmp / rho_tmp);
+        invrhocos = 1.0f / (rho_tmp * cosf(phi_tmp));
 
         cospsi = x_tmp * invrhocos;
         sinpsi = y_tmp * invrhocos;
 
-        if (cospsi > 1) {
-            // std::cout << "(cospsi > 1): " << cospsi <<std::endl;
-            cospsi = 1.0f;
+        // if (cospsi > 1) {
+        //     // std::cout << "(cospsi > 1): " << cospsi <<std::endl;
+        //     cospsi = 1.0f;
 
-        } else if (cospsi < -1) {
-            // std::cout << "(cospsi < -1): " << cospsi <<std::endl;
-            cospsi = -1.0f;
-        } else {
-        }
+        // } else if (cospsi < -1) {
+        //     // std::cout << "(cospsi < -1): " << cospsi <<std::endl;
+        //     cospsi = -1.0f;
+        // } else {
+        // }
+        cospsi = fminf(fmaxf(cospsi, -1.0f), 1.0f);
 
+        // if (cospsi >= 0) {
+        //     if (sinpsi >= 0)  // 1 quadrant
+        //     {
+        //         theta_tmp = acosf32(cospsi) + offset_theta;
+        //     } else  // 4 quadrant
+        //     {
+        //         theta_tmp = twopi_plus_offset_theta - acosf32(cospsi);
+        //     }
+        // } else {
+        //     if (sinpsi >= 0)  // 2 quadrant
+        //     {
+        //         theta_tmp = M_PI_plus_offset_theta - acosf32(-cospsi);
+        //     } else  // 3 quadrant
+        //     {
+        //         theta_tmp = M_PI_plus_offset_theta + acosf32(-cospsi);
+        //     }
+        // }
         if (cospsi >= 0) {
-            if (sinpsi >= 0)  // 1 quadrant
-            {
-                theta_tmp = acosf32(cospsi) + offset_theta;
-            } else  // 4 quadrant
-            {
-                theta_tmp = twopi_plus_offset_theta - acosf32(cospsi);
-            }
+            theta_tmp = (sinpsi >= 0) ? acosf(cospsi) + offset_theta : twopi_plus_offset_theta - acosf(cospsi);
         } else {
-            if (sinpsi >= 0)  // 2 quadrant
-            {
-                theta_tmp = M_PI_plus_offset_theta - acosf32(-cospsi);
-            } else  // 3 quadrant
-            {
-                theta_tmp = M_PI_plus_offset_theta + acosf32(-cospsi);
-            }
+            theta_tmp = (sinpsi >= 0) ? M_PI_plus_offset_theta - acosf(-cospsi) : M_PI_plus_offset_theta + acosf(-cospsi);
         }
 
         if (theta_tmp >= twopi) {
-            theta_tmp = theta_tmp - twopi;
+            // theta_tmp = theta_tmp - twopi;
+            theta_tmp -= twopi;
         }
         // std::cout << str_rhopts_->rho[i] << " " << str_rhopts_->phi[i] << " "
         // << str_rhopts_->theta[i]<< std::endl;

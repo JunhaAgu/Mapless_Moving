@@ -486,29 +486,28 @@ void MaplessDynamic::solve(PointCloudwithTime::Ptr p0,
     }
 
     // Segment ground
-    // timer::tic();
+    timer::tic();
     SegmentGround_->fastsegmentGround(CloudFrame_next_);
-    // double dt_toc2 = timer::toc();  // milliseconds
+    double dt_toc2 = timer::toc();  // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'segmentSGround' :" << dt_toc2 << "
     // [ms]");
 
-    // sum_time_C += dt_toc2;
-    // avg_time_C = sum_time_C / iter_time_C;
-    // ROS_INFO_STREAM("Average time for 'C' :" << avg_time_C << " [ms]");
-    // iter_time_C++;
+    sum_time_C += dt_toc2;
+    avg_time_C = sum_time_C / iter_time_C;
+    ROS_INFO_STREAM("Average time for 'C' :" << avg_time_C << " [ms]");
+    iter_time_C++;
 
     // cv::imshow("SegmentGround_", SegmentGround_->groundPtsIdx_next_);
 
     //// Occlusion accumulation ////
 
     // Compute the occlusion dRdt
-    // timer::tic();
+    timer::tic();
     dRCalc_->dR_warpPointcloud(CloudFrame_next_, CloudFrame_cur_,
                                CloudFrame_cur_warped_, p0, T_next2cur_,
                                cnt_data, dRdt_);
-    // double dt_toc3 = timer::toc(); // milliseconds
-    // ROS_INFO_STREAM("elapsed time for 'dR_warpPointcloud' :" << dt_toc3 << "
-    // [ms]");
+    // double dt_toc_dRwarp = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'dR_warpPointcloud' :" << dt_toc_dRwarp << " [ms]");
     // CloudFrame_cur_->str_rhopts_->state();
     // cv::imshow("dRdt_", dRdt_);
     // cv::waitKey(0);
@@ -521,9 +520,8 @@ void MaplessDynamic::solve(PointCloudwithTime::Ptr p0,
     PclWarp_->initializeStructAndPcl(CloudFrame_warpPointcloud_);
     PclWarp_->warpPointcloud(CloudFrame_cur_, CloudFrame_warpPointcloud_,
                              T_next2cur_, accumulated_dRdt_score_, cnt_data);
-    // double dt_toc4 = timer::toc(); // milliseconds
-    // ROS_INFO_STREAM("elapsed time for 'warpPointcloud' :" << dt_toc4 << "
-    // [ms]");
+    // double dt_toc_warpPCL = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'warpPointcloud' :" << dt_toc_warpPCL << " [ms]");
     // cv::imshow("after warpPointcloud", accumulated_dRdt_);
 
     //     if (cnt_data == 2)
@@ -539,14 +537,13 @@ void MaplessDynamic::solve(PointCloudwithTime::Ptr p0,
     ObjectExt_->filterOutAccumdR(CloudFrame_next_, CloudFrame_cur_warped_,
                                  accumulated_dRdt_, accumulated_dRdt_score_,
                                  dRdt_);
-    // double dt_toc5 = timer::toc(); // milliseconds
-    // ROS_INFO_STREAM("elapsed time for 'filterOutAccumdR' :" << dt_toc5 << "
-    // [ms]");
-    // double dt_toc3 = timer::toc();  // milliseconds
-    // sum_time_D += dt_toc3;
-    // avg_time_D = sum_time_D / iter_time_D;
-    // ROS_INFO_STREAM("Average time for 'D' :" << avg_time_D << " [ms]");
-    // iter_time_D++;
+    // double dt_toc_filterAccum = timer::toc(); // milliseconds
+    // ROS_INFO_STREAM("elapsed time for 'filterOutAccumdR' :" << dt_toc_filterAccum << " [ms]");
+    double dt_toc3 = timer::toc();  // milliseconds
+    sum_time_D += dt_toc3;
+    avg_time_D = sum_time_D / iter_time_D;
+    ROS_INFO_STREAM("Average time for 'D' :" << avg_time_D << " [ms]");
+    iter_time_D++;
 
     // cv::imshow("after filterOutAccumdR", accumulated_dRdt_);
 
@@ -561,7 +558,7 @@ void MaplessDynamic::solve(PointCloudwithTime::Ptr p0,
     // }
 
     //// Extract object candidate via connected components in 2-D binary image
-    // timer::tic();
+    timer::tic();
     ObjectExt_->extractObjectCandidate(accumulated_dRdt_, CloudFrame_next_,
                                        object_factor);
     // double dt_toc6 = timer::toc(); // milliseconds
@@ -584,11 +581,11 @@ void MaplessDynamic::solve(PointCloudwithTime::Ptr p0,
     // double dt_toc8 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'updateAccum' :" <<  dt_toc8 << "
     // [ms]");
-    // double dt_toc4 = timer::toc();  // milliseconds
-    // sum_time_E += dt_toc4;
-    // avg_time_E = sum_time_E / iter_time_E;
-    // ROS_INFO_STREAM("Average time for 'E' :" << avg_time_E << " [ms]");
-    // iter_time_E++;
+    double dt_toc4 = timer::toc();  // milliseconds
+    sum_time_E += dt_toc4;
+    avg_time_E = sum_time_E / iter_time_E;
+    ROS_INFO_STREAM("Average time for 'E' :" << avg_time_E << " [ms]");
+    iter_time_E++;
 
     // cv::imshow("after updateAccum", accumulated_dRdt_);
 
@@ -610,11 +607,11 @@ void MaplessDynamic::solve(PointCloudwithTime::Ptr p0,
     // double dt_toc10 = timer::toc(); // milliseconds
     // ROS_INFO_STREAM("elapsed time for 'updateAccumdRdt' :" <<  dt_toc10 << "
     // [ms]");
-    // double dt_toc5 = timer::toc();  // milliseconds
-    // sum_time_F += dt_toc5;
-    // avg_time_F = sum_time_F / iter_time_F;
-    // ROS_INFO_STREAM("Average time for 'F' :" << avg_time_F << " [ms]");
-    // iter_time_F++;
+    double dt_toc5 = timer::toc();  // milliseconds
+    sum_time_F += dt_toc5;
+    avg_time_F = sum_time_F / iter_time_F;
+    ROS_INFO_STREAM("Average time for 'F' :" << avg_time_F << " [ms]");
+    iter_time_F++;
 
     float* ptr_accumulated_dRdt = accumulated_dRdt_.ptr<float>(0);
     float* ptr_accumulated_dRdt_score = accumulated_dRdt_score_.ptr<float>(0);
