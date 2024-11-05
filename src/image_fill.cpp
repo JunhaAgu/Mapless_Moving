@@ -89,7 +89,10 @@ void ImageFill::fillImageZeroHoles(cv::Mat& accumulated_dRdt,
             }
 
             if (*(ptr_img_rho + i_ncols_j) == 0) {
-                *(ptr_rho_zero_value + i_ncols_j) = 255;
+                if ((i == n_row - 1) || (i == n_row - 2)) {
+                } else {
+                    *(ptr_rho_zero_value + i_ncols_j) = 255;
+                }
             } else {
             }
         }

@@ -29,16 +29,16 @@ void dRCalc::dR_warpPointcloud(
     // int cnt = 0;
     slam::PointXYZT pcl_xyzt;
 
-    int rep_pts_dist = 10.0;
+    int dist_pts = 10.0;
     // representative pts
     for (int i = 0; i < n_row; ++i) {
         int i_ncols = i * n_col;
         for (int j = 0; j < n_col; ++j) {
             int i_ncols_j = i_ncols + j;
-            if ((*(ptr_cur_img_x + i_ncols_j) > rep_pts_dist) ||
-                (*(ptr_cur_img_x + i_ncols_j) < -rep_pts_dist) ||
-                (*(ptr_cur_img_y + i_ncols_j) > rep_pts_dist) ||
-                (*(ptr_cur_img_y + i_ncols_j) < -rep_pts_dist)) {
+            if ((*(ptr_cur_img_x + i_ncols_j) > dist_pts) ||
+                (*(ptr_cur_img_x + i_ncols_j) < -dist_pts) ||
+                (*(ptr_cur_img_y + i_ncols_j) > dist_pts) ||
+                (*(ptr_cur_img_y + i_ncols_j) < -dist_pts)) {
                 pcl_xyzt.x = *(ptr_cur_img_x + i_ncols_j);
                 pcl_xyzt.y = *(ptr_cur_img_y + i_ncols_j);
                 pcl_xyzt.z = *(ptr_cur_img_z + i_ncols_j);
@@ -50,8 +50,8 @@ void dRCalc::dR_warpPointcloud(
 
     // Far pts are warped by the original pts
     for (int i = 0; i < p0->size(); ++i) {
-        if (((*p0)[i].x <= rep_pts_dist) && ((*p0)[i].x >= -rep_pts_dist) &&
-            ((*p0)[i].y <= rep_pts_dist) && ((*p0)[i].y >= -rep_pts_dist)) {
+        if (((*p0)[i].x <= dist_pts) && ((*p0)[i].x >= -dist_pts) &&
+            ((*p0)[i].y <= dist_pts) && ((*p0)[i].y >= -dist_pts)) {
             velo_cur_->push_back((*p0)[i]);
         }
     }

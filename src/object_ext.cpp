@@ -270,7 +270,7 @@ void ObjectExt::extractObjectCandidate(
                     (diff_z_[i] - mean_diff_z) * (diff_z_[i] - mean_diff_z);
             }
             std_diff_z = sqrt(1.0 / ((float)diff_z_.size() - 1.0) * std_diff_z);
-            if (std_diff_z < 0.07) {
+            if (std_diff_z < 0.09) {
                 for (int i = 0; i < object_row_.size(); ++i) {
                     *(ptr_accumulated_dRdt + object_row_[i] * n_col +
                       object_col_[i]) = 0;
@@ -506,7 +506,7 @@ void ObjectExt::updateAccum(cv::Mat& accumulated_dRdt,
             }
 
             if (*(ptr_accumulated_dRdt_score + i_ncols + j) > 2.0) {
-                *(ptr_accumulated_dRdt + i_ncols + j) *= 5.0;
+                *(ptr_accumulated_dRdt + i_ncols + j) *= 4.0;
                 if (*(ptr_accumulated_dRdt + i_ncols + j) > 1e3) {
                     *(ptr_accumulated_dRdt + i_ncols + j) = 1e3;
                 } else {
