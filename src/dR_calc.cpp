@@ -29,15 +29,16 @@ void dRCalc::dR_warpPointcloud(
     // int cnt = 0;
     slam::PointXYZT pcl_xyzt;
 
+    int rep_pts_dist = 10.0;
     // representative pts
     for (int i = 0; i < n_row; ++i) {
         int i_ncols = i * n_col;
         for (int j = 0; j < n_col; ++j) {
             int i_ncols_j = i_ncols + j;
-            if ((*(ptr_cur_img_x + i_ncols_j) > 10.0) ||
-                (*(ptr_cur_img_x + i_ncols_j) < -10.0) ||
-                (*(ptr_cur_img_y + i_ncols_j) > 10.0) ||
-                (*(ptr_cur_img_y + i_ncols_j) < -10.0)) {
+            if ((*(ptr_cur_img_x + i_ncols_j) > rep_pts_dist) ||
+                (*(ptr_cur_img_x + i_ncols_j) < -rep_pts_dist) ||
+                (*(ptr_cur_img_y + i_ncols_j) > rep_pts_dist) ||
+                (*(ptr_cur_img_y + i_ncols_j) < -rep_pts_dist)) {
                 pcl_xyzt.x = *(ptr_cur_img_x + i_ncols_j);
                 pcl_xyzt.y = *(ptr_cur_img_y + i_ncols_j);
                 pcl_xyzt.z = *(ptr_cur_img_z + i_ncols_j);
@@ -49,8 +50,8 @@ void dRCalc::dR_warpPointcloud(
 
     // Far pts are warped by the original pts
     for (int i = 0; i < p0->size(); ++i) {
-        if (((*p0)[i].x <= 10) && ((*p0)[i].x >= -10.0) &&
-            ((*p0)[i].y <= 10.0) && ((*p0)[i].y >= -10.0)) {
+        if (((*p0)[i].x <= rep_pts_dist) && ((*p0)[i].x >= -rep_pts_dist) &&
+            ((*p0)[i].y <= rep_pts_dist) && ((*p0)[i].y >= -rep_pts_dist)) {
             velo_cur_->push_back((*p0)[i]);
         }
     }
@@ -252,8 +253,8 @@ void dRCalc::compensateCurRhoZeroWarp(
                 if (min_rho_4_dir > 0.0) {
                     new_phi = v_angle_[i] * D2R;
                     new_theta = 0.4 * (j + 1) * D2R;
-                    for (int m = 0; m < 5; ++m) {
-                        new_phi_alpha = new_phi + ((float)m - 2.0) * 0.2 * D2R;
+                    for (int m = 0; m < 5; ++m) { // 5 , 11
+                        new_phi_alpha = new_phi + ((float)m - 2.0) * 0.2 * D2R; // 2.0 , 5.0
                         min_rho_cos = -min_rho_4_dir * cosf(new_phi_alpha);
                         for (int p = 0; p < 5; ++p) {
                             new_theta_alpha =

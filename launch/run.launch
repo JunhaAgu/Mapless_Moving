@@ -5,10 +5,10 @@
     <!--ALOAM: /aft_mapped_to_init-->
     <!--CT-ICP /ct_icp/pose/odom-->
 
-    <arg name="dataset_name"        default="CARLA"/>   <!-- KITTI // CARLA -->
+    <arg name="dataset_name"        default="KITTI"/>   <!-- KITTI // CARLA -->
     <arg name="rosbag_play"         default="false"/>    <!-- true: rosbag // false: pcd data -->
     <arg name="T01_slam"            default="false"/>   <!-- true: T01 from slam // false: T01 from GT -->
-    <arg name="data_number"         default="01"/>      <!-- KITTI data: 00 01 02 05 07 // CARLA data: 01 01_001 01_002 03 03_001 03_002--> 
+    <arg name="data_number"         default="05"/>      <!-- KITTI data: 00 01 02 05 07 // CARLA data: 01 01_001 01_002 03 03_001 03_002--> 
 
     <arg name="dataset_kitti_dir"         default="/mnt/e/KITTI_odometry/"/>
     <arg name="dataset_carla_dir"         default="/mnt/f/mapless_dataset/CARLA/"/>
