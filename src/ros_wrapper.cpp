@@ -249,7 +249,7 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg) {
         pub_lidar_marker_.publish(lidar_marker_);
 
         cnt_pcl += 1;
-    } else if (cnt_initial > 5)  // If not initialized, 129 or 1
+    } else if (cnt_initial > 5)  // If not initialized, 5 for LOAM, 129 for CT-ICP 
     {
         is_initialized_ = true;
 

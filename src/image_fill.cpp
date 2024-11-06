@@ -377,50 +377,38 @@ void ImageFill::fillImageZeroHoles(cv::Mat& accumulated_dRdt,
             } else {
             }
 
-            float range_min = 0.0;
-            float range_max = 0.0;
-
-            std::vector<float> mean_col;
-            mean_col.resize(n_col);
-            for (int q = 0; q < n_col; ++q) {
-            }
-
-            // float his_range_max =
-            // *max_element(filled_object_rho_roi_.begin(),
-            //                                    filled_object_rho_roi_.end());
-            // float his_range_min =
-            // *min_element(filled_object_rho_roi_.begin(),
-            //                                    filled_object_rho_roi_.end());
-            // float his_range[] = {his_range_min, his_range_max};
-            // const int* channel_numbers = {0};
-            // const float* his_ranges = his_range;
-            // int number_bins = 50;
-
-            // cv::calcHist(&filled_object_rho_mat, 1, channel_numbers,
-            // cv::Mat(),
-            //              histogram_, 1, &number_bins, &his_ranges);
-            // int max_n = 0;
-            // int max_idx = 100;
-            // for (int p = 0; p < number_bins; ++p) {
-            //     if (max_n < histogram_.at<float>(p)) {
-            //         max_n = histogram_.at<float>(p);
-            //         max_idx = p;
-            //     }
-            // }
-            // float his_interval =
-            //     (his_range_max - his_range_min) / (float)number_bins;
-            // float bin_range_min = his_range_min +
-            // (float)(max_idx)*his_interval; float bin_range_max =
-            //     his_range_min + (float)(max_idx + 1) * his_interval;
             // float range_min = 0.0;
             // float range_max = 0.0;
 
-            // if ((bin_range_min - 10.0) < 0.0) {
-            //     range_min = 0.0;
-            // } else {
-            //     range_min = bin_range_min - 10.0;
+            // std::vector<float> mean_col;
+            // mean_col.resize(n_col);
+            // for (int q = 0; q < n_col; ++q) {
             // }
-            // range_max = bin_range_max + 10.0;
+
+            float his_range_max = *max_element(filled_object_rho_roi_.begin(),
+                                               filled_object_rho_roi_.end());
+            float his_range_min = *min_element(filled_object_rho_roi_.begin(),
+                                               filled_object_rho_roi_.end());
+            float his_range[] = {his_range_min, his_range_max};
+            const int channel_numbers[] = {0};
+            const float* his_ranges = his_range;
+            int number_bins = 50;
+            
+            cv::calcHist(&filled_object_rho_mat, 1, channel_numbers, cv::Mat(),
+                         histogram_, 1, &number_bins, &his_ranges);
+            int max_n = 0;
+            int max_idx = 0;
+            for (int p = 0; p < number_bins; ++p) {
+                if (max_n < histogram_.at<float>(p)) {
+                    max_n = histogram_.at<float>(p);
+                    max_idx = p;
+                }
+            }
+            float his_interval  = (his_range_max - his_range_min) / static_cast<float>(number_bins);
+            float bin_range_min = his_range_min + static_cast<float>(max_idx) * his_interval;
+            float bin_range_max = his_range_min + static_cast<float>(max_idx + 1) * his_interval;
+            float range_min = (bin_range_min - 10.0f < 0.0f) ? 0.0f : bin_range_min - 15.0f;
+            float range_max = (bin_range_max + 15.0f);
 
             for (int i = 0; i < rho_zero_filled_row_.size(); ++i) {
                 const float& rho_zero_filled_rho_roi_tmp =
