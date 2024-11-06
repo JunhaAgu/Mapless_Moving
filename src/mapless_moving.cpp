@@ -482,7 +482,7 @@ void MaplessDynamic::solve(PointCloudwithTime::Ptr p0,
         "Norm of euler angle: " << NORM(euler(0), euler(1), euler(2)));
 
     if (NORM(euler(0), euler(1), euler(2)) > 3.0) {
-        object_factor = 2.0;
+        object_factor = 1.5;
     }
 
     // Segment ground

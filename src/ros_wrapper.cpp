@@ -81,7 +81,7 @@ ROSWrapper::~ROSWrapper() {
 void ROSWrapper::run() {
     int freq_spin;  // test: 10[Hz], rosbag: <100[Hz]
     if (rosbag_play_ == true) {
-        freq_spin = 20;
+        freq_spin = 100;
     } else  // rosbag_play_==false //<-- pcd dataset play
     {
         freq_spin = 10;
@@ -249,7 +249,7 @@ void ROSWrapper::callbackLiDAR(const sensor_msgs::PointCloud2ConstPtr& msg) {
         pub_lidar_marker_.publish(lidar_marker_);
 
         cnt_pcl += 1;
-    } else if (cnt_initial > 1)  // If not initialized, 129 or 1
+    } else if (cnt_initial > 5)  // If not initialized, 129 or 1
     {
         is_initialized_ = true;
 

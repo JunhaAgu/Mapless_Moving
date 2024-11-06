@@ -1,8 +1,8 @@
 <launch>
     <!-- if rosbag_play == true -->
     <arg name="topicname_lidar"     default="/debug/pc_raw"/> <!-- "/velodyne_points/lidar0"/> -->
-    <arg name="topicname_pose"      default="/aft_mapped_to_init"/> 
-    <!--ALOAM: /aft_mapped_to_init-->
+    <arg name="topicname_pose"      default="/aft_mapped_to_init_high_frec"/> 
+    <!--ALOAM: /aft_mapped_to_init_high_frec-->
     <!--CT-ICP /ct_icp/pose/odom-->
 
     <arg name="dataset_name"        default="KITTI"/>   <!-- KITTI // CARLA -->
