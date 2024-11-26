@@ -138,7 +138,7 @@ void CloudFrame::genRangeImages_noComp(PointCloudwithTime::Ptr pcl_in,
 }
 
 void CloudFrame::calcuateRho(PointCloudwithTime::Ptr pcl_in, bool cur_next) {
-    const float twopi = 2.0 * M_PI;
+    const float twopi = 2.0f * M_PI;
     const float offset_theta = M_PI;
     const int  n_pts = pcl_in->size();
 
@@ -168,9 +168,17 @@ void CloudFrame::calcuateRho(PointCloudwithTime::Ptr pcl_in, bool cur_next) {
         float& phi_tmp = *ptr_phi;
         float& theta_tmp = *ptr_theta;
 
+        // rho_tmp = NORM(x_tmp, y_tmp, z_tmp);
+        // phi_tmp = asinf(z_tmp / rho_tmp);
+        // invrhocos = 1.0f / (rho_tmp * cosf(phi_tmp));
+        
         rho_tmp = NORM(x_tmp, y_tmp, z_tmp);
-        phi_tmp = asinf(z_tmp / rho_tmp);
-        invrhocos = 1.0f / (rho_tmp * cosf(phi_tmp));
+        const float inv_rho = 1.0f / rho_tmp;
+
+        // compute phi (angle)
+        float sin_phi = z_tmp * inv_rho;
+        phi_tmp = asinf(sin_phi);
+        invrhocos = inv_rho / cosf(phi_tmp);
 
         cospsi = x_tmp * invrhocos;
         sinpsi = y_tmp * invrhocos;
@@ -204,9 +212,19 @@ void CloudFrame::calcuateRho(PointCloudwithTime::Ptr pcl_in, bool cur_next) {
         //     }
         // }
         if (cospsi >= 0) {
-            theta_tmp = (sinpsi >= 0) ? acosf(cospsi) + offset_theta : twopi_plus_offset_theta - acosf(cospsi);
+            if (cospsi > 1){
+                theta_tmp = (sinpsi >= 0) ? offset_theta : twopi_plus_offset_theta;
+            }
+            else{
+                theta_tmp = (sinpsi >= 0) ? acosf(cospsi) + offset_theta : twopi_plus_offset_theta - acosf(cospsi);
+            }
         } else {
-            theta_tmp = (sinpsi >= 0) ? M_PI_plus_offset_theta - acosf(-cospsi) : M_PI_plus_offset_theta + acosf(-cospsi);
+            if (cospsi < -1){
+                theta_tmp = (sinpsi >= 0) ? M_PI : twopi;
+            }
+            else{
+                theta_tmp = (sinpsi >= 0) ? M_PI_plus_offset_theta - acosf(-cospsi) : M_PI_plus_offset_theta + acosf(-cospsi);
+            }
         }
 
         if (theta_tmp >= twopi) {
@@ -264,122 +282,70 @@ void CloudFrame::calcuateRho_SIMD(PointCloudwithTime::Ptr pcl_in,
 };
 
 void CloudFrame::makeRangeImageAndPtsPerPixel(bool cur_next) {
-    int i_row = 0;
-    int i_col = 0;
+    const int n_row = str_rhopts_->img_rho.rows;
+    const int n_col = str_rhopts_->img_rho.cols;
+    const int n_vertical_minus_1 = n_vertical_ - 1;
 
     float* ptr_img_rho = str_rhopts_->img_rho.ptr<float>(0);
     int* ptr_img_index = str_rhopts_->img_index.ptr<int>(0);
 
-    int n_row = str_rhopts_->img_rho.rows;
-    int n_col = str_rhopts_->img_rho.cols;
-
     float* ptr_rho = str_rhopts_->rho.data();
     float* ptr_phi = str_rhopts_->phi.data();
     float* ptr_theta = str_rhopts_->theta.data();
-    float* ptr_v_angle = v_angle_.data();
 
-    float az_step_R2D = az_step_ * R2D;
-
-    float phi_R2D = 0.0f;
-
-    int n_vertical_minus_1 = n_vertical_ - 1;
-    int i_row_ncols_i_col = 0;
-    // std::string line;
-    // std::ofstream file("/home/junhakim/debug_rowcol.txt");
-
-    const float& criteria0 = lidar_elevation_criteria_[0];
-    const float& criteria1 = lidar_elevation_criteria_[1];
-    const float& criteria2 = lidar_elevation_criteria_[2];
-    const float& criteria3 = lidar_elevation_criteria_[3];
-    const float& line0_a = lidar_elevation_line0_[0];
-    const float& line0_b = lidar_elevation_line0_[1];
-    const float& line1_a = lidar_elevation_line1_[0];
-    const float& line1_b = lidar_elevation_line1_[1];
+    const float az_step_R2D = az_step_ * R2D;
+    const float criteria0 = lidar_elevation_criteria_[0];
+    const float criteria1 = lidar_elevation_criteria_[1];
+    const float criteria2 = lidar_elevation_criteria_[2];
+    const float criteria3 = lidar_elevation_criteria_[3];
+    const float line0_a = lidar_elevation_line0_[0];
+    const float line0_b = lidar_elevation_line0_[1];
+    const float line1_a = lidar_elevation_line1_[0];
+    const float line1_b = lidar_elevation_line1_[1];
 
     for (int i = 0; i < n_pts_; ++i, ++ptr_phi, ++ptr_theta, ++ptr_rho) {
-        float& phi_tmp = *ptr_phi;
-        phi_tmp *= R2D;
-        float& theta_tmp = *ptr_theta;
-        float& rho_tmp = *ptr_rho;
+        float phi_tmp = *ptr_phi * R2D;
+        float theta_tmp = *ptr_theta;
+        float rho_tmp = *ptr_rho;
 
-        if (phi_tmp > criteria0)  // 2.5[degree]
-        {
+        // Determine row index (i_row) based on phi_tmp
+        int i_row = 0;
+        if (phi_tmp > criteria0) {
             i_row = 0;
-        } else if (phi_tmp > criteria1)  // -8.0[degree]
-        {
-            i_row = (int)ceil((line0_a * phi_tmp + line0_b));
-        } else if (phi_tmp > criteria2)  // -8.5[degree]
-        {
+        } else if (phi_tmp > criteria1) {
+            i_row = static_cast<int>(ceil(line0_a * phi_tmp + line0_b));
+        } else if (phi_tmp > criteria2) {
             i_row = 32;
-        } else if (phi_tmp > criteria3)  // -23.8[degree]
-        {
-            i_row = (int)ceil((line1_a * phi_tmp + line1_b));
+        } else if (phi_tmp > criteria3) {
+            i_row = static_cast<int>(ceil(line1_a * phi_tmp + line1_b));
         } else {
             i_row = 63;
         }
 
-        // phi_R2D = (ptr_phi[i] * R2D);
-        // for (int kk = 0; kk < n_vertical_; ++kk)
-        // {
-        //     if (ptr_v_angle[kk] < phi_R2D || kk == n_vertical_-1)
-        //     {
-        //         i_row = kk;
-        //         break;
-        //     }
-        // }
-
-        i_col = roundf(theta_tmp * az_step_R2D);
-
-        if ((i_row > n_vertical_minus_1) || (i_row < 0)) {
+        // Check if row is valid
+        if (i_row > n_vertical_minus_1 || i_row < 0) {
             continue;
         }
 
-        // if (cur_next==1)
-        // {
-        //     if (file.is_open())
-        //     {
-        //         file << i_row << " " << i_col << "\n";
-        //     }
-        //     else
-        //     {
-        //         std::cout << "error" << std::endl;
-        //     }
-        // }
+        // Calculate column index (i_col)
+        int i_col = static_cast<int>(roundf(theta_tmp * az_step_R2D));
 
-        i_row_ncols_i_col = i_row * n_col + i_col;
+        // Compute flattened index
+        int i_row_ncols_i_col = i_row * n_col + i_col;
 
-        // float& rho_tmp = ptr_rho[i];
+        // Update image and index data
         float& img_rho_tmp = *(ptr_img_rho + i_row_ncols_i_col);
-        if (img_rho_tmp == 0 || img_rho_tmp > rho_tmp)
-        //(str_rhopts_->img_rho.at<float>(i_row,i_col) == 0)
-        {
+        if (img_rho_tmp == 0.0f || img_rho_tmp > rho_tmp) {
             img_rho_tmp = rho_tmp;
             *(ptr_img_index + i_row_ncols_i_col) = i;
         }
-        // else if (*(ptr_img_rho + i_row_ncols_i_col) > ptr_rho[i])
-        // {
-        //     *(ptr_img_rho + i_row_ncols_i_col) = ptr_rho[i];
-        //     *(ptr_img_index + i_row_ncols_i_col) = i;
-        // }
-        else {
-        }
 
-        // ptr_pts_per_pixel_n[i_row_ncols_i_col] += 1;
+        // Add point data to per-pixel vectors
         str_rhopts_->pts_per_pixel_index[i_row_ncols_i_col].emplace_back(i);
         str_rhopts_->pts_per_pixel_rho[i_row_ncols_i_col].emplace_back(rho_tmp);
-    }  // end for
-
-    // if (cur_next == 1)
-    // {
-    //     file.close();
-    //     exit(0);
-    // }
-
-    // cv::FileStorage fs_w("/home/junhakim/asdf.yaml", cv::FileStorage::WRITE);
-    // fs_w << "matImage" << str_rhopts_->img_rho;
-    // fs_w.release();
-    // exit(0);
+    }
 }
+
 
 void CloudFrame::makeRangeImageAndPtsPerPixel_dR(bool cur_next) {
     int i_row = 0;
